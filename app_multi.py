@@ -49,9 +49,8 @@ def extract_round_code(filename: str) -> tuple[str, int]:
 
 def parse_dvw_minimal(dvw_text: str) -> dict:
     """
-    Estrae solo season, competition, team_a, team_b.
-    ASSUNZIONE coerente col tuo uso attuale: nel [3TEAMS] la prima è la squadra con codici '*'
-    (casa) e la seconda è la squadra con codici 'a' (ospite).
+    Estrae season/competition da [3MATCH] e team_a/team_b da [3TEAMS].
+    Scelta stabile: nel [3TEAMS] la 1ª squadra è quella con codici '*', la 2ª con codici 'a'.
     """
     season = None
     competition = None
@@ -88,12 +87,7 @@ def parse_dvw_minimal(dvw_text: str) -> dict:
     team_a = teams[0] if len(teams) >= 1 else ""
     team_b = teams[1] if len(teams) >= 2 else ""
 
-    return {
-        "season": season,
-        "competition": competition,
-        "team_a": team_a,
-        "team_b": team_b,
-    }
+    return {"season": season, "competition": competition, "team_a": team_a, "team_b": team_b}
 
 
 def extract_scout_lines(dvw_text: str) -> list[str]:
@@ -143,12 +137,10 @@ def code6(line: str) -> str:
 
 
 def is_home_rece(c6: str) -> bool:
-    # *24RQ# / *16RM! ecc.
     return len(c6) >= 5 and c6[0] == "*" and c6[3:5] in ("RQ", "RM")
 
 
 def is_away_rece(c6: str) -> bool:
-    # a24RQ# / a16RM! ecc.
     return len(c6) >= 5 and c6[0] == "a" and c6[3:5] in ("RQ", "RM")
 
 
@@ -169,7 +161,6 @@ def is_away_float(c6: str) -> bool:
 
 
 def is_serve(c6: str) -> bool:
-    # *14SM- / a01SQ! ecc.
     return len(c6) >= 5 and c6[0] in ("*", "a") and c6[3:5] in ("SQ", "SM")
 
 
@@ -179,6 +170,35 @@ def is_home_point(c6: str) -> bool:
 
 def is_away_point(c6: str) -> bool:
     return c6.startswith("ap")
+
+
+def is_attack(c6: str, prefix: str) -> bool:
+    # primo attacco: fondamentale che inizia con 'A' in posizione 3 (AH/AT/…)
+    return len(c6) >= 6 and c6[0] == prefix and c6[3] == "A"
+
+
+def is_attack_winner(c6: str, prefix: str) -> bool:
+    # attacco vincente: 6° carattere '#'
+    return is_attack(c6, prefix) and c6[5] == "#"
+
+
+def first_attack_after_reception_is_winner(rally: list[str], prefix: str) -> bool:
+    """
+    Direttezza = il PRIMO attacco della squadra che riceve (dopo la sua ricezione) è vincente (#).
+    Ignora eventuale alzata (ET) e qualsiasi altro evento.
+    """
+    rece_idx = None
+    for i, c in enumerate(rally):
+        if len(c) >= 5 and c[0] == prefix and c[3:5] in ("RQ", "RM"):
+            rece_idx = i
+            break
+    if rece_idx is None:
+        return False
+
+    for c in rally[rece_idx + 1 :]:
+        if is_attack(c, prefix):
+            return c[5] == "#"
+    return False
 
 
 def pct(wins: int, attempts: int) -> float:
@@ -202,7 +222,7 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
             continue
 
         if not current:
-            continue  # ignora righe finché non arriva la prima battuta
+            continue
 
         current.append(c)
 
@@ -210,7 +230,6 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
             rallies.append(current)
             current = []
 
-    # conteggi
     so_home_attempts = so_home_wins = 0
     so_away_attempts = so_away_wins = 0
 
@@ -222,6 +241,10 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
 
     so_float_home_attempts = so_float_home_wins = 0
     so_float_away_attempts = so_float_away_wins = 0
+
+    # ✅ DIRETTO corretto: solo WIN al primo attacco dopo ricezione
+    so_dir_home_wins = 0
+    so_dir_away_wins = 0
 
     for r in rallies:
         first = r[0]
@@ -273,6 +296,13 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
             if away_point:
                 so_float_away_wins += 1
 
+        # ✅ DIRETTO (primo attacco dopo ricezione vincente)
+        if home_rece and home_point and first_attack_after_reception_is_winner(r, "*"):
+            so_dir_home_wins += 1
+
+        if away_rece and away_point and first_attack_after_reception_is_winner(r, "a"):
+            so_dir_away_wins += 1
+
         # Break
         if home_served:
             bp_home_attempts += 1
@@ -291,20 +321,26 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
         "so_away_wins": so_away_wins,
         "sideout_home_pct": pct(so_home_wins, so_home_attempts),
         "sideout_away_pct": pct(so_away_wins, so_away_attempts),
+
         "bp_home_attempts": bp_home_attempts,
         "bp_home_wins": bp_home_wins,
         "bp_away_attempts": bp_away_attempts,
         "bp_away_wins": bp_away_wins,
         "break_home_pct": pct(bp_home_wins, bp_home_attempts),
         "break_away_pct": pct(bp_away_wins, bp_away_attempts),
+
         "so_spin_home_attempts": so_spin_home_attempts,
         "so_spin_home_wins": so_spin_home_wins,
         "so_spin_away_attempts": so_spin_away_attempts,
         "so_spin_away_wins": so_spin_away_wins,
+
         "so_float_home_attempts": so_float_home_attempts,
         "so_float_home_wins": so_float_home_wins,
         "so_float_away_attempts": so_float_away_attempts,
         "so_float_away_wins": so_float_away_wins,
+
+        "so_dir_home_wins": so_dir_home_wins,
+        "so_dir_away_wins": so_dir_away_wins,
     }
 
 
@@ -351,11 +387,13 @@ def init_db():
                 so_float_home_attempts INTEGER,
                 so_float_home_wins INTEGER,
                 so_float_away_attempts INTEGER,
-                so_float_away_wins INTEGER
+                so_float_away_wins INTEGER,
+
+                so_dir_home_wins INTEGER,
+                so_dir_away_wins INTEGER
             )
         """))
 
-        # migration: aggiungi colonne se mancanti
         cols_to_add = [
             ("scout_text", "TEXT"),
             ("preview", "TEXT"),
@@ -384,6 +422,9 @@ def init_db():
             ("so_float_home_wins", "INTEGER"),
             ("so_float_away_attempts", "INTEGER"),
             ("so_float_away_wins", "INTEGER"),
+
+            ("so_dir_home_wins", "INTEGER"),
+            ("so_dir_away_wins", "INTEGER"),
         ]
         for col, coltype in cols_to_add:
             try:
@@ -403,7 +444,8 @@ def show_last_imports(limit: int = 20):
                    so_home_attempts, so_home_wins, so_away_attempts, so_away_wins,
                    sideout_home_pct, sideout_away_pct,
                    so_spin_home_attempts, so_spin_home_wins, so_spin_away_attempts, so_spin_away_wins,
-                   so_float_home_attempts, so_float_home_wins, so_float_away_attempts, so_float_away_wins
+                   so_float_home_attempts, so_float_home_wins, so_float_away_attempts, so_float_away_wins,
+                   so_dir_home_wins, so_dir_away_wins
             FROM matches
             ORDER BY id DESC
             LIMIT {limit}
@@ -429,10 +471,8 @@ def render_import(admin_mode: bool):
         accept_multiple_files=True
     )
 
-    # Mostra sempre gli ultimi import
     show_last_imports(limit=20)
 
-    # Pannello DELETE sempre visibile
     st.divider()
     st.subheader("Elimina un import (dal database)")
 
@@ -477,29 +517,31 @@ def render_import(admin_mode: bool):
         sql_upsert = """
         INSERT INTO matches
         (filename, phase, round_number, season, competition, team_a, team_b,
-         n_azioni, preview, scout_text, match_key, created_at,
+        n_azioni, preview, scout_text, match_key, created_at,
 
-         so_home_attempts, so_home_wins, so_away_attempts, so_away_wins,
-         sideout_home_pct, sideout_away_pct,
+        so_home_attempts, so_home_wins, so_away_attempts, so_away_wins,
+        sideout_home_pct, sideout_away_pct,
 
-         bp_home_attempts, bp_home_wins, bp_away_attempts, bp_away_wins,
-         break_home_pct, break_away_pct,
+        bp_home_attempts, bp_home_wins, bp_away_attempts, bp_away_wins,
+        break_home_pct, break_away_pct,
 
-         so_spin_home_attempts, so_spin_home_wins, so_spin_away_attempts, so_spin_away_wins,
-         so_float_home_attempts, so_float_home_wins, so_float_away_attempts, so_float_away_wins
+        so_spin_home_attempts, so_spin_home_wins, so_spin_away_attempts, so_spin_away_wins,
+        so_float_home_attempts, so_float_home_wins, so_float_away_attempts, so_float_away_wins,
+        so_dir_home_wins, so_dir_away_wins
         )
         VALUES
         (:filename, :phase, :round_number, :season, :competition, :team_a, :team_b,
-         :n_azioni, :preview, :scout_text, :match_key, :created_at,
+        :n_azioni, :preview, :scout_text, :match_key, :created_at,
 
-         :so_home_attempts, :so_home_wins, :so_away_attempts, :so_away_wins,
-         :sideout_home_pct, :sideout_away_pct,
+        :so_home_attempts, :so_home_wins, :so_away_attempts, :so_away_wins,
+        :sideout_home_pct, :sideout_away_pct,
 
-         :bp_home_attempts, :bp_home_wins, :bp_away_attempts, :bp_away_wins,
-         :break_home_pct, :break_away_pct,
+        :bp_home_attempts, :bp_home_wins, :bp_away_attempts, :bp_away_wins,
+        :break_home_pct, :break_away_pct,
 
-         :so_spin_home_attempts, :so_spin_home_wins, :so_spin_away_attempts, :so_spin_away_wins,
-         :so_float_home_attempts, :so_float_home_wins, :so_float_away_attempts, :so_float_away_wins
+        :so_spin_home_attempts, :so_spin_home_wins, :so_spin_away_attempts, :so_spin_away_wins,
+        :so_float_home_attempts, :so_float_home_wins, :so_float_away_attempts, :so_float_away_wins,
+        :so_dir_home_wins, :so_dir_away_wins
         )
         ON CONFLICT(match_key) DO UPDATE SET
             filename = excluded.filename,
@@ -536,7 +578,10 @@ def render_import(admin_mode: bool):
             so_float_home_attempts = excluded.so_float_home_attempts,
             so_float_home_wins = excluded.so_float_home_wins,
             so_float_away_attempts = excluded.so_float_away_attempts,
-            so_float_away_wins = excluded.so_float_away_wins
+            so_float_away_wins = excluded.so_float_away_wins,
+
+            so_dir_home_wins = excluded.so_dir_home_wins,
+            so_dir_away_wins = excluded.so_dir_away_wins
         """
 
         with engine.begin() as conn:
@@ -573,8 +618,7 @@ def render_import(admin_mode: bool):
                         "scout_text": "\n".join(scout_lines),
                         "match_key": match_key,
                         "created_at": datetime.now(timezone.utc).isoformat(),
-
-                        **{k: int(v) if isinstance(v, bool) is False and isinstance(v, int) else v for k, v in counts.items()},
+                        **counts,
                     }
 
                     conn.execute(text(sql_upsert), params)
@@ -671,25 +715,18 @@ def render_sideout_team():
             "n_ricezioni": "n° ricezioni",
             "n_sideout": "n° Side Out",
         })
-
-        df = df[["squadra", "% S.O.", "n° ricezioni", "n° Side Out"]].copy()
         df.insert(0, "Rank", range(1, len(df) + 1))
+        df = df[["Rank", "squadra", "% S.O.", "n° ricezioni", "n° Side Out"]].copy()
 
         styled = (
             df.style
               .apply(highlight_perugia, axis=1)
-              .format({
-                  "Rank": "{:.0f}",
-                  "% S.O.": "{:.1f}",
-                  "n° ricezioni": "{:.0f}",
-                  "n° Side Out": "{:.0f}",
-              })
+              .format({"Rank": "{:.0f}", "% S.O.": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out": "{:.0f}"})
               .set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-
         st.dataframe(styled, width="stretch", hide_index=True)
 
     # --- SPIN ---
@@ -731,26 +768,19 @@ def render_sideout_team():
             "spin_win": "n° Side Out SPIN",
             "spin_share_pct": "% SPIN su TOT",
         })
-
         df_spin.insert(0, "Rank", range(1, len(df_spin) + 1))
         df_spin = df_spin[["Rank", "squadra", "% S.O. SPIN", "n° ricezioni SPIN", "n° Side Out SPIN", "% SPIN su TOT"]].copy()
 
         styled = (
             df_spin.style
               .apply(highlight_perugia, axis=1)
-              .format({
-                  "Rank": "{:.0f}",
-                  "% S.O. SPIN": "{:.1f}",
-                  "n° ricezioni SPIN": "{:.0f}",
-                  "n° Side Out SPIN": "{:.0f}",
-                  "% SPIN su TOT": "{:.1f}",
-              })
+              .format({"Rank": "{:.0f}", "% S.O. SPIN": "{:.1f}", "n° ricezioni SPIN": "{:.0f}",
+                       "n° Side Out SPIN": "{:.0f}", "% SPIN su TOT": "{:.1f}"})
               .set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-
         st.dataframe(styled, width="stretch", hide_index=True)
 
     # --- FLOAT ---
@@ -771,9 +801,7 @@ def render_sideout_team():
                                COALESCE(so_home_attempts, 0)       AS tot_att
                         FROM matches
                         WHERE round_number BETWEEN :from_round AND :to_round
-
                         UNION ALL
-
                         SELECT team_b AS squadra,
                                COALESCE(so_float_away_attempts, 0) AS float_att,
                                COALESCE(so_float_away_wins, 0)     AS float_win,
@@ -794,26 +822,68 @@ def render_sideout_team():
             "float_win": "n° Side Out FLOAT",
             "float_share_pct": "% FLOAT su TOT",
         })
-
         df_float.insert(0, "Rank", range(1, len(df_float) + 1))
         df_float = df_float[["Rank", "squadra", "% S.O. FLOAT", "n° ricezioni FLOAT", "n° Side Out FLOAT", "% FLOAT su TOT"]].copy()
 
         styled = (
             df_float.style
               .apply(highlight_perugia, axis=1)
-              .format({
-                  "Rank": "{:.0f}",
-                  "% S.O. FLOAT": "{:.1f}",
-                  "n° ricezioni FLOAT": "{:.0f}",
-                  "n° Side Out FLOAT": "{:.0f}",
-                  "% FLOAT su TOT": "{:.1f}",
-              })
+              .format({"Rank": "{:.0f}", "% S.O. FLOAT": "{:.1f}", "n° ricezioni FLOAT": "{:.0f}",
+                       "n° Side Out FLOAT": "{:.0f}", "% FLOAT su TOT": "{:.1f}"})
               .set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
+        st.dataframe(styled, width="stretch", hide_index=True)
 
+    # --- DIRETTO (corretto) ---
+    elif voce == "Side Out DIRETTO":
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT
+                        squadra,
+                        SUM(tot_att) AS n_ricezioni,
+                        SUM(dir_win) AS n_sideout_dir,
+                        COALESCE(ROUND(100.0 * SUM(dir_win) / NULLIF(SUM(tot_att), 0), 1), 0.0) AS so_dir_pct
+                    FROM (
+                        SELECT team_a AS squadra,
+                               COALESCE(so_home_attempts, 0) AS tot_att,
+                               COALESCE(so_dir_home_wins, 0) AS dir_win
+                        FROM matches
+                        WHERE round_number BETWEEN :from_round AND :to_round
+                        UNION ALL
+                        SELECT team_b AS squadra,
+                               COALESCE(so_away_attempts, 0) AS tot_att,
+                               COALESCE(so_dir_away_wins, 0) AS dir_win
+                        FROM matches
+                        WHERE round_number BETWEEN :from_round AND :to_round
+                    )
+                    GROUP BY squadra
+                    ORDER BY so_dir_pct DESC, n_ricezioni DESC
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        df_dir = pd.DataFrame(rows).rename(columns={
+            "squadra": "squadra",
+            "so_dir_pct": "% S.O. DIR",
+            "n_ricezioni": "n° ricezioni",
+            "n_sideout_dir": "n° Side Out DIR",
+        })
+        df_dir.insert(0, "Rank", range(1, len(df_dir) + 1))
+        df_dir = df_dir[["Rank", "squadra", "% S.O. DIR", "n° ricezioni", "n° Side Out DIR"]].copy()
+
+        styled = (
+            df_dir.style
+              .apply(highlight_perugia, axis=1)
+              .format({"Rank": "{:.0f}", "% S.O. DIR": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out DIR": "{:.0f}"})
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
         st.dataframe(styled, width="stretch", hide_index=True)
 
     else:
@@ -853,26 +923,6 @@ elif page == "Import DVW (solo staff)":
 elif page == "Indici Side Out - Squadre":
     render_sideout_team()
 
-elif page == "Indici Break Point - Squadre":
-    st.header("Indici Break Point - Squadre")
-    st.info("In costruzione.")
-
-elif page == "Indici Side Out - Giocatori (per ruolo)":
-    st.header("Indici Side Out - Giocatori (per ruolo)")
-    st.info("In costruzione.")
-
-elif page == "Indici Break Point - Giocatori (per ruolo)":
-    st.header("Indici Break Point - Giocatori (per ruolo)")
-    st.info("In costruzione.")
-
-elif page == "Classifiche Fondamentali - Squadre":
-    st.header("Classifiche Fondamentali - Squadre")
-    st.info("In costruzione.")
-
-elif page == "Classifiche Fondamentali - Giocatori (per ruolo)":
-    st.header("Classifiche Fondamentali - Giocatori (per ruolo)")
-    st.info("In costruzione.")
-
-elif page == "Punti per Set":
-    st.header("Punti per Set")
+else:
+    st.header(page)
     st.info("In costruzione.")
