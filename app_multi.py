@@ -1,3 +1,4 @@
+
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -219,8 +220,39 @@ def pct(wins: int, attempts: int) -> float:
 
 
 def compute_counts_from_scout(scout_lines: list[str]) -> dict:
-    rallies: list[list[str]] = []
-    current: list[str] = []
+    # --- helper BT (break tendency) dal testo SERVIZIO ---
+    def detect_bt(raw_line: str) -> str | None:
+        if not raw_line:
+            return None
+        s = raw_line.strip()
+
+        # Priorità: simboli tra parentesi quadre
+        if "[-]" in s:
+            return "NEG"
+        if "[+]" in s:
+            return "POS"
+        if "[!]" in s:
+            return "EXC"
+        if "[½]" in s:
+            return "HALF"
+
+        # Varianti non-bracketed
+        if "½" in s or "1/2" in s or "0.5" in s:
+            return "HALF"
+
+        tail = s[-6:]  # spesso il segno è vicino alla fine
+        if "!" in tail:
+            return "EXC"
+        if "+" in tail:
+            return "POS"
+        if "-" in tail:
+            return "NEG"
+
+        return None
+
+    # --- costruzione rallies: teniamo (c6, raw) per non perdere i segni BT ---
+    rallies: list[list[tuple[str, str]]] = []
+    current: list[tuple[str, str]] = []
 
     for raw in scout_lines:
         c = code6(raw)
@@ -230,18 +262,21 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
         if is_serve(c):
             if current:
                 rallies.append(current)
-            current = [c]
+            current = [(c, raw)]
             continue
 
         if not current:
             continue
 
-        current.append(c)
+        current.append((c, raw))
 
         if is_home_point(c) or is_away_point(c):
             rallies.append(current)
             current = []
 
+    # =========================
+    # SIDE OUT counters
+    # =========================
     so_home_attempts = so_home_wins = 0
     so_away_attempts = so_away_wins = 0
 
@@ -269,22 +304,31 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
     so_neg_home_attempts = so_neg_home_wins = 0
     so_neg_away_attempts = so_neg_away_wins = 0
 
+    # =========================
+    # BREAK "GIOCATO" + BT counters
+    # =========================
+    bp_play_home_attempts = bp_play_home_wins = 0
+    bp_play_away_attempts = bp_play_away_wins = 0
+
+    bt_neg_home = bt_pos_home = bt_exc_home = bt_half_home = 0
+    bt_neg_away = bt_pos_away = bt_exc_away = bt_half_away = 0
+
     for r in rallies:
-        first = r[0]
-        home_served = first.startswith("*")
-        away_served = first.startswith("a")
+        first_c6, first_raw = r[0]
+        home_served = first_c6.startswith("*")
+        away_served = first_c6.startswith("a")
 
-        home_point = any(is_home_point(x) for x in r)
-        away_point = any(is_away_point(x) for x in r)
+        home_point = any(is_home_point(c6) for c6, _ in r)
+        away_point = any(is_away_point(c6) for c6, _ in r)
 
-        home_rece = any(is_home_rece(x) for x in r)
-        away_rece = any(is_away_rece(x) for x in r)
+        home_rece = any(is_home_rece(c6) for c6, _ in r)
+        away_rece = any(is_away_rece(c6) for c6, _ in r)
 
-        home_spin = any(is_home_spin(x) for x in r)
-        away_spin = any(is_away_spin(x) for x in r)
+        home_spin = any(is_home_spin(c6) for c6, _ in r)
+        away_spin = any(is_away_spin(c6) for c6, _ in r)
 
-        home_float = any(is_home_float(x) for x in r)
-        away_float = any(is_away_float(x) for x in r)
+        home_float = any(is_home_float(c6) for c6, _ in r)
+        away_float = any(is_away_float(c6) for c6, _ in r)
 
         # SideOut totale
         if home_rece:
@@ -320,15 +364,16 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
                 so_float_away_wins += 1
 
         # DIRETTO
-        if home_rece and home_point and first_attack_after_reception_is_winner(r, "*"):
+        rally_c6 = [c6 for c6, _ in r]
+        if home_rece and home_point and first_attack_after_reception_is_winner(rally_c6, "*"):
             so_dir_home_wins += 1
 
-        if away_rece and away_point and first_attack_after_reception_is_winner(r, "a"):
+        if away_rece and away_point and first_attack_after_reception_is_winner(rally_c6, "a"):
             so_dir_away_wins += 1
 
         # GIOCATO (# + ! -)
-        home_play = any(is_home_rece_playable(x) for x in r)
-        away_play = any(is_away_rece_playable(x) for x in r)
+        home_play = any(is_home_rece_playable(c6) for c6, _ in r)
+        away_play = any(is_away_rece_playable(c6) for c6, _ in r)
 
         if home_play:
             so_play_home_attempts += 1
@@ -341,8 +386,8 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
                 so_play_away_wins += 1
 
         # BUONA (#,+)
-        home_good = any(is_home_rece_good(x) for x in r)
-        away_good = any(is_away_rece_good(x) for x in r)
+        home_good = any(is_home_rece_good(c6) for c6, _ in r)
+        away_good = any(is_away_rece_good(c6) for c6, _ in r)
 
         if home_good:
             so_good_home_attempts += 1
@@ -355,8 +400,8 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
                 so_good_away_wins += 1
 
         # ESCLAMATIVA (!)
-        home_exc = any(is_home_rece_exc(x) for x in r)
-        away_exc = any(is_away_rece_exc(x) for x in r)
+        home_exc = any(is_home_rece_exc(c6) for c6, _ in r)
+        away_exc = any(is_away_rece_exc(c6) for c6, _ in r)
 
         if home_exc:
             so_exc_home_attempts += 1
@@ -369,8 +414,8 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
                 so_exc_away_wins += 1
 
         # NEGATIVA (-)
-        home_neg = any(is_home_rece_neg(x) for x in r)
-        away_neg = any(is_away_rece_neg(x) for x in r)
+        home_neg = any(is_home_rece_neg(c6) for c6, _ in r)
+        away_neg = any(is_away_rece_neg(c6) for c6, _ in r)
 
         if home_neg:
             so_neg_home_attempts += 1
@@ -382,7 +427,7 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
             if away_point:
                 so_neg_away_wins += 1
 
-        # Break (punto su proprio servizio)
+        # Break totale
         if home_served:
             bp_home_attempts += 1
             if home_point:
@@ -392,6 +437,37 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
             bp_away_attempts += 1
             if away_point:
                 bp_away_wins += 1
+
+        # Break giocato + BT
+        bt = detect_bt(first_raw)
+        if bt is not None:
+            if home_served:
+                bp_play_home_attempts += 1
+                if home_point:
+                    bp_play_home_wins += 1
+
+                if bt == "NEG":
+                    bt_neg_home += 1
+                elif bt == "POS":
+                    bt_pos_home += 1
+                elif bt == "EXC":
+                    bt_exc_home += 1
+                elif bt == "HALF":
+                    bt_half_home += 1
+
+            if away_served:
+                bp_play_away_attempts += 1
+                if away_point:
+                    bp_play_away_wins += 1
+
+                if bt == "NEG":
+                    bt_neg_away += 1
+                elif bt == "POS":
+                    bt_pos_away += 1
+                elif bt == "EXC":
+                    bt_exc_away += 1
+                elif bt == "HALF":
+                    bt_half_away += 1
 
     return {
         "so_home_attempts": so_home_attempts,
@@ -440,6 +516,22 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
         "so_neg_home_wins": so_neg_home_wins,
         "so_neg_away_attempts": so_neg_away_attempts,
         "so_neg_away_wins": so_neg_away_wins,
+
+        # NEW: Break giocato + BT
+        "bp_play_home_attempts": bp_play_home_attempts,
+        "bp_play_home_wins": bp_play_home_wins,
+        "bp_play_away_attempts": bp_play_away_attempts,
+        "bp_play_away_wins": bp_play_away_wins,
+
+        "bt_neg_home": bt_neg_home,
+        "bt_pos_home": bt_pos_home,
+        "bt_exc_home": bt_exc_home,
+        "bt_half_home": bt_half_home,
+
+        "bt_neg_away": bt_neg_away,
+        "bt_pos_away": bt_pos_away,
+        "bt_exc_away": bt_exc_away,
+        "bt_half_away": bt_half_away,
     }
 
 
@@ -509,7 +601,23 @@ def init_db():
                 so_neg_home_attempts INTEGER,
                 so_neg_home_wins INTEGER,
                 so_neg_away_attempts INTEGER,
-                so_neg_away_wins INTEGER
+                so_neg_away_wins INTEGER,
+
+                -- NEW: Break giocato + BT
+                bp_play_home_attempts INTEGER,
+                bp_play_home_wins INTEGER,
+                bp_play_away_attempts INTEGER,
+                bp_play_away_wins INTEGER,
+
+                bt_neg_home INTEGER,
+                bt_pos_home INTEGER,
+                bt_exc_home INTEGER,
+                bt_half_home INTEGER,
+
+                bt_neg_away INTEGER,
+                bt_pos_away INTEGER,
+                bt_exc_away INTEGER,
+                bt_half_away INTEGER
             )
         """))
 
@@ -564,7 +672,24 @@ def init_db():
             ("so_neg_home_wins", "INTEGER"),
             ("so_neg_away_attempts", "INTEGER"),
             ("so_neg_away_wins", "INTEGER"),
+
+            # NEW: Break giocato + BT
+            ("bp_play_home_attempts", "INTEGER"),
+            ("bp_play_home_wins", "INTEGER"),
+            ("bp_play_away_attempts", "INTEGER"),
+            ("bp_play_away_wins", "INTEGER"),
+
+            ("bt_neg_home", "INTEGER"),
+            ("bt_pos_home", "INTEGER"),
+            ("bt_exc_home", "INTEGER"),
+            ("bt_half_home", "INTEGER"),
+
+            ("bt_neg_away", "INTEGER"),
+            ("bt_pos_away", "INTEGER"),
+            ("bt_exc_away", "INTEGER"),
+            ("bt_half_away", "INTEGER"),
         ]
+
         for col, coltype in cols_to_add:
             try:
                 conn.execute(text(f"ALTER TABLE matches ADD COLUMN {col} {coltype}"))
@@ -646,7 +771,11 @@ def render_import(admin_mode: bool):
          so_play_home_attempts, so_play_home_wins, so_play_away_attempts, so_play_away_wins,
          so_good_home_attempts, so_good_home_wins, so_good_away_attempts, so_good_away_wins,
          so_exc_home_attempts, so_exc_home_wins, so_exc_away_attempts, so_exc_away_wins,
-         so_neg_home_attempts, so_neg_home_wins, so_neg_away_attempts, so_neg_away_wins
+         so_neg_home_attempts, so_neg_home_wins, so_neg_away_attempts, so_neg_away_wins,
+
+         bp_play_home_attempts, bp_play_home_wins, bp_play_away_attempts, bp_play_away_wins,
+         bt_neg_home, bt_pos_home, bt_exc_home, bt_half_home,
+         bt_neg_away, bt_pos_away, bt_exc_away, bt_half_away
         )
         VALUES
         (:filename, :phase, :round_number, :season, :competition, :team_a, :team_b,
@@ -665,7 +794,11 @@ def render_import(admin_mode: bool):
          :so_play_home_attempts, :so_play_home_wins, :so_play_away_attempts, :so_play_away_wins,
          :so_good_home_attempts, :so_good_home_wins, :so_good_away_attempts, :so_good_away_wins,
          :so_exc_home_attempts, :so_exc_home_wins, :so_exc_away_attempts, :so_exc_away_wins,
-         :so_neg_home_attempts, :so_neg_home_wins, :so_neg_away_attempts, :so_neg_away_wins
+         :so_neg_home_attempts, :so_neg_home_wins, :so_neg_away_attempts, :so_neg_away_wins,
+
+         :bp_play_home_attempts, :bp_play_home_wins, :bp_play_away_attempts, :bp_play_away_wins,
+         :bt_neg_home, :bt_pos_home, :bt_exc_home, :bt_half_home,
+         :bt_neg_away, :bt_pos_away, :bt_exc_away, :bt_half_away
         )
         ON CONFLICT(match_key) DO UPDATE SET
             filename = excluded.filename,
@@ -725,7 +858,22 @@ def render_import(admin_mode: bool):
             so_neg_home_attempts = excluded.so_neg_home_attempts,
             so_neg_home_wins = excluded.so_neg_home_wins,
             so_neg_away_attempts = excluded.so_neg_away_attempts,
-            so_neg_away_wins = excluded.so_neg_away_wins
+            so_neg_away_wins = excluded.so_neg_away_wins,
+
+            bp_play_home_attempts = excluded.bp_play_home_attempts,
+            bp_play_home_wins = excluded.bp_play_home_wins,
+            bp_play_away_attempts = excluded.bp_play_away_attempts,
+            bp_play_away_wins = excluded.bp_play_away_wins,
+
+            bt_neg_home = excluded.bt_neg_home,
+            bt_pos_home = excluded.bt_pos_home,
+            bt_exc_home = excluded.bt_exc_home,
+            bt_half_home = excluded.bt_half_home,
+
+            bt_neg_away = excluded.bt_neg_away,
+            bt_pos_away = excluded.bt_pos_away,
+            bt_exc_away = excluded.bt_exc_away,
+            bt_half_away = excluded.bt_half_away
         """
 
         with engine.begin() as conn:
@@ -1160,7 +1308,7 @@ def render_sideout_team():
 
 
 # =========================
-# UI: BREAK TEAM (nuova)
+# UI: BREAK TEAM
 # =========================
 def render_break_team():
     st.header("Indici Fase Break – Squadre")
@@ -1171,10 +1319,11 @@ def render_break_team():
             "BREAK TOTALE",
             "BREAK GIOCATO",
             "BREAK con BT. NEGATIVA",
-            "BREAK con BT. POSITIVA",
             "BREAK con BT. ESCLAMATIVA",
-            "BREAK con BT. ½ punto",
-            "BT punto/errore/ratio",
+            "BREAK con BT. POSITIVA",
+            "BREAK con BT. 1/2 PUNTO",
+            "BT punto/errore/ratio",            "Confronto TEAM",
+            "GRAFICI",
         ],
         index=0,
     )
@@ -1187,8 +1336,8 @@ def render_break_team():
             WHERE round_number IS NOT NULL
         """)).mappings().first()
 
-    min_r = int((bounds["min_r"] or 1))
-    max_r = int((bounds["max_r"] or 1))
+    min_r = int(bounds["min_r"] or 1)
+    max_r = int(bounds["max_r"] or 1)
 
     c1, c2 = st.columns(2)
     with c1:
@@ -1200,6 +1349,21 @@ def render_break_team():
         st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
         st.stop()
 
+    def fix_team(name: str) -> str:
+        n = " ".join((name or "").split())
+        low = n.lower()
+        # mapping esplicito richiesto
+        if low.startswith("gas sales bluenergy p"):
+            return "Gas Sales Bluenergy Piacenza"
+        if low == "gas sales bluenergy piacenza":
+            return "Gas Sales Bluenergy Piacenza"
+        if low == "grottazzolina":
+            return "Yuasa Battery Grottazzolina"
+        # normalizza eventuali varianti di maiuscole
+        if "yuasa" in low and "grottazzolina" in low:
+            return "Yuasa Battery Grottazzolina"
+        return n
+
     def highlight_perugia(row):
         is_perugia = "perugia" in str(row["squadra"]).lower()
         style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
@@ -1209,6 +1373,11 @@ def render_break_team():
         if df.empty:
             st.info("Nessun dato nel range selezionato.")
             return
+        # applica mapping richiesto
+        if "squadra" in df.columns:
+            df = df.copy()
+            df["squadra"] = df["squadra"].apply(fix_team)
+
         styled = (
             df.style
               .apply(highlight_perugia, axis=1)
@@ -1220,56 +1389,1261 @@ def render_break_team():
         )
         st.dataframe(styled, width="stretch", hide_index=True)
 
-    # --- BREAK TOTALE ---
-    if voce == "BREAK TOTALE":
+    # ===== helper: calcola BT giocato/segni direttamente da scout_text (NON usa colonne bp_play_*/bt_* nel DB) =====
+    def compute_break_bt_agg() -> pd.DataFrame:
         with engine.begin() as conn:
             rows = conn.execute(
                 text("""
                     SELECT
-                        squadra,
-                        SUM(att) AS n_battute,
-                        SUM(win) AS n_bpoint,
-                        COALESCE(ROUND(100.0 * SUM(win) / NULLIF(SUM(att), 0), 1), 0.0) AS bp_pct
-                    FROM (
-                        SELECT team_a AS squadra,
-                               COALESCE(bp_home_attempts, 0) AS att,
-                               COALESCE(bp_home_wins, 0)     AS win
-                        FROM matches
-                        WHERE round_number BETWEEN :from_round AND :to_round
-                        UNION ALL
-                        SELECT team_b AS squadra,
-                               COALESCE(bp_away_attempts, 0) AS att,
-                               COALESCE(bp_away_wins, 0)     AS win
-                        FROM matches
-                        WHERE round_number BETWEEN :from_round AND :to_round
-                    )
-                    GROUP BY squadra
-                    ORDER BY bp_pct DESC, n_battute DESC
+                        team_a, team_b,
+                        scout_text,
+                        COALESCE(bp_home_attempts, 0) AS bp_home_attempts,
+                        COALESCE(bp_away_attempts, 0) AS bp_away_attempts,
+                        COALESCE(bp_home_wins, 0)     AS bp_home_wins,
+                        COALESCE(bp_away_wins, 0)     AS bp_away_wins
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
                 """),
                 {"from_round": int(from_round), "to_round": int(to_round)}
             ).mappings().all()
 
-        df = pd.DataFrame(rows).rename(columns={
-            "squadra": "squadra",
-            "bp_pct": "% B.Point",
+        if not rows:
+            return pd.DataFrame()
+
+        agg = {}
+
+        def ensure(team: str):
+            team = fix_team(team)
+            if team not in agg:
+                agg[team] = {
+                    "squadra": team,
+                    "bt_att": 0,      # battute con valutazione (- + !)
+                    "bt_bp": 0,       # break point su quelle battute
+                    "bt_neg": 0,
+                    "bt_pos": 0,
+                    "bt_exc": 0,
+                    "serves_tot": 0,  # battute totali (da DB)
+                    "bp_tot": 0,      # break point totali (da DB)
+                }
+            return team
+
+        def iter_rallies_from_scout_text(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln and ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        for r in rows:
+            home_team = ensure(r.get("team_a") or "")
+            away_team = ensure(r.get("team_b") or "")
+
+            # totali dal DB
+            agg[home_team]["serves_tot"] += int(r.get("bp_home_attempts") or 0)
+            agg[away_team]["serves_tot"] += int(r.get("bp_away_attempts") or 0)
+            agg[home_team]["bp_tot"] += int(r.get("bp_home_wins") or 0)
+            agg[away_team]["bp_tot"] += int(r.get("bp_away_wins") or 0)
+
+            rallies = iter_rallies_from_scout_text(r.get("scout_text") or "")
+            for rally in rallies:
+                first = rally[0]
+                if len(first) < 6:
+                    continue
+                sign = first[5]  # '-' '+' '!' ecc.
+                if sign not in ("-", "+", "!"):
+                    continue  # non "giocato" secondo tua logica BT
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                if home_served:
+                    agg[home_team]["bt_att"] += 1
+                    if home_point:
+                        agg[home_team]["bt_bp"] += 1
+                    if sign == "-":
+                        agg[home_team]["bt_neg"] += 1
+                    elif sign == "+":
+                        agg[home_team]["bt_pos"] += 1
+                    elif sign == "!":
+                        agg[home_team]["bt_exc"] += 1
+
+                if away_served:
+                    agg[away_team]["bt_att"] += 1
+                    if away_point:
+                        agg[away_team]["bt_bp"] += 1
+                    if sign == "-":
+                        agg[away_team]["bt_neg"] += 1
+                    elif sign == "+":
+                        agg[away_team]["bt_pos"] += 1
+                    elif sign == "!":
+                        agg[away_team]["bt_exc"] += 1
+
+        return pd.DataFrame(list(agg.values()))
+
+    # ===== BREAK TOTALE (come prima) =====
+    if voce == "BREAK TOTALE":
+        with engine.begin() as conn:
+            rows = conn.execute(text("""
+                SELECT
+                    squadra,
+                    SUM(att) AS n_battute,
+                    SUM(win) AS n_bpoint,
+                    COALESCE(ROUND(100.0 * SUM(win) / NULLIF(SUM(att), 0), 1), 0.0) AS bp_pct
+                FROM (
+                    SELECT team_a AS squadra,
+                           COALESCE(bp_home_attempts, 0) AS att,
+                           COALESCE(bp_home_wins, 0)     AS win
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                    UNION ALL
+                    SELECT team_b AS squadra,
+                           COALESCE(bp_away_attempts, 0) AS att,
+                           COALESCE(bp_away_wins, 0)     AS win
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                )
+                GROUP BY squadra
+                ORDER BY bp_pct DESC, n_battute DESC
+            """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+        df = pd.DataFrame(rows)
+        if df.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df["squadra"] = df["squadra"].apply(fix_team)
+        df = df.groupby("squadra", as_index=False).sum(numeric_only=True)
+        df["% B.Point"] = (100.0 * df["n_bpoint"] / df["n_battute"].replace({0: pd.NA})).fillna(0.0)
+
+        df = df.rename(columns={
             "n_battute": "n° Battute",
             "n_bpoint": "n° B.Point",
         })
+
+        df = df.sort_values(by=["% B.Point", "n° Battute"], ascending=[False, False]).reset_index(drop=True)
         df.insert(0, "Rank", range(1, len(df) + 1))
         df = df[["Rank", "squadra", "% B.Point", "n° Battute", "n° B.Point"]].copy()
 
-        show_table(
-            df,
-            {
-                "Rank": "{:.0f}",
-                "% B.Point": "{:.1f}",
-                "n° Battute": "{:.0f}",
-                "n° B.Point": "{:.0f}",
-            }
+        show_table(df, {"Rank": "{:.0f}", "% B.Point": "{:.1f}", "n° Battute": "{:.0f}", "n° B.Point": "{:.0f}"})
+
+    # ===== BREAK GIOCATO (BT = '-' '+' '!') =====
+    elif voce == "BREAK GIOCATO":
+        base = compute_break_bt_agg()
+        if base.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df = base.copy()
+        df["% B.Point (Giocato)"] = (100.0 * df["bt_bp"] / df["bt_att"].replace({0: pd.NA})).fillna(0.0)
+
+        df = df.rename(columns={
+            "bt_att": "n° Battute (BT)",
+            "bt_bp": "n° B.Point",
+        })
+
+        df = df.sort_values(by=["% B.Point (Giocato)", "n° Battute (BT)"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        df = df[["Rank", "squadra", "% B.Point (Giocato)", "n° Battute (BT)", "n° B.Point"]].copy()
+        show_table(df, {"Rank": "{:.0f}", "% B.Point (Giocato)": "{:.1f}", "n° Battute (BT)": "{:.0f}", "n° B.Point": "{:.0f}"})
+
+    # ===== BT NEGATIVA / POSITIVA / ESCLAMATIVA =====
+    elif voce == "BREAK con BT. NEGATIVA":
+        # ==========================================================
+        # TABELLA RIDEFINITA (richiesta):
+        # A Ranking (per % B.Point con Bt-)
+        # B Team (12)
+        # C % B.Point con Bt-  = BP_su_battuta_negativa / battute_negative
+        #    BP: fine azione *p (casa) / ap (ospite) A FAVORE DEL BATTITORE
+        # D % Bt-/Bt Tot = battute_negative / battute_totali
+        # ==========================================================
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {"Team": team, "neg_serves": 0, "neg_bp": 0, "tot_serves": 0}
+
+        for r in rows:
+            ta = fix_team(r.get("team_a") or "")
+            tb = fix_team(r.get("team_b") or "")
+            ensure(ta)
+            ensure(tb)
+
+            scout_text = r.get("scout_text") or ""
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+
+                if not current:
+                    continue
+
+                current.append(c)
+
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+
+            for rally in rallies:
+                first = rally[0]
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                if home_served:
+                    agg[ta]["tot_serves"] += 1
+                if away_served:
+                    agg[tb]["tot_serves"] += 1
+
+                is_neg = (len(first) >= 6 and first[5] == "-")
+                if not is_neg:
+                    continue
+
+                if home_served:
+                    agg[ta]["neg_serves"] += 1
+                    if home_point:
+                        agg[ta]["neg_bp"] += 1
+
+                if away_served:
+                    agg[tb]["neg_serves"] += 1
+                    if away_point:
+                        agg[tb]["neg_bp"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df["% B.Point con Bt-"] = (100.0 * df["neg_bp"] / df["neg_serves"].replace({0: pd.NA})).fillna(0.0)
+        df["% Bt-/Bt Tot"] = (100.0 * df["neg_serves"] / df["tot_serves"].replace({0: pd.NA})).fillna(0.0)
+
+        df = df.sort_values(by=["% B.Point con Bt-", "% Bt-/Bt Tot", "Team"], ascending=[False, False, True]).reset_index(drop=True)
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+
+        out = df[["Ranking", "Team", "% B.Point con Bt-", "% Bt-/Bt Tot"]].copy()
+
+        def highlight_perugia_row(row):
+            is_perugia = "perugia" in str(row["Team"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia_row, axis=1)
+              .format({"Ranking": "{:.0f}", "% B.Point con Bt-": "{:.1f}", "% Bt-/Bt Tot": "{:.1f}"})
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+    elif voce == "BREAK con BT. POSITIVA":
+        # ==========================================================
+        # TABELLA POSITIVA (stesso modello della NEGATIVA):
+        # A Ranking (per % B.Point con Bt+)
+        # B Team (12)
+        # C % B.Point con Bt+  = BP_su_battuta_positiva / battute_positive
+        #    BP: fine azione *p (casa) / ap (ospite) A FAVORE DEL BATTITORE
+        # D % Bt+/Bt Tot = battute_positive / battute_totali
+        # ==========================================================
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {"Team": team, "pos_serves": 0, "pos_bp": 0, "tot_serves": 0}
+
+        for r in rows:
+            ta = fix_team(r.get("team_a") or "")
+            tb = fix_team(r.get("team_b") or "")
+            ensure(ta)
+            ensure(tb)
+
+            scout_text = r.get("scout_text") or ""
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+
+                if not current:
+                    continue
+
+                current.append(c)
+
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+
+            for rally in rallies:
+                first = rally[0]
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                # total serves
+                if home_served:
+                    agg[ta]["tot_serves"] += 1
+                if away_served:
+                    agg[tb]["tot_serves"] += 1
+
+                # positiva se 6° char del servizio è '+'
+                is_pos = (len(first) >= 6 and first[5] == "+")
+                if not is_pos:
+                    continue
+
+                if home_served:
+                    agg[ta]["pos_serves"] += 1
+                    # BP su battuta positiva: punto a favore del battitore (casa) -> *p
+                    if home_point:
+                        agg[ta]["pos_bp"] += 1
+
+                if away_served:
+                    agg[tb]["pos_serves"] += 1
+                    # BP su battuta positiva: punto a favore del battitore (ospite) -> ap
+                    if away_point:
+                        agg[tb]["pos_bp"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df["% B.Point con Bt+"] = (100.0 * df["pos_bp"] / df["pos_serves"].replace({0: pd.NA})).fillna(0.0)
+        df["% Bt+/Bt Tot"] = (100.0 * df["pos_serves"] / df["tot_serves"].replace({0: pd.NA})).fillna(0.0)
+
+        df = df.sort_values(by=["% B.Point con Bt+", "% Bt+/Bt Tot", "Team"], ascending=[False, False, True]).reset_index(drop=True)
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+
+        out = df[["Ranking", "Team", "% B.Point con Bt+", "% Bt+/Bt Tot"]].copy()
+
+        def highlight_perugia_row(row):
+            is_perugia = "perugia" in str(row["Team"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia_row, axis=1)
+              .format({"Ranking": "{:.0f}", "% B.Point con Bt+": "{:.1f}", "% Bt+/Bt Tot": "{:.1f}"})
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+    elif voce == "BREAK con BT. ESCLAMATIVA":
+        # ==========================================================
+        # TABELLA ESCLAMATIVA (solo '!'):
+        # A Ranking (per % B.Point con Bt!)
+        # B Team (12)
+        # C % B.Point con Bt! = BP_su_battuta_esclamativa / battute_esclamative
+        #    BP: fine azione *p (casa) / ap (ospite) a favore del battitore
+        # D % Bt!/Bt Tot = battute_esclamative / battute_totali
+        # ==========================================================
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {"Team": team, "exc_serves": 0, "exc_bp": 0, "tot_serves": 0}
+
+        for r in rows:
+            ta = fix_team(r.get("team_a") or "")
+            tb = fix_team(r.get("team_b") or "")
+            ensure(ta)
+            ensure(tb)
+
+            scout_text = r.get("scout_text") or ""
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+
+                if not current:
+                    continue
+
+                current.append(c)
+
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+
+            for rally in rallies:
+                first = rally[0]
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                if home_served:
+                    agg[ta]["tot_serves"] += 1
+                if away_served:
+                    agg[tb]["tot_serves"] += 1
+
+                # esclamativa se 6° char del servizio è '!'
+                is_exc = (len(first) >= 6 and first[5] == "!")
+                if not is_exc:
+                    continue
+
+                if home_served:
+                    agg[ta]["exc_serves"] += 1
+                    if home_point:
+                        agg[ta]["exc_bp"] += 1
+
+                if away_served:
+                    agg[tb]["exc_serves"] += 1
+                    if away_point:
+                        agg[tb]["exc_bp"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df["% B.Point con Bt!"] = (100.0 * df["exc_bp"] / df["exc_serves"].replace({0: pd.NA})).fillna(0.0)
+        df["% Bt!/Bt Tot"] = (100.0 * df["exc_serves"] / df["tot_serves"].replace({0: pd.NA})).fillna(0.0)
+
+        df = df.sort_values(by=["% B.Point con Bt!", "% Bt!/Bt Tot", "Team"], ascending=[False, False, True]).reset_index(drop=True)
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+
+        out = df[["Ranking", "Team", "% B.Point con Bt!", "% Bt!/Bt Tot"]].copy()
+
+        def highlight_perugia_row(row):
+            is_perugia = "perugia" in str(row["Team"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia_row, axis=1)
+              .format({"Ranking": "{:.0f}", "% B.Point con Bt!": "{:.1f}", "% Bt!/Bt Tot": "{:.1f}"})
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+
+
+    elif voce == "BREAK con BT. 1/2 PUNTO":
+        # ==========================================================
+        # TABELLA 1/2 PUNTO (stesso modello di NEG / POS / !):
+        # A Ranking (per % B.Point con Bt½)
+        # B Team (12)
+        # C % B.Point con Bt½ = BP_su_battuta_½ / battute_½
+        #    BP: fine azione *p (casa) / ap (ospite) a favore del battitore
+        # D % Bt½/Bt Tot = battute_½ / battute_totali
+        # ==========================================================
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {"Team": team, "half_serves": 0, "half_bp": 0, "tot_serves": 0}
+
+        for r in rows:
+            ta = fix_team(r.get("team_a") or "")
+            tb = fix_team(r.get("team_b") or "")
+            ensure(ta)
+            ensure(tb)
+
+            scout_text = r.get("scout_text") or ""
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+
+                if not current:
+                    continue
+
+                current.append(c)
+
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+
+            for rally in rallies:
+                first = rally[0]
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                if home_served:
+                    agg[ta]["tot_serves"] += 1
+                if away_served:
+                    agg[tb]["tot_serves"] += 1
+
+                # 1/2 punto: nel tuo scout è '/' nel 6° carattere (es: *06SQ/).
+                # Nessun fallback: usiamo '/' come da codifica.
+                is_half = (len(first) >= 6 and first[5] == "/")
+                if not is_half:
+                    continue
+
+                if home_served:
+                    agg[ta]["half_serves"] += 1
+                    if home_point:
+                        agg[ta]["half_bp"] += 1
+
+                if away_served:
+                    agg[tb]["half_serves"] += 1
+                    if away_point:
+                        agg[tb]["half_bp"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df["% B.Point con Bt½"] = (100.0 * df["half_bp"] / df["half_serves"].replace({0: pd.NA})).fillna(0.0)
+        df["% Bt½/Bt Tot"] = (100.0 * df["half_serves"] / df["tot_serves"].replace({0: pd.NA})).fillna(0.0)
+
+        df = df.sort_values(by=["% B.Point con Bt½", "% Bt½/Bt Tot", "Team"], ascending=[False, False, True]).reset_index(drop=True)
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+
+        out = df[["Ranking", "Team", "% B.Point con Bt½", "% Bt½/Bt Tot"]].copy()
+
+        def highlight_perugia_row(row):
+            is_perugia = "perugia" in str(row["Team"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia_row, axis=1)
+              .format({"Ranking": "{:.0f}", "% B.Point con Bt½": "{:.1f}", "% Bt½/Bt Tot": "{:.1f}"})
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+
+
+    elif voce == "BT punto/errore/ratio":
+        # ==========================================================
+        # BT punto/errore/ratio (richiesta):
+        # COL A: Teams
+        # COL B: % Bt Punto (#) su Tot Battute
+        # COL C: % Bt Errore (=) su Tot Battute
+        # COL D: Ratio Errore/Punto = Tot '=' / Tot '#'
+        #
+        # Definizioni (sul servizio code6):
+        # - Battuta = SQ o SM (is_serve)
+        # - Punto = 6° carattere '#': *06SQ#
+        # - Errore = 6° carattere '=': *06SQ=
+        # ==========================================================
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {"Teams": team, "tot_serves": 0, "bt_punto": 0, "bt_errore": 0}
+
+        for r in rows:
+            ta = fix_team(r.get("team_a") or "")
+            tb = fix_team(r.get("team_b") or "")
+            ensure(ta); ensure(tb)
+
+            scout_text = r.get("scout_text") or ""
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+
+                if not current:
+                    continue
+
+                current.append(c)
+
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+
+            for rally in rallies:
+                first = rally[0]
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                if home_served:
+                    agg[ta]["tot_serves"] += 1
+                    if len(first) >= 6 and first[5] == "#":
+                        agg[ta]["bt_punto"] += 1
+                    elif len(first) >= 6 and first[5] == "=":
+                        agg[ta]["bt_errore"] += 1
+
+                if away_served:
+                    agg[tb]["tot_serves"] += 1
+                    if len(first) >= 6 and first[5] == "#":
+                        agg[tb]["bt_punto"] += 1
+                    elif len(first) >= 6 and first[5] == "=":
+                        agg[tb]["bt_errore"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun dato nel range selezionato.")
+            return
+
+        df["% Bt Punto/Tot Bt"] = (100.0 * df["bt_punto"] / df["tot_serves"].replace({0: pd.NA})).fillna(0.0)
+        df["% Bt Errore/Tot Bt"] = (100.0 * df["bt_errore"] / df["tot_serves"].replace({0: pd.NA})).fillna(0.0)
+        df["Ratio Errore/Punto"] = (df["bt_errore"] / df["bt_punto"].replace({0: pd.NA})).fillna(0.0)
+        show_details = st.checkbox("Mostra colonne di controllo (Tot Bt, Bt#, Bt=)", value=False)
+
+        df["Tot Bt"] = df["tot_serves"]
+        df["Bt#"] = df["bt_punto"]
+        df["Bt="] = df["bt_errore"]
+
+        base_cols = ["Teams", "% Bt Punto/Tot Bt", "% Bt Errore/Tot Bt", "Ratio Errore/Punto"]
+        detail_cols = ["Tot Bt", "Bt#", "Bt="] if show_details else []
+
+        out = df[base_cols + detail_cols].copy()
+        out = out.sort_values(by=["% Bt Punto/Tot Bt", "Teams"], ascending=[False, True]).reset_index(drop=True)
+
+
+        def highlight_perugia_row(row):
+            is_perugia = "perugia" in str(row["Teams"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia_row, axis=1)
+              .format({
+                  "% Bt Punto/Tot Bt": "{:.1f}",
+                  "% Bt Errore/Tot Bt": "{:.1f}",
+                  "Ratio Errore/Punto": "{:.2f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+
+
+    elif voce == "Confronto TEAM":
+        # ==========================================================
+        # Confronto TEAM (max 4 squadre) nel range giornate selezionato
+        # Colonne:
+        # TEAM | % BREAK TOTALE | BREAK GIOCATO | Bt- | Bt! | Bt+ | 1/2 | BT punto/errore/ratio
+        # Definizioni (sul servizio code6):
+        # - Battuta = is_serve(code6) -> SQ o SM
+        # - Break totale % = punti a favore del battitore / battute totali
+        # - Break giocato % = punti a favore del battitore / battute con segno tra (-,+,!,/)
+        # - Bt-: % BP con Bt- = punti a favore del battitore / battute con '-' (6° char)
+        # - Bt!: % BP con Bt! = punti a favore del battitore / battute con '!' (6° char)
+        # - Bt+: % BP con Bt+ = punti a favore del battitore / battute con '+' (6° char)
+        # - 1/2: % BP con Bt/ = punti a favore del battitore / battute con '/' (6° char)
+        # - BT punto/errore/ratio: "P% / E% / R" su totale battute (P=#, E==, R=E/P)
+        # ==========================================================
+
+        with engine.begin() as conn:
+            teams_raw = conn.execute(text("""
+                SELECT DISTINCT squadra FROM (
+                    SELECT team_a AS squadra FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                    UNION
+                    SELECT team_b AS squadra FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                )
+                WHERE squadra IS NOT NULL AND TRIM(squadra) <> ''
+                ORDER BY squadra
+            """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        teams = sorted({fix_team(r["squadra"]) for r in teams_raw if r.get("squadra")})
+
+        selected = st.multiselect(
+            "Seleziona fino a 4 squadre",
+            options=teams,
+            default=[],
+            max_selections=4,
         )
 
-    else:
-        st.info(f"In costruzione: **{voce}**")
+        if not selected:
+            st.info("Seleziona 1–4 squadre per vedere il confronto.")
+            return
+
+        # carica match nel range
+        with engine.begin() as conn:
+            matches = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not matches:
+            st.info("Nessun match nel range selezionato.")
+            return
+
+        # aggregatori per team
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {
+                    "TEAM": team,
+                    "tot_serves": 0, "tot_bp": 0,
+                    "g_att": 0, "g_bp": 0,     # giocato (- + ! /)
+                    "neg_att": 0, "neg_bp": 0,
+                    "exc_att": 0, "exc_bp": 0,
+                    "pos_att": 0, "pos_bp": 0,
+                    "half_att": 0, "half_bp": 0,
+                    "pt_cnt": 0, "err_cnt": 0,  # # and =
+                }
+
+        # helper per parse rally da scout_text
+        def rallies_from_scout_text(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def serve_sign(c6: str) -> str:
+            return c6[5] if len(c6) >= 6 else ""
+
+        for m in matches:
+            ta = fix_team(m.get("team_a") or "")
+            tb = fix_team(m.get("team_b") or "")
+            # assicurati in agg solo se selezionate (ottimizziamo)
+            if ta not in selected and tb not in selected:
+                continue
+            ensure(ta); ensure(tb)
+
+            for rally in rallies_from_scout_text(m.get("scout_text") or ""):
+                first = rally[0]
+                if not is_serve(first):
+                    continue
+
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                # team che batte e "bp" (punto a favore del battitore)
+                if home_served:
+                    team = ta
+                    bp = 1 if home_point else 0
+                elif away_served:
+                    team = tb
+                    bp = 1 if away_point else 0
+                else:
+                    continue
+
+                if team not in selected:
+                    continue
+
+                sgn = serve_sign(first)
+
+                agg[team]["tot_serves"] += 1
+                agg[team]["tot_bp"] += bp
+
+                # Break giocato: solo - + ! /
+                if sgn in ("-", "+", "!", "/"):
+                    agg[team]["g_att"] += 1
+                    agg[team]["g_bp"] += bp
+
+                # per segno
+                if sgn == "-":
+                    agg[team]["neg_att"] += 1
+                    agg[team]["neg_bp"] += bp
+                elif sgn == "!":
+                    agg[team]["exc_att"] += 1
+                    agg[team]["exc_bp"] += bp
+                elif sgn == "+":
+                    agg[team]["pos_att"] += 1
+                    agg[team]["pos_bp"] += bp
+                elif sgn == "/":
+                    agg[team]["half_att"] += 1
+                    agg[team]["half_bp"] += bp
+
+                # BT punto/errore/ratio
+                if sgn == "#":
+                    agg[team]["pt_cnt"] += 1
+                elif sgn == "=":
+                    agg[team]["err_cnt"] += 1
+
+        df = pd.DataFrame([agg[t] for t in selected])
+        if df.empty:
+            st.info("Nessun dato per le squadre selezionate nel range.")
+            return
+
+        def safe_pct(num, den):
+            return float(num) / float(den) * 100.0 if den else 0.0
+
+        # calcoli finali
+        df["% BREAK TOTALE"] = df.apply(lambda r: safe_pct(r["tot_bp"], r["tot_serves"]), axis=1)
+        df["BREAK GIOCATO"] = df.apply(lambda r: safe_pct(r["g_bp"], r["g_att"]), axis=1)
+
+        df["BREAK con BT. NEGATIVA"] = df.apply(lambda r: safe_pct(r["neg_bp"], r["neg_att"]), axis=1)
+        df["BREAK con BT. ESCLAMATIVA"] = df.apply(lambda r: safe_pct(r["exc_bp"], r["exc_att"]), axis=1)
+        df["BREAK con BT. POSITIVA"] = df.apply(lambda r: safe_pct(r["pos_bp"], r["pos_att"]), axis=1)
+        df["1/2 PUNTO"] = df.apply(lambda r: safe_pct(r["half_bp"], r["half_att"]), axis=1)
+
+        df["BT Punto %"] = df.apply(lambda r: safe_pct(r["pt_cnt"], r["tot_serves"]), axis=1)
+        df["BT Errore %"] = df.apply(lambda r: safe_pct(r["err_cnt"], r["tot_serves"]), axis=1)
+        df["BT Ratio (=/#)"] = df.apply(lambda r: (float(r["err_cnt"]) / float(r["pt_cnt"]) if r["pt_cnt"] else 0.0), axis=1)
+
+
+        out = df[[
+            "TEAM",
+            "% BREAK TOTALE",
+            "BREAK GIOCATO",
+            "BREAK con BT. NEGATIVA",
+            "BREAK con BT. ESCLAMATIVA",
+            "BREAK con BT. POSITIVA",
+            "1/2 PUNTO",
+            "BT Punto %",
+            "BT Errore %",
+            "BT Ratio (=/#)",
+        ]].copy()
+
+        # formatting + highlight Perugia
+        def highlight_perugia_row(row):
+            is_perugia = "perugia" in str(row["TEAM"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia_row, axis=1)
+              .format({
+                  "% BREAK TOTALE": "{:.1f}",
+                  "BREAK GIOCATO": "{:.1f}",
+                  "BREAK con BT. NEGATIVA": "{:.1f}",
+                  "BREAK con BT. ESCLAMATIVA": "{:.1f}",
+                  "BREAK con BT. POSITIVA": "{:.1f}",
+                  "1/2 PUNTO": "{:.1f}",
+                                "BT Punto %": "{:.1f}",
+                  "BT Errore %": "{:.1f}",
+                  "BT Ratio (=/#)": "{:.2f}",
+})
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
+                  {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+
+    elif voce == "GRAFICI":
+        # ==========================================================
+        # GRAFICI (max 4 squadre) nel range giornate selezionato
+        # Opzioni:
+        # 1) Distribuzione BP per tipo di Battuta
+        # 2) Distribuzione tipo di battuta (su Tot battute)
+        #
+        # Codifica (6° carattere del servizio):
+        #   '-' negativa, '!' esclamativa, '+' positiva, '/' mezzo punto,
+        #   '#' punto, '=' errore
+        # ==========================================================
+        import matplotlib.pyplot as plt
+
+        with engine.begin() as conn:
+            teams_raw = conn.execute(text("""
+                SELECT DISTINCT squadra FROM (
+                    SELECT team_a AS squadra FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                    UNION
+                    SELECT team_b AS squadra FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                )
+                WHERE squadra IS NOT NULL AND TRIM(squadra) <> ''
+                ORDER BY squadra
+            """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+        def fix_team(name: str) -> str:
+            n = " ".join((name or "").split())
+            if n.lower().startswith("gas sales bluenergy p"):
+                return "Gas Sales Bluenergy Piacenza"
+            if "grottazzolina" in n.lower():
+                return "Yuasa Battery Grottazzolina"
+            return n
+
+        teams = sorted({fix_team(r["squadra"]) for r in teams_raw if r.get("squadra")})
+
+        selected = st.multiselect(
+            "Seleziona fino a 4 squadre",
+            options=teams,
+            default=[],
+            max_selections=4,
+            key="grafici_teams",
+        )
+
+        option = st.radio(
+            "Seleziona grafico",
+            [
+                "Vedi distribuzione BP per tipo di Battuta",
+                "Vedi distribuzione tipo di battuta",
+            ],
+            index=0,
+            key="grafici_option",
+        )
+
+        # --- grafici compatti (2 colonne) ---
+        FIGSIZE = (3.4, 3.4)   # ancora più compatto
+        DPI = 120
+        LABEL_FONTSIZE = 8
+        TITLE_FONTSIZE = 10
+
+        if not selected:
+            st.info("Seleziona 1–4 squadre per vedere i grafici.")
+            return
+
+        with engine.begin() as conn:
+            matches = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not matches:
+            st.info("Nessun match nel range selezionato.")
+            return
+
+        def rallies_from_scout_text(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def serve_sign(c6: str) -> str:
+            return c6[5] if len(c6) >= 6 else ""
+
+        stats = {}
+        for t in selected:
+            stats[t] = {
+                "tot_serves": 0,
+                "serve_counts": {"-": 0, "!": 0, "+": 0, "/": 0, "#": 0, "=": 0},
+                "bp_counts": {"-": 0, "!": 0, "+": 0, "/": 0, "#": 0},
+            }
+
+        for m in matches:
+            ta = fix_team(m.get("team_a") or "")
+            tb = fix_team(m.get("team_b") or "")
+            if ta not in selected and tb not in selected:
+                continue
+
+            for rally in rallies_from_scout_text(m.get("scout_text") or ""):
+                first = rally[0]
+                if not is_serve(first):
+                    continue
+
+                home_served = first.startswith("*")
+                away_served = first.startswith("a")
+
+                home_point = any(is_home_point(x) for x in rally)
+                away_point = any(is_away_point(x) for x in rally)
+
+                if home_served:
+                    team = ta
+                    bp = 1 if home_point else 0
+                elif away_served:
+                    team = tb
+                    bp = 1 if away_point else 0
+                else:
+                    continue
+
+                if team not in selected:
+                    continue
+
+                sgn = serve_sign(first)
+                stats[team]["tot_serves"] += 1
+                if sgn in stats[team]["serve_counts"]:
+                    stats[team]["serve_counts"][sgn] += 1
+                if sgn in stats[team]["bp_counts"]:
+                    stats[team]["bp_counts"][sgn] += bp
+
+        label_map_bp = {"-": "Neg", "!": "!", "+": "+", "/": "½", "#": "#"}
+        label_map_all = {"-": "Neg", "!": "!", "+": "+", "/": "½", "#": "#", "=": "="}
+
+        def counts_df(keys, labels, values):
+            return pd.DataFrame({"Tipo": labels, "Conteggio": values})
+
+        cols = st.columns(2)
+        for i, t in enumerate(selected):
+            col = cols[i % 2]
+            with col:
+                st.markdown(f"### {t}")
+
+                if option == "Vedi distribuzione BP per tipo di Battuta":
+                    keys = ["-", "!", "+", "/", "#"]
+                    labels = [label_map_bp[k] for k in keys]
+                    values = [stats[t]["bp_counts"].get(k, 0) for k in keys]
+                    tot_bp = sum(values)
+
+                    if tot_bp == 0:
+                        st.info("Nessun Break Point nel range selezionato.")
+                    else:
+                        fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
+                        ax.pie(values, labels=labels, autopct="%1.1f%%", textprops={"fontsize": LABEL_FONTSIZE})
+                        ax.set_title("BP per battuta", fontsize=TITLE_FONTSIZE)
+                        st.pyplot(fig, clear_figure=True)
+
+                        # Chicca: totale + dettaglio conteggi in expander
+                        st.caption(f"Tot BP: **{tot_bp}** | Tot battute: **{stats[t]['tot_serves']}**")
+                        with st.expander("Dettaglio conteggi BP", expanded=False):
+                            st.dataframe(counts_df(keys, labels, values), width="stretch", hide_index=True)
+
+                else:
+                    keys = ["-", "!", "+", "/", "#", "="]
+                    labels = [label_map_all[k] for k in keys]
+                    values = [stats[t]["serve_counts"].get(k, 0) for k in keys]
+                    tot_serves = sum(values)
+
+                    if tot_serves == 0:
+                        st.info("Nessuna battuta nel range selezionato.")
+                    else:
+                        fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
+                        ax.pie(values, labels=labels, autopct="%1.1f%%", textprops={"fontsize": LABEL_FONTSIZE})
+                        ax.set_title("Distribuzione battute", fontsize=TITLE_FONTSIZE)
+                        st.pyplot(fig, clear_figure=True)
+
+                        # Chicca: totale + dettaglio conteggi in expander
+                        st.caption(f"Tot battute: **{tot_serves}**")
+                        with st.expander("Dettaglio conteggi battute", expanded=False):
+                            st.dataframe(counts_df(keys, labels, values), width="stretch", hide_index=True)
+
+            if i % 2 == 1 and i < len(selected) - 1:
+                st.divider()
+                cols = st.columns(2)
 
 
 # =========================
