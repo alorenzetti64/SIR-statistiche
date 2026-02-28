@@ -1,3 +1,4 @@
+
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -216,6 +217,50 @@ def is_away_rece_neg(c6: str) -> bool:
 
 def pct(wins: int, attempts: int) -> float:
     return (wins / attempts * 100.0) if attempts else 0.0
+
+# =========================
+# ROSTER / RUOLI HELPERS
+# =========================
+def fix_team_name(name: str) -> str:
+    """
+    Normalizza nome squadra per match con roster.
+    (stesse regole usate nelle pagine Break/Confronto)
+    """
+    n = " ".join((name or "").split())
+    nl = n.lower()
+    if nl.startswith("gas sales bluenergy p"):
+        return "Gas Sales Bluenergy Piacenza"
+    if "grottazzolina" in nl:
+        return "Yuasa Battery Grottazzolina"
+    return n
+
+
+def team_norm(name: str) -> str:
+    """Chiave stabile (lower + pulizia) per join DB."""
+    n = fix_team_name(name).strip().lower()
+    n = re.sub(r"[^a-z0-9\s]", " ", n)
+    return " ".join(n.split())
+
+
+def serve_player_number(c6: str) -> int | None:
+    """
+    Estrae numero maglia dal code6 della battuta:
+    es: *06SQ- -> 6 ; a08SM+ -> 8
+    """
+    if not c6 or len(c6) < 3:
+        return None
+    if c6[0] not in ("*", "a"):
+        return None
+    digits = c6[1:3]
+    if not digits.isdigit():
+        return None
+    return int(digits)
+
+
+def serve_sign(c6: str) -> str:
+    """Valutazione battuta: 6° carattere ( -, +, !, /, #, = )"""
+    return c6[5] if c6 and len(c6) >= 6 else ""
+
 
 
 def compute_counts_from_scout(scout_lines: list[str]) -> dict:
@@ -600,23 +645,7 @@ def init_db():
                 so_neg_home_attempts INTEGER,
                 so_neg_home_wins INTEGER,
                 so_neg_away_attempts INTEGER,
-                so_neg_away_wins INTEGER,
-
-                -- NEW: Break giocato + BT
-                bp_play_home_attempts INTEGER,
-                bp_play_home_wins INTEGER,
-                bp_play_away_attempts INTEGER,
-                bp_play_away_wins INTEGER,
-
-                bt_neg_home INTEGER,
-                bt_pos_home INTEGER,
-                bt_exc_home INTEGER,
-                bt_half_home INTEGER,
-
-                bt_neg_away INTEGER,
-                bt_pos_away INTEGER,
-                bt_exc_away INTEGER,
-                bt_half_away INTEGER
+                so_neg_away_wins INTEGER
             )
         """))
 
@@ -671,34 +700,28 @@ def init_db():
             ("so_neg_home_wins", "INTEGER"),
             ("so_neg_away_attempts", "INTEGER"),
             ("so_neg_away_wins", "INTEGER"),
-
-            # NEW: Break giocato + BT
-            ("bp_play_home_attempts", "INTEGER"),
-            ("bp_play_home_wins", "INTEGER"),
-            ("bp_play_away_attempts", "INTEGER"),
-            ("bp_play_away_wins", "INTEGER"),
-
-            ("bt_neg_home", "INTEGER"),
-            ("bt_pos_home", "INTEGER"),
-            ("bt_exc_home", "INTEGER"),
-            ("bt_half_home", "INTEGER"),
-
-            ("bt_neg_away", "INTEGER"),
-            ("bt_pos_away", "INTEGER"),
-            ("bt_exc_away", "INTEGER"),
-            ("bt_half_away", "INTEGER"),
         ]
-
         for col, coltype in cols_to_add:
             try:
                 conn.execute(text(f"ALTER TABLE matches ADD COLUMN {col} {coltype}"))
             except Exception:
                 pass
 
+        # --- roster (ruoli giocatori) ---
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS roster (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                season TEXT,
+                team_raw TEXT,
+                team_norm TEXT,
+                jersey_number INTEGER,
+                player_name TEXT,
+                role TEXT,
+                created_at TEXT,
+                UNIQUE(season, team_norm, jersey_number)
+            )
+        """))
 
-# =========================
-# UI: IMPORT + DELETE
-# =========================
 def render_import(admin_mode: bool):
     st.header("Import multiplo DVW (settimana)")
 
@@ -2646,6 +2669,784 @@ def render_break_team():
 
 
 # =========================
+# UI: GRAFICI 4 QUADRANTI
+# =========================
+def render_grafici_4_quadranti():
+    st.header("GRAFICI 4 Quadranti")
+
+    with engine.begin() as conn:
+        bounds = conn.execute(text("""
+            SELECT MIN(round_number) AS min_r, MAX(round_number) AS max_r
+            FROM matches
+            WHERE round_number IS NOT NULL
+        """)).mappings().first()
+
+    min_r = int((bounds["min_r"] or 1))
+    max_r = int((bounds["max_r"] or 1))
+
+    c1, c2 = st.columns(2)
+    with c1:
+        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="q_from")
+    with c2:
+        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="q_to")
+
+    if from_round > to_round:
+        st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
+        st.stop()
+
+    x_options = [
+        "Side Out TOTALE",
+        "Side Out SPIN",
+        "Side Out FLOAT",
+        "Side Out DIRETTO",
+        "Side Out GIOCATO",
+        "Side Out con RICE BUONA",
+        "Side Out con RICE ESCALAMATIVA",
+        "Side Out con RICE NEGATIVA",
+        "Ricezione Errore e ½ punto",
+    ]
+    y_options = [
+        "BREAK TOTALE",
+        "BREAK GIOCATO",
+        "BREAK con BT. NEGATIVA",
+        "BREAK con BT. ESCLAMATIVA",
+        "BREAK con BT. POSITIVA",
+        "BT Punto e Bt ½ punto",
+        "BT errore",
+    ]
+
+    cx, cy = st.columns(2)
+    with cx:
+        x_metric = st.selectbox("Ascisse (X)", x_options, index=0)
+    with cy:
+        y_metric = st.selectbox("Ordinate (Y)", y_options, index=0)
+
+    with engine.begin() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT
+                    team_a, team_b, scout_text,
+                    COALESCE(so_home_attempts,0) AS so_home_attempts,
+                    COALESCE(so_home_wins,0)     AS so_home_wins,
+                    COALESCE(so_away_attempts,0) AS so_away_attempts,
+                    COALESCE(so_away_wins,0)     AS so_away_wins,
+
+                    COALESCE(so_spin_home_attempts,0) AS so_spin_home_attempts,
+                    COALESCE(so_spin_home_wins,0)     AS so_spin_home_wins,
+                    COALESCE(so_spin_away_attempts,0) AS so_spin_away_attempts,
+                    COALESCE(so_spin_away_wins,0)     AS so_spin_away_wins,
+
+                    COALESCE(so_float_home_attempts,0) AS so_float_home_attempts,
+                    COALESCE(so_float_home_wins,0)     AS so_float_home_wins,
+                    COALESCE(so_float_away_attempts,0) AS so_float_away_attempts,
+                    COALESCE(so_float_away_wins,0)     AS so_float_away_wins,
+
+                    COALESCE(so_dir_home_wins,0) AS so_dir_home_wins,
+                    COALESCE(so_dir_away_wins,0) AS so_dir_away_wins,
+
+                    COALESCE(so_play_home_attempts,0) AS so_play_home_attempts,
+                    COALESCE(so_play_home_wins,0)     AS so_play_home_wins,
+                    COALESCE(so_play_away_attempts,0) AS so_play_away_attempts,
+                    COALESCE(so_play_away_wins,0)     AS so_play_away_wins,
+
+                    COALESCE(so_good_home_attempts,0) AS so_good_home_attempts,
+                    COALESCE(so_good_home_wins,0)     AS so_good_home_wins,
+                    COALESCE(so_good_away_attempts,0) AS so_good_away_attempts,
+                    COALESCE(so_good_away_wins,0)     AS so_good_away_wins,
+
+                    COALESCE(so_exc_home_attempts,0) AS so_exc_home_attempts,
+                    COALESCE(so_exc_home_wins,0)     AS so_exc_home_wins,
+                    COALESCE(so_exc_away_attempts,0) AS so_exc_away_attempts,
+                    COALESCE(so_exc_away_wins,0)     AS so_exc_away_wins,
+
+                    COALESCE(so_neg_home_attempts,0) AS so_neg_home_attempts,
+                    COALESCE(so_neg_home_wins,0)     AS so_neg_home_wins,
+                    COALESCE(so_neg_away_attempts,0) AS so_neg_away_attempts,
+                    COALESCE(so_neg_away_wins,0)     AS so_neg_away_wins,
+
+                    COALESCE(bp_home_attempts,0) AS bp_home_attempts,
+                    COALESCE(bp_home_wins,0)     AS bp_home_wins,
+                    COALESCE(bp_away_attempts,0) AS bp_away_attempts,
+                    COALESCE(bp_away_wins,0)     AS bp_away_wins
+                FROM matches
+                WHERE round_number BETWEEN :from_round AND :to_round
+            """),
+            {"from_round": int(from_round), "to_round": int(to_round)}
+        ).mappings().all()
+
+    if not rows:
+        st.info("Nessun match nel range selezionato.")
+        return
+
+    def fix_team(name: str) -> str:
+        n = " ".join((name or "").split())
+        if n.lower().startswith("gas sales bluenergy p"):
+            return "Gas Sales Bluenergy Piacenza"
+        if "grottazzolina" in n.lower():
+            return "Yuasa Battery Grottazzolina"
+        return n
+
+    def safe_pct(num: float, den: float) -> float:
+        return (float(num) / float(den) * 100.0) if den else 0.0
+
+    agg = {}
+
+    def ensure(team: str):
+        if team not in agg:
+            agg[team] = {
+                "TEAM": team,
+                "so_att": 0, "so_win": 0,
+                "spin_att": 0, "spin_win": 0,
+                "float_att": 0, "float_win": 0,
+                "dir_win": 0,
+                "so_play_att": 0, "so_play_win": 0,
+                "so_good_att": 0, "so_good_win": 0,
+                "so_exc_att": 0, "so_exc_win": 0,
+                "so_neg_att": 0, "so_neg_win": 0,
+                "rec_tot": 0, "rec_errhalf": 0,
+                "bp_att": 0, "bp_win": 0,
+                "g_att": 0, "g_bp": 0,
+                "neg_att": 0, "neg_bp": 0,
+                "exc_att": 0, "exc_bp": 0,
+                "pos_att": 0, "pos_bp": 0,
+                "half_att": 0, "half_bp": 0,
+                "bt_hash": 0,
+                "bt_err": 0,
+                "tot_serves": 0,
+            }
+
+    def parse_scout(scout_text: str):
+        if not scout_text:
+            return [], []
+        lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+        scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+        rallies = []
+        current = []
+        for raw in scout_lines:
+            c = code6(raw)
+            if not c:
+                continue
+            if is_serve(c):
+                if current:
+                    rallies.append(current)
+                current = [c]
+                continue
+            if not current:
+                continue
+            current.append(c)
+            if is_home_point(c) or is_away_point(c):
+                rallies.append(current)
+                current = []
+        return rallies, scout_lines
+
+    for r in rows:
+        ta = fix_team(r.get("team_a") or "")
+        tb = fix_team(r.get("team_b") or "")
+        ensure(ta); ensure(tb)
+
+        # SideOut from DB
+        agg[ta]["so_att"] += int(r["so_home_attempts"]); agg[ta]["so_win"] += int(r["so_home_wins"])
+        agg[tb]["so_att"] += int(r["so_away_attempts"]); agg[tb]["so_win"] += int(r["so_away_wins"])
+
+        agg[ta]["spin_att"] += int(r["so_spin_home_attempts"]); agg[ta]["spin_win"] += int(r["so_spin_home_wins"])
+        agg[tb]["spin_att"] += int(r["so_spin_away_attempts"]); agg[tb]["spin_win"] += int(r["so_spin_away_wins"])
+
+        agg[ta]["float_att"] += int(r["so_float_home_attempts"]); agg[ta]["float_win"] += int(r["so_float_home_wins"])
+        agg[tb]["float_att"] += int(r["so_float_away_attempts"]); agg[tb]["float_win"] += int(r["so_float_away_wins"])
+
+        agg[ta]["dir_win"] += int(r["so_dir_home_wins"]); agg[tb]["dir_win"] += int(r["so_dir_away_wins"])
+
+        agg[ta]["so_play_att"] += int(r["so_play_home_attempts"]); agg[ta]["so_play_win"] += int(r["so_play_home_wins"])
+        agg[tb]["so_play_att"] += int(r["so_play_away_attempts"]); agg[tb]["so_play_win"] += int(r["so_play_away_wins"])
+
+        agg[ta]["so_good_att"] += int(r["so_good_home_attempts"]); agg[ta]["so_good_win"] += int(r["so_good_home_wins"])
+        agg[tb]["so_good_att"] += int(r["so_good_away_attempts"]); agg[tb]["so_good_win"] += int(r["so_good_away_wins"])
+
+        agg[ta]["so_exc_att"] += int(r["so_exc_home_attempts"]); agg[ta]["so_exc_win"] += int(r["so_exc_home_wins"])
+        agg[tb]["so_exc_att"] += int(r["so_exc_away_attempts"]); agg[tb]["so_exc_win"] += int(r["so_exc_away_wins"])
+
+        agg[ta]["so_neg_att"] += int(r["so_neg_home_attempts"]); agg[ta]["so_neg_win"] += int(r["so_neg_home_wins"])
+        agg[tb]["so_neg_att"] += int(r["so_neg_away_attempts"]); agg[tb]["so_neg_win"] += int(r["so_neg_away_wins"])
+
+        # Break total from DB
+        agg[ta]["bp_att"] += int(r["bp_home_attempts"]); agg[ta]["bp_win"] += int(r["bp_home_wins"])
+        agg[tb]["bp_att"] += int(r["bp_away_attempts"]); agg[tb]["bp_win"] += int(r["bp_away_wins"])
+
+        rallies, scout_lines = parse_scout(r.get("scout_text") or "")
+
+        # Reception error + half (/)
+        for raw in scout_lines:
+            c6 = code6(raw)
+            if not c6:
+                continue
+            if is_home_rece(c6):
+                agg[ta]["rec_tot"] += 1
+                if len(c6) >= 6 and c6[5] in ("=", "/"):
+                    agg[ta]["rec_errhalf"] += 1
+            elif is_away_rece(c6):
+                agg[tb]["rec_tot"] += 1
+                if len(c6) >= 6 and c6[5] in ("=", "/"):
+                    agg[tb]["rec_errhalf"] += 1
+
+        # Break giocato + segni + BT #/=
+        for rally in rallies:
+            first = rally[0]
+            if not is_serve(first):
+                continue
+
+            home_served = first.startswith("*")
+            away_served = first.startswith("a")
+
+            home_point = any(is_home_point(x) for x in rally)
+            away_point = any(is_away_point(x) for x in rally)
+
+            if home_served:
+                team = ta
+                bp = 1 if home_point else 0
+            elif away_served:
+                team = tb
+                bp = 1 if away_point else 0
+            else:
+                continue
+
+            sgn = first[5] if len(first) >= 6 else ""
+            agg[team]["tot_serves"] += 1
+
+            if sgn == "#":
+                agg[team]["bt_hash"] += 1
+            elif sgn == "=":
+                agg[team]["bt_err"] += 1
+
+            if sgn in ("-", "+", "!", "/"):
+                agg[team]["g_att"] += 1
+                agg[team]["g_bp"] += bp
+
+            if sgn == "-":
+                agg[team]["neg_att"] += 1; agg[team]["neg_bp"] += bp
+            elif sgn == "!":
+                agg[team]["exc_att"] += 1; agg[team]["exc_bp"] += bp
+            elif sgn == "+":
+                agg[team]["pos_att"] += 1; agg[team]["pos_bp"] += bp
+            elif sgn == "/":
+                agg[team]["half_att"] += 1; agg[team]["half_bp"] += bp
+
+    df = pd.DataFrame(list(agg.values()))
+    if df.empty:
+        st.info("Nessun dato disponibile.")
+        return
+
+    def compute_x(row):
+        if x_metric == "Side Out TOTALE":
+            return safe_pct(row["so_win"], row["so_att"])
+        if x_metric == "Side Out SPIN":
+            return safe_pct(row["spin_win"], row["spin_att"])
+        if x_metric == "Side Out FLOAT":
+            return safe_pct(row["float_win"], row["float_att"])
+        if x_metric == "Side Out DIRETTO":
+            return safe_pct(row["dir_win"], row["so_att"])
+        if x_metric == "Side Out GIOCATO":
+            return safe_pct(row["so_play_win"], row["so_play_att"])
+        if x_metric == "Side Out con RICE BUONA":
+            return safe_pct(row["so_good_win"], row["so_good_att"])
+        if x_metric == "Side Out con RICE ESCALAMATIVA":
+            return safe_pct(row["so_exc_win"], row["so_exc_att"])
+        if x_metric == "Side Out con RICE NEGATIVA":
+            return safe_pct(row["so_neg_win"], row["so_neg_att"])
+        if x_metric == "Ricezione Errore e ½ punto":
+            return safe_pct(row["rec_errhalf"], row["rec_tot"])
+        return 0.0
+
+    def compute_y(row):
+        if y_metric == "BREAK TOTALE":
+            return safe_pct(row["bp_win"], row["bp_att"])
+        if y_metric == "BREAK GIOCATO":
+            return safe_pct(row["g_bp"], row["g_att"])
+        if y_metric == "BREAK con BT. NEGATIVA":
+            return safe_pct(row["neg_bp"], row["neg_att"])
+        if y_metric == "BREAK con BT. ESCLAMATIVA":
+            return safe_pct(row["exc_bp"], row["exc_att"])
+        if y_metric == "BREAK con BT. POSITIVA":
+            return safe_pct(row["pos_bp"], row["pos_att"])
+        if y_metric == "BT Punto e Bt ½ punto":
+            # quota battute (# + /) su tot battute
+            return safe_pct((row["bt_hash"] + row["half_att"]), row["tot_serves"])
+        if y_metric == "BT errore":
+            return safe_pct(row["bt_err"], row["tot_serves"])
+        return 0.0
+
+    df["X"] = df.apply(compute_x, axis=1)
+    df["Y"] = df.apply(compute_y, axis=1)
+
+    import matplotlib.pyplot as plt
+
+    x_med = float(df["X"].median())
+    y_med = float(df["Y"].median())
+
+    fig, ax = plt.subplots(figsize=(8.5, 6.5), dpi=120)
+    ax.scatter(df["X"], df["Y"])
+
+    ax.axvline(x_med, linestyle="--")
+    ax.axhline(y_med, linestyle="--")
+
+    for _, row in df.iterrows():
+        ax.annotate(str(row["TEAM"]), (row["X"], row["Y"]), fontsize=8, xytext=(4, 4), textcoords="offset points")
+
+    ax.set_xlabel(f"{x_metric} (%)")
+    ax.set_ylabel(f"{y_metric} (%)")
+    ax.set_title("Grafico a 4 quadranti – Squadre (range giornate)")
+
+    st.pyplot(fig, clear_figure=True)
+    st.caption(f"Linee dei quadranti: mediana X = {x_med:.1f} | mediana Y = {y_med:.1f}")
+
+
+
+# =========================
+# UI: IMPORT RUOLI (ROSTER)
+# =========================
+def render_import_ruoli(admin_mode: bool):
+    st.header("Import Ruoli (Roster)")
+
+    if not admin_mode:
+        st.warning("Accesso riservato allo staff (admin).")
+        return
+
+    # --- Import XLSX ---
+    up = st.file_uploader("Carica file Ruoli (.xlsx)", type=["xlsx"])
+    st.info("Attese colonne: Team | Nome | Ruolo | N° (ID facoltativo).")
+
+    season = st.text_input("Stagione (obbligatoria, es. 2025-26)", value="2025-26")
+
+    if up is not None:
+        df = pd.read_excel(up)
+        df.columns = [str(c).strip() for c in df.columns]
+
+        required = ["Team", "Nome", "Ruolo", "N°"]
+        missing = [c for c in required if c not in df.columns]
+        if missing:
+            st.error(f"Mancano colonne: {missing}")
+            st.stop()
+
+        df = df.copy()
+        df["Team"] = df["Team"].astype(str).apply(fix_team_name)
+        df["team_norm"] = df["Team"].astype(str).apply(team_norm)
+        df["Nome"] = df["Nome"].astype(str).str.strip()
+        df["Ruolo"] = df["Ruolo"].astype(str).str.strip()
+        df["N°"] = pd.to_numeric(df["N°"], errors="coerce").astype("Int64")
+
+        df = df.dropna(subset=["N°", "team_norm"])
+        df["N°"] = df["N°"].astype(int)
+
+        st.subheader("Preview import")
+        st.dataframe(df[["Team", "Nome", "Ruolo", "N°"]].head(80), width="stretch", hide_index=True)
+
+        if st.button("Importa/aggiorna roster nel DB", key="btn_roster_import"):
+            sql = """
+            INSERT INTO roster (season, team_raw, team_norm, jersey_number, player_name, role, created_at)
+            VALUES (:season, :team_raw, :team_norm, :jersey_number, :player_name, :role, :created_at)
+            ON CONFLICT(season, team_norm, jersey_number) DO UPDATE SET
+                team_raw = excluded.team_raw,
+                player_name = excluded.player_name,
+                role = excluded.role,
+                created_at = excluded.created_at
+            """
+            now = datetime.now(timezone.utc).isoformat()
+            with engine.begin() as conn:
+                for _, r in df.iterrows():
+                    conn.execute(
+                        text(sql),
+                        {
+                            "season": season,
+                            "team_raw": str(r["Team"]),
+                            "team_norm": str(r["team_norm"]),
+                            "jersey_number": int(r["N°"]),
+                            "player_name": str(r["Nome"]),
+                            "role": str(r["Ruolo"]),
+                            "created_at": now,
+                        }
+                    )
+            st.success("Roster importato/aggiornato.")
+            st.rerun()
+
+    st.divider()
+    st.subheader("Correggi / Elimina record")
+
+    # --- Carica roster dal DB per la stagione ---
+    with engine.begin() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT id, season, team_raw, team_norm, jersey_number, player_name, role
+                FROM roster
+                WHERE season = :season
+                ORDER BY team_raw, jersey_number
+            """),
+            {"season": season}
+        ).mappings().all()
+
+    if not rows:
+        st.info("Nessun record in roster per questa stagione. Importa un file .xlsx sopra.")
+        return
+
+    df_db = pd.DataFrame(rows)
+
+    # ===== Selezione: Team -> Giocatore (con filtro nome) =====
+    teams = sorted(df_db["team_raw"].dropna().unique().tolist())
+    team_sel = st.selectbox("Team", teams, index=0, key="edit_team")
+
+    filtro_nome = st.text_input("Filtro nome (opzionale)", value="", key="edit_name_filter").strip().lower()
+
+    df_team = df_db[df_db["team_raw"] == team_sel].copy()
+    if filtro_nome:
+        df_team = df_team[df_team["player_name"].fillna("").str.lower().str.contains(filtro_nome)]
+
+    if df_team.empty:
+        st.warning("Nessun giocatore trovato con questi filtri.")
+        return
+
+    df_team = df_team.sort_values(by=["jersey_number", "player_name"], ascending=[True, True])
+
+    # opzioni: usiamo id come chiave stabile
+    options = df_team["id"].tolist()
+
+    def fmt_player(rid: int) -> str:
+        r = df_team[df_team["id"] == rid].iloc[0]
+        num = int(r["jersey_number"]) if pd.notna(r["jersey_number"]) else 0
+        name = str(r["player_name"] or "").strip()
+        role = str(r["role"] or "").strip()
+        return f"{num:02d} — {name}  ({role})"
+
+    player_id = st.selectbox("Giocatore", options, format_func=fmt_player, key="edit_player_id")
+
+    rec = df_team[df_team["id"] == player_id].iloc[0].to_dict()
+    st.caption(f"Record selezionato: id={rec['id']} | season={rec['season']} | team_norm={rec['team_norm']}")
+
+    # campi editabili
+    c3, c4 = st.columns(2)
+    with c3:
+        new_name = st.text_input("Nome giocatore", value=str(rec.get("player_name") or ""), key="edit_name")
+        new_team_raw = st.text_input("Team (testo)", value=str(rec.get("team_raw") or ""), key="edit_team_raw")
+    with c4:
+        role_options = ["Alzatore", "Opposto", "Centrale", "Schiacciatore", "Libero"]
+        current_role = str(rec.get("role") or "").strip()
+        if current_role and current_role not in role_options:
+            role_options = [current_role] + role_options
+        new_role = st.selectbox("Ruolo", role_options, index=role_options.index(current_role) if current_role in role_options else 0, key="edit_role")
+        new_num = st.number_input("Numero maglia", min_value=0, max_value=99, value=int(rec.get("jersey_number") or 0), step=1, key="edit_jersey")
+
+    c5, c6 = st.columns(2)
+    with c5:
+        if st.button("Salva correzione", key="btn_roster_save"):
+            team_raw_fixed = fix_team_name(new_team_raw)
+            team_norm_fixed = team_norm(team_raw_fixed)
+            now = datetime.now(timezone.utc).isoformat()
+
+            with engine.begin() as conn:
+                conn.execute(
+                    text("""
+                        UPDATE roster
+                        SET team_raw = :team_raw,
+                            team_norm = :team_norm,
+                            jersey_number = :jersey_number,
+                            player_name = :player_name,
+                            role = :role,
+                            created_at = :created_at
+                        WHERE id = :id
+                    """),
+                    {
+                        "team_raw": team_raw_fixed,
+                        "team_norm": team_norm_fixed,
+                        "jersey_number": int(new_num),
+                        "player_name": str(new_name).strip(),
+                        "role": str(new_role).strip(),
+                        "created_at": now,
+                        "id": int(rec["id"]),
+                    }
+                )
+            st.success("Record aggiornato.")
+            st.rerun()
+
+    with c6:
+        confirm_del = st.checkbox("Confermo: elimina questo record", value=False, key="confirm_del_roster")
+        if st.button("Elimina record", disabled=not confirm_del, key="btn_roster_delete"):
+            with engine.begin() as conn:
+                conn.execute(text("DELETE FROM roster WHERE id = :id"), {"id": int(rec["id"])})
+            st.success("Record eliminato.")
+            st.rerun()
+
+
+def render_sideout_players_by_role():
+    st.header("Indici Side Out - Giocatori (per ruolo)")
+
+    voce = st.radio(
+        "Seleziona indice",
+        ["SIDE OUT TOTALE", "SIDE OUT SPIN", "SIDE OUT FLOAT"],
+        index=0,
+        key="sop_voce",
+    )
+
+    # ===== RANGE GIORNATE =====
+    with engine.begin() as conn:
+        bounds = conn.execute(text("""
+            SELECT MIN(round_number) AS min_r, MAX(round_number) AS max_r
+            FROM matches
+            WHERE round_number IS NOT NULL
+        """)).mappings().first()
+
+    min_r = int(bounds["min_r"] or 1)
+    max_r = int(bounds["max_r"] or 1)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="sop_from")
+    with c2:
+        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="sop_to")
+
+    if from_round > to_round:
+        st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
+        st.stop()
+
+    # ===== RUOLI (multi) + MIN RICE =====
+    with engine.begin() as conn:
+        role_rows = conn.execute(text("""
+            SELECT DISTINCT role
+            FROM roster
+            WHERE role IS NOT NULL AND TRIM(role) <> ''
+            ORDER BY role
+        """)).mappings().all()
+    role_options = [r["role"] for r in role_rows] if role_rows else []
+
+    sel_roles = st.multiselect(
+        "Filtra per ruolo (selezione multipla)",
+        options=role_options,
+        default=role_options,
+        key="sop_roles",
+    )
+
+    min_recv = st.number_input(
+        "Numero minimo di ricezioni (sotto questo valore il giocatore non viene mostrato)",
+        min_value=0,
+        value=10,
+        step=1,
+        key="sop_minrecv",
+    )
+
+    st.info(
+        "Si precisa che il ranking rappresenta la percentuale di side out ottenuta durante la ricezione da parte del giocatore indicato. "
+        "Selezionando il titolo di ciascuna colonna, i nominativi saranno ordinati in base al parametro corrispondente."
+    )
+
+    # ===== MATCHES NEL RANGE =====
+    with engine.begin() as conn:
+        matches = conn.execute(text("""
+            SELECT team_a, team_b, scout_text
+            FROM matches
+            WHERE round_number BETWEEN :from_round AND :to_round
+        """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+    if not matches:
+        st.info("Nessun match nel range.")
+        return
+
+    # ===== ROSTER LOOKUP (team_norm + jersey -> name/role) =====
+    # NB: usiamo team_norm per ridurre varianti di nome squadra
+    def team_norm_key(name: str) -> str:
+        return norm(name)
+
+    with engine.begin() as conn:
+        roster = conn.execute(text("""
+            SELECT season, team_norm, jersey_number, player_name, role
+            FROM roster
+        """)).mappings().all()
+
+    roster_map = {}
+    for r in roster:
+        tn = (r.get("team_norm") or "").strip().lower()
+        jn = r.get("jersey_number")
+        if tn and jn is not None:
+            roster_map[(tn, int(jn))] = {
+                "player_name": (r.get("player_name") or "").strip(),
+                "role": (r.get("role") or "").strip(),
+            }
+
+    # ===== Parse rallies =====
+    def parse_rallies(scout_text: str):
+        if not scout_text:
+            return []
+        lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and str(ln).strip()]
+        rallies = []
+        cur = []
+        for raw in lines:
+            c = code6(raw)
+            if not c:
+                continue
+            if is_serve(c):
+                if cur:
+                    rallies.append(cur)
+                cur = [c]
+                continue
+            if not cur:
+                continue
+            cur.append(c)
+            if is_home_point(c) or is_away_point(c):
+                rallies.append(cur)
+                cur = []
+        if cur:
+            rallies.append(cur)
+        return rallies
+
+    def is_recv_code(c6: str, prefix: str) -> bool:
+        # ricezione = RQ o RM
+        return len(c6) >= 5 and c6[0] == prefix and c6[3:5] in ("RQ", "RM")
+
+    def recv_kind_ok(c6: str) -> bool:
+        # filtro indice: totale / spin / float
+        # Qui "SPIN" = ricezioni RQ ; "FLOAT" = ricezioni RM (non battuta SQ/SM)
+        if voce == "SIDE OUT TOTALE":
+            return True
+        if voce == "SIDE OUT SPIN":
+            return len(c6) >= 5 and c6[3:5] == "RQ"
+        if voce == "SIDE OUT FLOAT":
+            return len(c6) >= 5 and c6[3:5] == "RM"
+        return True
+        if voce == "SIDE OUT SPIN":
+            return is_home_spin(c6) or is_away_spin(c6)
+        if voce == "SIDE OUT FLOAT":
+            return is_home_float(c6) or is_away_float(c6)
+        return True
+
+    # ===== Accumulator per player =====
+    # key = (team_norm, jersey_number)
+    acc = {}
+
+    def bump(team_name: str, jersey: int, win: bool, direct: bool):
+        tn = team_norm_key(team_name)
+        k = (tn, int(jersey))
+        if k not in acc:
+            acc[k] = {"team": team_name, "jersey": int(jersey), "recv_att": 0, "so_win": 0, "so_dir": 0}
+        acc[k]["recv_att"] += 1
+        if win:
+            acc[k]["so_win"] += 1
+        if direct:
+            acc[k]["so_dir"] += 1
+
+    # ===== Scan matches =====
+    for m in matches:
+        team_a = m.get("team_a") or ""
+        team_b = m.get("team_b") or ""
+        rallies = parse_rallies(m.get("scout_text") or "")
+
+        for r in rallies:
+            # ricezione home/away (c'è una sola ricezione per rally, prendiamo la prima che troviamo)
+            home_recv = next((x for x in r if is_recv_code(x, "*") and recv_kind_ok(x)), None)
+            away_recv = next((x for x in r if is_recv_code(x, "a") and recv_kind_ok(x)), None)
+
+            home_point = any(is_home_point(x) for x in r)
+            away_point = any(is_away_point(x) for x in r)
+
+            if home_recv:
+                # jersey number 2 cifre pos 1-2
+                try:
+                    jersey = int(home_recv[1:3])
+                except Exception:
+                    continue
+                direct = bool(home_point and first_attack_after_reception_is_winner(r, "*"))
+                bump(team_a, jersey, win=home_point, direct=direct)
+
+            if away_recv:
+                try:
+                    jersey = int(away_recv[1:3])
+                except Exception:
+                    continue
+                direct = bool(away_point and first_attack_after_reception_is_winner(r, "a"))
+                bump(team_b, jersey, win=away_point, direct=direct)
+
+    if not acc:
+        st.info("Nessuna ricezione trovata nel range selezionato.")
+        return
+
+    # ===== Build dataframe =====
+    rows = []
+    for (tn, jersey), v in acc.items():
+        info = roster_map.get((tn, jersey), {"player_name": f"N°{jersey:02d}", "role": ""})
+        rows.append({
+            "Nome giocatore": (info.get("player_name") or f"N°{jersey:02d}").strip(),
+            "Ruolo": (info.get("role") or "").strip(),
+            "Squadra": v["team"],
+            "recv_att": int(v["recv_att"]),
+            "so_win": int(v["so_win"]),
+            "so_dir": int(v["so_dir"]),
+        })
+
+    df = pd.DataFrame(rows)
+
+    # filtro ruoli
+    if sel_roles:
+        df = df[df["Ruolo"].isin(sel_roles)].copy()
+
+    # filtro minimo ricezioni
+    df = df[df["recv_att"] >= int(min_recv)].copy()
+
+    if df.empty:
+        st.info("Nessun giocatore soddisfa i filtri selezionati.")
+        return
+
+    # Tot ricezioni di squadra (per % Ply/Team)
+    team_tot = df.groupby("Squadra", as_index=False)["recv_att"].sum().rename(columns={"recv_att": "team_recv"})
+    df = df.merge(team_tot, on="Squadra", how="left")
+
+    df["% Ply/Team"] = df.apply(lambda r: pct(int(r["recv_att"]), int(r["team_recv"])), axis=1)
+    df["% di SO"] = df.apply(lambda r: pct(int(r["so_win"]), int(r["recv_att"])), axis=1)
+    df["% di SO-d"] = df.apply(lambda r: pct(int(r["so_dir"]), int(r["recv_att"])), axis=1)
+
+    # Dedup robusto: stessa persona può comparire due volte per errori roster -> raggruppo per Nome+Squadra
+    df = df.groupby(["Nome giocatore", "Squadra"], as_index=False).agg({
+        "Ruolo": "first",
+        "recv_att": "sum",
+        "so_win": "sum",
+        "so_dir": "sum",
+        "team_recv": "first",
+    })
+    df["% Ply/Team"] = df.apply(lambda r: pct(int(r["recv_att"]), int(r["team_recv"])), axis=1)
+    df["% di SO"] = df.apply(lambda r: pct(int(r["so_win"]), int(r["recv_att"])), axis=1)
+    df["% di SO-d"] = df.apply(lambda r: pct(int(r["so_dir"]), int(r["recv_att"])), axis=1)
+
+    # Ranking fisso su % di SO (poi n ricezioni)
+    df_rank = df.sort_values(by=["% di SO", "recv_att"], ascending=[False, False]).reset_index(drop=True)
+    df_rank.insert(0, "Ranking", range(1, len(df_rank) + 1))
+
+    out = df_rank[[
+        "Ranking",
+        "Nome giocatore",
+        "Squadra",
+        "recv_att",
+        "% Ply/Team",
+        "% di SO",
+        "% di SO-d",
+    ]].rename(columns={"recv_att": "N° ricezioni fatte"}).copy()
+
+    # ===== Styling =====
+    def highlight_perugia(row):
+        return ["background-color: #fff3cd; font-weight: 800;" if "perugia" in str(row["Squadra"]).lower() else "" for _ in row]
+
+    styled = (
+        out.style
+          .apply(highlight_perugia, axis=1)
+          .format({
+              "Ranking": "{:.0f}",
+              "N° ricezioni fatte": "{:.0f}",
+              "% Ply/Team": "{:.1f}",
+              "% di SO": "{:.1f}",
+              "% di SO-d": "{:.1f}",
+          })
+          .set_table_styles([
+              {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "10px 12px")]},
+              {"selector": "td", "props": [("font-size", "21px"), ("padding", "10px 12px")]},
+          ])
+          .set_properties(subset=["% di SO"], **{"font-weight": "900", "background-color": "#e8f5e9"})
+    )
+
+    st.dataframe(styled, width="stretch", hide_index=True)
+
+# =========================
 # MAIN
 # =========================
 init_db()
@@ -2656,8 +3457,10 @@ page = st.sidebar.radio(
     [
         "Home",
         "Import DVW (solo staff)",
+        "Import Ruoli (solo staff)",
         "Indici Side Out - Squadre",
         "Indici Fase Break – Squadre",
+        "GRAFICI 4 Quadranti",
         "Indici Side Out - Giocatori (per ruolo)",
         "Indici Break Point - Giocatori (per ruolo)",
         "Classifiche Fondamentali - Squadre",
@@ -2675,13 +3478,27 @@ if page == "Home":
 elif page == "Import DVW (solo staff)":
     render_import(ADMIN_MODE)
 
+elif page == "Import Ruoli (solo staff)":
+    render_import_ruoli(ADMIN_MODE)
+
 elif page == "Indici Side Out - Squadre":
     render_sideout_team()
 
 elif page == "Indici Fase Break – Squadre":
     render_break_team()
 
-else:
+elif page == "GRAFICI 4 Quadranti":
+    render_grafici_4_quadranti()
+
+
+elif page == "Indici Side Out - Giocatori (per ruolo)":
+    render_sideout_players_by_role()
+
+elif page == "Indici Break Point - Giocatori (per ruolo)":
     st.header(page)
     st.info("In costruzione.")
 
+
+else:
+    st.header(page)
+    st.info("In costruzione.")
