@@ -3415,13 +3415,34 @@ def render_sideout_players_by_role():
 
     out = df_rank[[
         "Ranking",
+        "Team",
+        "sets_total",
+        "Punti Team/Set",
         "Nome giocatore",
-        "Squadra",
-        "recv_att",
+        "Set giocati",
+        "Punti/Set Giocatore",
         "% Ply/Team",
-        "% di SO",
-        "% di SO-d",
-    ]].rename(columns={"recv_att": "N° ricezioni fatte"}).copy()
+        "pts_serve",
+        "pts_attack",
+        "pts_block",
+    ]].rename(columns={
+        "Team": "Nome Team",
+        "sets_total": "Set giocati dal Team",
+        "Punti Team/Set": "Punti per Set (Team)",
+        "Set giocati": "Set giocati dal Giocatore",
+        "Punti/Set Giocatore": "Punti per Set (Giocatore)",
+        "% Ply/Team": "% Ply/Team",
+        "pts_serve": "Punti in Battuta",
+        "pts_attack": "Punti in Attacco",
+        "pts_block": "Punti a Muro",
+    }).copy()
+
+    # Trasforma i punti per fondamentale in "per set giocati dal giocatore"
+    if "Set giocati dal Giocatore" in out.columns and out["Set giocati dal Giocatore"].notna().any():
+        denom = out["Set giocati dal Giocatore"].replace(0, pd.NA).astype("float")
+        for col in ["Punti in Battuta", "Punti in Attacco", "Punti a Muro"]:
+            if col in out.columns:
+                out[col] = (out[col].astype("float") / denom).fillna(0.0).round(1)
 
     # ===== Styling =====
     def highlight_perugia(row):
@@ -4409,10 +4430,2384 @@ def render_fondamentali_team():
 
     elif voce == "Muro":
         st.subheader("Muro")
-        st.write("👉 Prossimo step: ranking squadre per muri punto, touch utili, errori.")
+
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            opt_neg = st.checkbox("Muro dopo Battuta negativa", value=True, key="fund_blk_neg")
+        with c2:
+            opt_exc = st.checkbox("Muro dopo Battuta Esclamativa", value=True, key="fund_blk_exc")
+        with c3:
+            opt_pos = st.checkbox("Muro dopo Battuta Positiva", value=True, key="fund_blk_pos")
+        with c4:
+            opt_tr  = st.checkbox("Muro di transizione", value=True, key="fund_blk_tr")
+
+        # Regola: se nessuna spuntata -> tutte (fallback)
+        if not (opt_neg or opt_exc or opt_pos or opt_tr):
+            opt_neg = opt_exc = opt_pos = opt_tr = True
+
+        st.caption(
+            "L’efficienza del muro è calcolata in questo modo: "
+            "(Vincenti*2 + Positivi*0,7 + Negativi*0,07 + Coperte*0,15 - Invasioni - ManiOut) / Tot * 100."
+        )
+
+        # ===== MATCHES NEL RANGE =====
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE round_number BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun match nel range selezionato.")
+            return
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def serve_sign(c6: str) -> str:
+            return c6[5] if c6 and len(c6) >= 6 else ""
+
+        def is_attack(c6: str) -> bool:
+            return len(c6) >= 6 and c6[3] == "A" and c6[0] in ("*", "a")
+
+        def first_attack_idx(rally: list[str], attacker_prefix: str) -> int | None:
+            for i in range(1, len(rally)):
+                c = rally[i]
+                if is_attack(c) and c[0] == attacker_prefix:
+                    return i
+            return None
+
+        def first_block_after_idx(rally: list[str], start_i: int):
+            for j in range(start_i + 1, len(rally)):
+                c = rally[j]
+                if len(c) >= 6 and c[3] == "B" and c[0] in ("*", "a"):
+                    return j, c
+            return None
+
+        agg = {}
+        def ensure(team: str):
+            if team not in agg:
+                agg[team] = {
+                    "Team": team,
+                    "Tot": 0,
+                    "Perf": 0,
+                    "Pos": 0,
+                    "Neg": 0,
+                    "Cop": 0,
+                    "Inv": 0,
+                    "Err": 0,
+                }
+            return agg[team]
+
+        for r in rows:
+            ta = fix_team_name(r.get("team_a") or "")
+            tb = fix_team_name(r.get("team_b") or "")
+
+            rallies = parse_rallies(r.get("scout_text") or "")
+            for rally in rallies:
+                if not rally or not is_serve(rally[0]):
+                    continue
+
+                first = rally[0]
+                sgn = serve_sign(first)
+
+                if first.startswith("*"):
+                    recv_team = tb
+                    recv_prefix = "a"
+                    blk_team = ta
+                    blk_prefix = "*"
+                elif first.startswith("a"):
+                    recv_team = ta
+                    recv_prefix = "*"
+                    blk_team = tb
+                    blk_prefix = "a"
+                else:
+                    continue
+
+                fa = first_attack_idx(rally, recv_prefix)
+                if fa is None:
+                    continue
+
+                fb = first_block_after_idx(rally, fa)
+                is_after_first_attack = False
+                block_code = None
+                if fb:
+                    _, bc = fb
+                    if bc[0] == blk_prefix:
+                        is_after_first_attack = True
+                        block_code = bc
+
+                # Transizione: tutti i tocchi muro della squadra al muro che NON sono quel "primo muro dopo primo attacco"
+                if opt_tr:
+                    for c in rally[1:]:
+                        if len(c) >= 6 and c[3] == "B" and c[0] == blk_prefix:
+                            if is_after_first_attack and block_code is not None and c == block_code:
+                                continue
+                            rec = ensure(blk_team)
+                            rec["Tot"] += 1
+                            sign = c[5]
+                            if sign == "#":
+                                rec["Perf"] += 1
+                            elif sign == "+":
+                                rec["Pos"] += 1
+                            elif sign == "-":
+                                rec["Neg"] += 1
+                            elif sign == "!":
+                                rec["Cop"] += 1
+                            elif sign == "/":
+                                rec["Inv"] += 1
+                            elif sign == "=":
+                                rec["Err"] += 1
+
+                # Dopo primo attacco, filtrato per segno battuta
+                if is_after_first_attack and block_code is not None:
+                    if (sgn == "-" and opt_neg) or (sgn == "!" and opt_exc) or (sgn == "+" and opt_pos):
+                        rec = ensure(blk_team)
+                        rec["Tot"] += 1
+                        sign = block_code[5]
+                        if sign == "#":
+                            rec["Perf"] += 1
+                        elif sign == "+":
+                            rec["Pos"] += 1
+                        elif sign == "-":
+                            rec["Neg"] += 1
+                        elif sign == "!":
+                            rec["Cop"] += 1
+                        elif sign == "/":
+                            rec["Inv"] += 1
+                        elif sign == "=":
+                            rec["Err"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty or df["Tot"].sum() == 0:
+            st.info("Nessun muro trovato per i filtri selezionati.")
+            return
+
+        def pct(num, den):
+            return (100.0 * num / den) if den else 0.0
+
+        df["Perf%"] = df.apply(lambda r: pct(r["Perf"], r["Tot"]), axis=1)
+        df["Pos%"]  = df.apply(lambda r: pct(r["Pos"],  r["Tot"]), axis=1)
+        df["Neg%"]  = df.apply(lambda r: pct(r["Neg"],  r["Tot"]), axis=1)
+        df["Cop%"]  = df.apply(lambda r: pct(r["Cop"],  r["Tot"]), axis=1)
+        df["Inv%"]  = df.apply(lambda r: pct(r["Inv"],  r["Tot"]), axis=1)
+        df["Err%"]  = df.apply(lambda r: pct(r["Err"],  r["Tot"]), axis=1)
+
+        df["EFF"] = df.apply(
+            lambda r: (
+                (r["Perf"] * 2.0 + r["Pos"] * 0.7 + r["Neg"] * 0.07 + r["Cop"] * 0.15 - r["Inv"] - r["Err"])
+                / r["Tot"]
+                * 100.0
+            ) if r["Tot"] else 0.0,
+            axis=1
+        )
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        out = df[[
+            "Rank", "Team", "Tot", "EFF",
+            "Perf%", "Pos%", "Neg%", "Cop%", "Inv%", "Err%"
+        ]].rename(columns={
+            "Rank": "Rank",
+            "Team": "Team",
+            "Tot": "Tot",
+            "EFF": "Eff",
+            "Perf%": "Perf",
+            "Pos%": "Pos",
+            "Neg%": "Neg",
+            "Cop%": "Cop",
+            "Inv%": "Inv",
+            "Err%": "Err",
+        }).copy()
+
+        def highlight_perugia(row):
+            is_perugia = "perugia" in str(row["Team"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["Eff"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Rank": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "Eff": "{:.1f}",
+                  "Perf": "{:.1f}",
+                  "Pos": "{:.1f}",
+                  "Neg": "{:.1f}",
+                  "Cop": "{:.1f}",
+                  "Inv": "{:.1f}",
+                  "Err": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+
+        st.dataframe(styled, width="stretch", hide_index=True)
+
+
     elif voce == "Difesa":
         st.subheader("Difesa")
         st.write("👉 Prossimo step: ranking squadre per difese positive e conversione a break point.")
+
+
+# =========================
+# UI: CLASSIFICHE FONDAMENTALI - GIOCATORI (per ruolo)
+# =========================
+def render_fondamentali_players():
+    st.header("Classifiche Fondamentali - Giocatori (per ruolo)")
+
+    fondamentale = st.radio(
+        "Seleziona fondamentale",
+        ["Battuta", "Ricezione", "Attacco", "Muro", "Difesa"],
+        index=0,
+        key="fund_pl_fond",
+    )
+
+    # ===== RANGE GIORNATE =====
+    with engine.begin() as conn:
+        bounds = conn.execute(text("""
+            SELECT MIN(round_number) AS min_r, MAX(round_number) AS max_r
+            FROM matches
+            WHERE round_number IS NOT NULL
+        """)).mappings().first()
+
+    min_r = int((bounds["min_r"] or 1))
+    max_r = int((bounds["max_r"] or 1))
+
+    c1, c2 = st.columns(2)
+    with c1:
+        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="fund_pl_from")
+    with c2:
+        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="fund_pl_to")
+
+    if from_round > to_round:
+        st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
+        st.stop()
+
+    # ===== ROSTER / RUOLI =====
+    season = st.text_input("Stagione roster", value="2025-26", key="fund_pl_season")
+
+    with engine.begin() as conn:
+        roster_rows = conn.execute(text("""
+            SELECT team_raw, team_norm, jersey_number, player_name, role, created_at
+            FROM roster
+            WHERE season = :season
+        """), {"season": season}).mappings().all()
+
+    if not roster_rows:
+        st.warning("Roster vuoto per questa stagione: importa prima i ruoli (pagina Import Ruoli).")
+        return
+
+    df_roster = pd.DataFrame(roster_rows)
+    df_roster["created_at"] = df_roster["created_at"].fillna("")
+    df_roster = (
+        df_roster.sort_values(by=["team_norm", "jersey_number", "created_at"])
+                 .drop_duplicates(subset=["team_norm", "jersey_number"], keep="last")
+    )
+
+    roles_all = sorted(df_roster["role"].dropna().unique().tolist())
+    roles_sel = st.multiselect(
+        "Filtra per ruolo (selezione multipla)",
+        options=roles_all,
+        default=roles_all,
+        key="fund_pl_roles",
+    )
+
+    min_hits = st.number_input(
+        "Numero minimo di colpi (sotto questo valore il giocatore non viene mostrato)",
+        min_value=0,
+        max_value=1000,
+        value=10,
+        step=1,
+        key="fund_pl_min_hits",
+    )
+
+    # ===== MATCHES NEL RANGE =====
+    with engine.begin() as conn:
+        matches = conn.execute(text("""
+            SELECT team_a, team_b, scout_text
+            FROM matches
+            WHERE round_number BETWEEN :from_round AND :to_round
+        """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+    if not matches:
+        st.info("Nessun match nel range selezionato.")
+        return
+
+    def pct(num, den):
+        return (100.0 * num / den) if den else 0.0
+
+    def highlight_perugia(row):
+        is_perugia = "perugia" in str(row.get("Squadra", "")).lower()
+        style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+        return [style] * len(row)
+
+    # =======================
+    # BATTUTA
+    # =======================
+    if fondamentale == "Battuta":
+        cb1, cb2 = st.columns(2)
+        with cb1:
+            use_spin = st.checkbox("Battuta SPIN", value=True, key="fund_pl_srv_spin")
+        with cb2:
+            use_float = st.checkbox("Battuta FLOAT", value=True, key="fund_pl_srv_float")
+
+        if not use_spin and not use_float:
+            use_spin = True
+            use_float = True
+
+        allowed_types = set()
+        if use_spin:
+            allowed_types.add("SQ")
+        if use_float:
+            allowed_types.add("SM")
+
+        st.caption(
+            "L’efficienza della battuta è calcolata in questo modo: "
+            "(Punti + ½ P.*0,8 + Pos.*0,45 + Esc*0,3 + Neg*0,15 – Err) / Tot * 100. "
+            "Dove i coefficienti sono le % medie di B.Point con quel tipo di ricezione del campionato."
+        )
+
+        agg = {}
+
+        def ensure(team_raw: str, num: int):
+            tnorm = team_norm(team_raw)
+            key = (tnorm, num)
+            if key not in agg:
+                agg[key] = {
+                    "team_norm": tnorm,
+                    "Squadra": team_raw,
+                    "N°": num,
+                    "Tot": 0,
+                    "Punti": 0,
+                    "Half": 0,
+                    "Err": 0,
+                    "Pos": 0,
+                    "Esc": 0,
+                    "Neg": 0,
+                }
+            return agg[key]
+
+        def serve_type(c6: str) -> str:
+            return c6[3:5] if c6 and len(c6) >= 5 else ""
+
+        def serve_sign_local(c6: str) -> str:
+            return c6[5] if c6 and len(c6) >= 6 else ""
+
+        for m in matches:
+            ta = fix_team_name(m.get("team_a") or "")
+            tb = fix_team_name(m.get("team_b") or "")
+            scout_text = m.get("scout_text") or ""
+            if not scout_text:
+                continue
+
+            for raw in str(scout_text).splitlines():
+                raw = raw.strip()
+                if not raw or raw[0] not in ("*", "a"):
+                    continue
+                c6 = code6(raw)
+                if not c6 or not is_serve(c6):
+                    continue
+
+                stype = serve_type(c6)
+                if stype not in allowed_types:
+                    continue
+
+                team = ta if c6[0] == "*" else tb
+
+                num = serve_player_number(c6)
+                if num is None:
+                    continue
+
+                rec = ensure(team, num)
+                rec["Tot"] += 1
+
+                sgn = serve_sign_local(c6)
+                if sgn == "#":
+                    rec["Punti"] += 1
+                elif sgn == "/":
+                    rec["Half"] += 1
+                elif sgn == "=":
+                    rec["Err"] += 1
+                elif sgn == "+":
+                    rec["Pos"] += 1
+                elif sgn == "!":
+                    rec["Esc"] += 1
+                elif sgn == "-":
+                    rec["Neg"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessuna battuta trovata per i filtri selezionati.")
+            return
+
+        df = df.merge(
+            df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+            left_on=["team_norm", "N°"],
+            right_on=["team_norm", "jersey_number"],
+            how="left",
+        ).drop(columns=["jersey_number"])
+
+        df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+        df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
+        df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
+        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df = df.drop(columns=["team_raw"])
+
+        if roles_sel:
+            df = df[df["Ruolo"].isin(roles_sel)].copy()
+
+        df = df[df["Tot"] >= int(min_hits)].copy()
+        if df.empty:
+            st.info("Nessun giocatore supera il filtro del numero minimo di colpi.")
+            return
+
+        df["Punti%"] = df.apply(lambda r: pct(r["Punti"], r["Tot"]), axis=1)
+        df["Half%"]  = df.apply(lambda r: pct(r["Half"],  r["Tot"]), axis=1)
+        df["Err%"]   = df.apply(lambda r: pct(r["Err"],   r["Tot"]), axis=1)
+        df["Pos%"]   = df.apply(lambda r: pct(r["Pos"],   r["Tot"]), axis=1)
+        df["Esc%"]   = df.apply(lambda r: pct(r["Esc"],   r["Tot"]), axis=1)
+        df["Neg%"]   = df.apply(lambda r: pct(r["Neg"],   r["Tot"]), axis=1)
+
+        df["EFF"] = df.apply(
+            lambda r: (
+                (r["Punti"] + r["Half"] * 0.8 + r["Pos"] * 0.45 + r["Esc"] * 0.3 + r["Neg"] * 0.15 - r["Err"])
+                / r["Tot"]
+                * 100.0
+            ) if r["Tot"] else 0.0,
+            axis=1
+        )
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        out = df[[
+            "Rank", "Nome giocatore", "Squadra", "Tot", "EFF",
+            "Punti%", "Half%", "Err%", "Pos%", "Esc%", "Neg%"
+        ]].rename(columns={
+            "Tot": "Tot",
+            "EFF": "EFF",
+            "Punti%": "Punti",
+            "Half%": "½ P",
+            "Err%": "Err.",
+            "Pos%": "Pos",
+            "Esc%": "Esc",
+            "Neg%": "Neg",
+        }).copy()
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["EFF"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Rank": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "EFF": "{:.1f}",
+                  "Punti": "{:.1f}",
+                  "½ P": "{:.1f}",
+                  "Err.": "{:.1f}",
+                  "Pos": "{:.1f}",
+                  "Esc": "{:.1f}",
+                  "Neg": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+        return
+
+    # =======================
+    # RICEZIONE
+    # =======================
+    if fondamentale == "Ricezione":
+        cb1, cb2 = st.columns(2)
+        with cb1:
+            use_spin = st.checkbox("Ricezione SPIN", value=True, key="fund_pl_rec_spin")
+        with cb2:
+            use_float = st.checkbox("Ricezione FLOAT", value=True, key="fund_pl_rec_float")
+
+        if not use_spin and not use_float:
+            use_spin = True
+            use_float = True
+
+        allowed_types = set()
+        if use_spin:
+            allowed_types.add("SQ")
+        if use_float:
+            allowed_types.add("SM")
+
+        st.caption(
+            "L’efficienza della ricezione è calcolata in questo modo: "
+            "(Ok*0,77 + Escl*0,55 + Neg*0,38 – Mez*0,8 - Err) / Tot * 100. "
+            "Dove i coefficienti sono le % medie di Side Out con quel tipo di ricezione del campionato."
+        )
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def serve_type(first: str) -> str:
+            return first[3:5] if first and len(first) >= 5 else ""
+
+        def first_reception(rally: list[str], prefix: str):
+            for c in rally:
+                if len(c) >= 6 and c[0] == prefix and c[3:5] in ("RQ", "RM"):
+                    return c
+            return None
+
+        agg = {}
+
+        def ensure(team_raw: str, num: int):
+            tnorm = team_norm(team_raw)
+            key = (tnorm, num)
+            if key not in agg:
+                agg[key] = {
+                    "team_norm": tnorm,
+                    "Squadra": team_raw,
+                    "N°": num,
+                    "Tot": 0,
+                    "Perf": 0,
+                    "Pos": 0,
+                    "Escl": 0,
+                    "Neg": 0,
+                    "Mez": 0,
+                    "Err": 0,
+                }
+            return agg[key]
+
+        for m in matches:
+            ta = fix_team_name(m.get("team_a") or "")
+            tb = fix_team_name(m.get("team_b") or "")
+            rallies = parse_rallies(m.get("scout_text") or "")
+            for rally in rallies:
+                if not rally or not is_serve(rally[0]):
+                    continue
+                first = rally[0]
+                stype = serve_type(first)
+                if stype not in allowed_types:
+                    continue
+
+                if first.startswith("*"):
+                    recv_team = tb
+                    recv_prefix = "a"
+                else:
+                    recv_team = ta
+                    recv_prefix = "*"
+
+                rece = first_reception(rally, recv_prefix)
+                if not rece:
+                    continue
+
+                num = serve_player_number(rece)
+                if num is None:
+                    continue
+
+                sign = rece[5]
+                rec = ensure(recv_team, num)
+                rec["Tot"] += 1
+                if sign == "#":
+                    rec["Perf"] += 1
+                elif sign == "+":
+                    rec["Pos"] += 1
+                elif sign == "!":
+                    rec["Escl"] += 1
+                elif sign == "-":
+                    rec["Neg"] += 1
+                elif sign == "/":
+                    rec["Mez"] += 1
+                elif sign == "=":
+                    rec["Err"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessuna ricezione trovata per i filtri selezionati.")
+            return
+
+        df = df.merge(
+            df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+            left_on=["team_norm", "N°"],
+            right_on=["team_norm", "jersey_number"],
+            how="left",
+        ).drop(columns=["jersey_number"])
+
+        df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+        df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
+        df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
+        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df = df.drop(columns=["team_raw"])
+
+        if roles_sel:
+            df = df[df["Ruolo"].isin(roles_sel)].copy()
+
+        df = df[df["Tot"] >= int(min_hits)].copy()
+        if df.empty:
+            st.info("Nessun giocatore supera il filtro del numero minimo di colpi.")
+            return
+
+        df["Perf%"] = df.apply(lambda r: pct(r["Perf"], r["Tot"]), axis=1)
+        df["Pos%"]  = df.apply(lambda r: pct(r["Pos"],  r["Tot"]), axis=1)
+        df["OK%"]   = df["Perf%"] + df["Pos%"]
+        df["Escl%"] = df.apply(lambda r: pct(r["Escl"], r["Tot"]), axis=1)
+        df["Neg%"]  = df.apply(lambda r: pct(r["Neg"],  r["Tot"]), axis=1)
+        df["Mez%"]  = df.apply(lambda r: pct(r["Mez"],  r["Tot"]), axis=1)
+        df["Err%"]  = df.apply(lambda r: pct(r["Err"],  r["Tot"]), axis=1)
+
+        ok_cnt = df["Perf"] + df["Pos"]
+        df["EFF"] = ((ok_cnt * 0.77 + df["Escl"] * 0.55 + df["Neg"] * 0.38 - df["Mez"] * 0.8 - df["Err"]) / df["Tot"]) * 100.0
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        out = df[[
+            "Rank", "Nome giocatore", "Squadra", "Tot", "EFF",
+            "Perf%", "Pos%", "OK%", "Escl%", "Neg%", "Mez%", "Err%"
+        ]].rename(columns={
+            "Tot": "Tot",
+            "EFF": "Eff",
+            "Perf%": "Perf",
+            "Pos%": "Pos",
+            "OK%": "OK",
+            "Escl%": "Escl",
+            "Neg%": "Neg",
+            "Mez%": "Mez",
+            "Err%": "Err",
+        }).copy()
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["Eff"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Rank": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "Eff": "{:.1f}",
+                  "Perf": "{:.1f}",
+                  "Pos": "{:.1f}",
+                  "OK": "{:.1f}",
+                  "Escl": "{:.1f}",
+                  "Neg": "{:.1f}",
+                  "Mez": "{:.1f}",
+                  "Err": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+        return
+
+    
+    # =======================
+    # ATTACCO
+    # =======================
+    if fondamentale == "Attacco":
+        copt1, copt2 = st.columns(2)
+        with copt1:
+            use_after_recv = st.checkbox("Attacco dopo Ricezione", value=True, key="fund_pl_att_so")
+        with copt2:
+            use_transition = st.checkbox("Attacco di Transizione", value=True, key="fund_pl_att_tr")
+
+        if not use_after_recv and not use_transition:
+            use_after_recv = True
+            use_transition = True
+
+        st.caption("L’efficienza dell’attacco è calcolata in questo modo: (Punti – Murate - Errori) / Tot * 100.")
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def is_attack_code(c: str) -> bool:
+            return len(c) >= 6 and c[3] == "A" and c[0] in ("*", "a")
+
+        def attack_sign(c: str) -> str:
+            return c[5] if c and len(c) >= 6 else ""
+
+        def first_attack_idx_after_serve(rally: list[str]) -> int | None:
+            for i, c in enumerate(rally[1:], start=1):
+                if is_attack_code(c):
+                    return i
+            return None
+
+        agg = {}
+
+        def ensure(team_raw: str, num: int):
+            tnorm = team_norm(team_raw)
+            key = (tnorm, num)
+            if key not in agg:
+                agg[key] = {
+                    "team_norm": tnorm,
+                    "Squadra": team_raw,
+                    "N°": num,
+                    "Tot": 0,
+                    "Punti": 0,
+                    "Pos": 0,
+                    "Escl": 0,
+                    "Neg": 0,
+                    "Mur": 0,
+                    "Err": 0,
+                }
+            return agg[key]
+
+        for m in matches:
+            ta = fix_team_name(m.get("team_a") or "")
+            tb = fix_team_name(m.get("team_b") or "")
+            rallies = parse_rallies(m.get("scout_text") or "")
+
+            for rally in rallies:
+                if not rally or not is_serve(rally[0]):
+                    continue
+
+                fa = first_attack_idx_after_serve(rally)
+                if fa is None:
+                    continue
+
+                for i in range(fa, len(rally)):
+                    c = rally[i]
+                    if not is_attack_code(c):
+                        continue
+
+                    is_first = (i == fa)
+                    if is_first and not use_after_recv:
+                        continue
+                    if (not is_first) and not use_transition:
+                        continue
+
+                    team_raw = ta if c[0] == "*" else tb
+                    num = serve_player_number(c)
+                    if num is None:
+                        continue
+
+                    rec = ensure(team_raw, num)
+                    rec["Tot"] += 1
+                    s = attack_sign(c)
+                    if s == "#":
+                        rec["Punti"] += 1
+                    elif s == "+":
+                        rec["Pos"] += 1
+                    elif s == "!":
+                        rec["Escl"] += 1
+                    elif s == "-":
+                        rec["Neg"] += 1
+                    elif s == "/":
+                        rec["Mur"] += 1
+                    elif s == "=":
+                        rec["Err"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun attacco trovato per i filtri selezionati.")
+            return
+
+        df = df.merge(
+            df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+            left_on=["team_norm", "N°"],
+            right_on=["team_norm", "jersey_number"],
+            how="left",
+        ).drop(columns=["jersey_number"])
+
+        df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+        df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
+        df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
+        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df = df.drop(columns=["team_raw"])
+
+        if roles_sel:
+            df = df[df["Ruolo"].isin(roles_sel)].copy()
+
+        df = df[df["Tot"] >= int(min_hits)].copy()
+        if df.empty:
+            st.info("Nessun giocatore supera il filtro del numero minimo di colpi.")
+            return
+
+        df["Punti%"] = df.apply(lambda r: pct(r["Punti"], r["Tot"]), axis=1)
+        df["Pos%"]   = df.apply(lambda r: pct(r["Pos"],   r["Tot"]), axis=1)
+        df["Escl%"]  = df.apply(lambda r: pct(r["Escl"],  r["Tot"]), axis=1)
+        df["Neg%"]   = df.apply(lambda r: pct(r["Neg"],   r["Tot"]), axis=1)
+        df["Mur%"]   = df.apply(lambda r: pct(r["Mur"],   r["Tot"]), axis=1)
+        df["Err%"]   = df.apply(lambda r: pct(r["Err"],   r["Tot"]), axis=1)
+        df["KO%"]    = df["Mur%"] + df["Err%"]
+
+        df["EFF"] = df.apply(
+            lambda r: ((r["Punti"] - (r["Mur"] + r["Err"])) / r["Tot"] * 100.0) if r["Tot"] else 0.0,
+            axis=1
+        )
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        out = df[[
+            "Rank", "Nome giocatore", "Squadra", "Tot", "EFF",
+            "Punti%", "Pos%", "Escl%", "Neg%", "Mur%", "Err%", "KO%"
+        ]].rename(columns={
+            "Tot": "Tot",
+            "EFF": "Eff",
+            "Punti%": "Punti",
+            "Pos%": "Pos",
+            "Escl%": "Escl",
+            "Neg%": "Neg",
+            "Mur%": "Mur",
+            "Err%": "Err",
+            "KO%": "KO",
+        }).copy()
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["Eff"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Rank": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "Eff": "{:.1f}",
+                  "Punti": "{:.1f}",
+                  "Pos": "{:.1f}",
+                  "Escl": "{:.1f}",
+                  "Neg": "{:.1f}",
+                  "Mur": "{:.1f}",
+                  "Err": "{:.1f}",
+                  "KO": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+        return
+
+    
+    # =======================
+    # MURO
+    # =======================
+    if fondamentale == "Muro":
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            opt_neg = st.checkbox("Muro dopo Battuta negativa", value=True, key="fund_pl_blk_neg")
+        with c2:
+            opt_exc = st.checkbox("Muro dopo Battuta Esclamativa", value=True, key="fund_pl_blk_exc")
+        with c3:
+            opt_pos = st.checkbox("Muro dopo Battuta Positiva", value=True, key="fund_pl_blk_pos")
+        with c4:
+            opt_tr  = st.checkbox("Muro di transizione", value=True, key="fund_pl_blk_tr")
+
+        if not (opt_neg or opt_exc or opt_pos or opt_tr):
+            opt_neg = opt_exc = opt_pos = opt_tr = True
+
+        st.caption(
+            "L’efficienza del muro è calcolata in questo modo: "
+            "(Vincenti*2 + Positivi*0,7 + Negativi*0,07 + Coperte*0,15 - Invasioni - ManiOut) / Tot * 100."
+        )
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def serve_sign(c6: str) -> str:
+            return c6[5] if c6 and len(c6) >= 6 else ""
+
+        def is_attack(c6: str) -> bool:
+            return len(c6) >= 6 and c6[3] == "A" and c6[0] in ("*", "a")
+
+        def first_attack_idx(rally: list[str], attacker_prefix: str):
+            for i in range(1, len(rally)):
+                c = rally[i]
+                if is_attack(c) and c[0] == attacker_prefix:
+                    return i
+            return None
+
+        def first_block_after_idx(rally: list[str], start_i: int):
+            for j in range(start_i + 1, len(rally)):
+                c = rally[j]
+                if len(c) >= 6 and c[3] == "B" and c[0] in ("*", "a"):
+                    return j, c
+            return None
+
+        agg = {}  # (team_norm, num) -> counts
+
+        def ensure(team_raw: str, num: int):
+            tnorm = team_norm(team_raw)
+            key = (tnorm, num)
+            if key not in agg:
+                agg[key] = {
+                    "team_norm": tnorm,
+                    "Squadra": team_raw,
+                    "N°": num,
+                    "Tot": 0,
+                    "Perf": 0,
+                    "Pos": 0,
+                    "Neg": 0,
+                    "Cop": 0,
+                    "Inv": 0,
+                    "Err": 0,
+                }
+            return agg[key]
+
+        def add_block(team_raw: str, num: int, block_code: str):
+            rec = ensure(team_raw, num)
+            rec["Tot"] += 1
+            sign = block_code[5] if len(block_code) >= 6 else ""
+            if sign == "#":
+                rec["Perf"] += 1
+            elif sign == "+":
+                rec["Pos"] += 1
+            elif sign == "-":
+                rec["Neg"] += 1
+            elif sign == "!":
+                rec["Cop"] += 1
+            elif sign == "/":
+                rec["Inv"] += 1
+            elif sign == "=":
+                rec["Err"] += 1
+
+        for m in matches:
+            ta = fix_team_name(m.get("team_a") or "")
+            tb = fix_team_name(m.get("team_b") or "")
+            rallies = parse_rallies(m.get("scout_text") or "")
+
+            for rally in rallies:
+                if not rally or not is_serve(rally[0]):
+                    continue
+
+                first = rally[0]
+                sgn = serve_sign(first)
+
+                if first.startswith("*"):
+                    recv_team = tb
+                    recv_prefix = "a"
+                    blk_team = ta
+                    blk_prefix = "*"
+                else:
+                    recv_team = ta
+                    recv_prefix = "*"
+                    blk_team = tb
+                    blk_prefix = "a"
+
+                fa = first_attack_idx(rally, recv_prefix)
+                if fa is None:
+                    continue
+
+                fb = first_block_after_idx(rally, fa)
+                is_after_first_attack = False
+                block_code = None
+                if fb:
+                    _, bc = fb
+                    if bc[0] == blk_prefix:
+                        is_after_first_attack = True
+                        block_code = bc
+
+                # Transizione: tutti i tocchi muro della squadra al muro che NON sono quel "primo muro dopo primo attacco"
+                if opt_tr:
+                    for c in rally[1:]:
+                        if len(c) >= 6 and c[3] == "B" and c[0] == blk_prefix:
+                            if is_after_first_attack and block_code is not None and c == block_code:
+                                continue
+                            num = serve_player_number(c)
+                            if num is None:
+                                continue
+                            add_block(blk_team, num, c)
+
+                # Dopo primo attacco, filtrato per segno battuta
+                if is_after_first_attack and block_code is not None:
+                    if (sgn == "-" and opt_neg) or (sgn == "!" and opt_exc) or (sgn == "+" and opt_pos):
+                        num = serve_player_number(block_code)
+                        if num is None:
+                            continue
+                        add_block(blk_team, num, block_code)
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessun muro trovato per i filtri selezionati.")
+            return
+
+        df = df.merge(
+            df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+            left_on=["team_norm", "N°"],
+            right_on=["team_norm", "jersey_number"],
+            how="left",
+        ).drop(columns=["jersey_number"])
+
+        df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+        df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
+        df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
+        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df = df.drop(columns=["team_raw"])
+
+        if roles_sel:
+            df = df[df["Ruolo"].isin(roles_sel)].copy()
+
+        df = df[df["Tot"] >= int(min_hits)].copy()
+        if df.empty:
+            st.info("Nessun giocatore supera il filtro del numero minimo di colpi.")
+            return
+
+        df["Perf%"] = df.apply(lambda r: pct(r["Perf"], r["Tot"]), axis=1)
+        df["Pos%"]  = df.apply(lambda r: pct(r["Pos"],  r["Tot"]), axis=1)
+        df["Neg%"]  = df.apply(lambda r: pct(r["Neg"],  r["Tot"]), axis=1)
+        df["Cop%"]  = df.apply(lambda r: pct(r["Cop"],  r["Tot"]), axis=1)
+        df["Inv%"]  = df.apply(lambda r: pct(r["Inv"],  r["Tot"]), axis=1)
+        df["Err%"]  = df.apply(lambda r: pct(r["Err"],  r["Tot"]), axis=1)
+
+        df["EFF"] = df.apply(
+            lambda r: (
+                (r["Perf"] * 2.0 + r["Pos"] * 0.7 + r["Neg"] * 0.07 + r["Cop"] * 0.15 - r["Inv"] - r["Err"])
+                / r["Tot"]
+                * 100.0
+            ) if r["Tot"] else 0.0,
+            axis=1
+        )
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        out = df[[
+            "Rank", "Nome giocatore", "Squadra", "Tot", "EFF",
+            "Perf%", "Pos%", "Neg%", "Cop%", "Inv%", "Err%"
+        ]].rename(columns={
+            "Tot": "Tot",
+            "EFF": "Eff",
+            "Perf%": "Perf",
+            "Pos%": "Pos",
+            "Neg%": "Neg",
+            "Cop%": "Cop",
+            "Inv%": "Inv",
+            "Err%": "Err",
+        }).copy()
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["Eff"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Rank": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "Eff": "{:.1f}",
+                  "Perf": "{:.1f}",
+                  "Pos": "{:.1f}",
+                  "Neg": "{:.1f}",
+                  "Cop": "{:.1f}",
+                  "Inv": "{:.1f}",
+                  "Err": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+        return
+
+    
+    # =======================
+    # DIFESA
+    # =======================
+    if fondamentale == "Difesa":
+        # stato iniziale
+        if "fund_pl_def_total" not in st.session_state:
+            st.session_state.fund_pl_def_total = True
+        for k in ("dt", "dq", "dm", "dh"):
+            kk = f"fund_pl_def_{k}"
+            if kk not in st.session_state:
+                st.session_state[kk] = False
+
+        def _toggle_total():
+            if st.session_state.fund_pl_def_total:
+                st.session_state.fund_pl_def_dt = False
+                st.session_state.fund_pl_def_dq = False
+                st.session_state.fund_pl_def_dm = False
+                st.session_state.fund_pl_def_dh = False
+
+        def _toggle_specific():
+            if (st.session_state.fund_pl_def_dt or st.session_state.fund_pl_def_dq or
+                st.session_state.fund_pl_def_dm or st.session_state.fund_pl_def_dh):
+                st.session_state.fund_pl_def_total = False
+            if (not st.session_state.fund_pl_def_total and
+                not st.session_state.fund_pl_def_dt and not st.session_state.fund_pl_def_dq and
+                not st.session_state.fund_pl_def_dm and not st.session_state.fund_pl_def_dh):
+                st.session_state.fund_pl_def_total = True
+
+        c1, c2, c3, c4, c5 = st.columns(5)
+        with c1:
+            st.checkbox("Difesa su palla Spinta", key="fund_pl_def_dt", on_change=_toggle_specific)
+        with c2:
+            st.checkbox("Difesa su 1°tempo", key="fund_pl_def_dq", on_change=_toggle_specific)
+        with c3:
+            st.checkbox("Difesa su PIPE", key="fund_pl_def_dm", on_change=_toggle_specific)
+        with c4:
+            st.checkbox("Difesa su H-ball", key="fund_pl_def_dh", on_change=_toggle_specific)
+        with c5:
+            st.checkbox("Difesa TOTALE", key="fund_pl_def_total", on_change=_toggle_total)
+
+        st.caption(
+            "L’efficienza della difesa è calcolata in questo modo: "
+            "(Buone*2 + Coperture*0,5 + Negative*0,4 + OverTheNet*0,3 – Errori) / Tot * 100. "
+            "È un indice motivatore."
+        )
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def is_defense(c6: str) -> bool:
+            return len(c6) >= 6 and c6[3] == "D" and c6[0] in ("*", "a")
+
+        def def_type(c6: str) -> str:
+            return c6[3:5] if c6 and len(c6) >= 5 else ""
+
+        def def_sign(c6: str) -> str:
+            return c6[5] if c6 and len(c6) >= 6 else ""
+
+        def defense_selected(c6: str) -> bool:
+            if st.session_state.fund_pl_def_total:
+                return True
+
+            t = def_type(c6)
+            s = def_sign(c6)
+
+            if st.session_state.fund_pl_def_dt and t == "DT":
+                return s != "!"
+            if st.session_state.fund_pl_def_dq and t == "DQ":
+                return s != "!"
+            if st.session_state.fund_pl_def_dm and t == "DM":
+                return s != "!"
+            if st.session_state.fund_pl_def_dh and t == "DH":
+                return s != "!"
+            return False
+
+        agg = {}  # (team_norm, num) -> counts
+
+        def ensure(team_raw: str, num: int):
+            tnorm = team_norm(team_raw)
+            key = (tnorm, num)
+            if key not in agg:
+                agg[key] = {
+                    "team_norm": tnorm,
+                    "Squadra": team_raw,
+                    "N°": num,
+                    "Tot": 0,
+                    "Perf": 0,  # '+'
+                    "Cop": 0,   # '!'
+                    "Neg": 0,   # '-'
+                    "Over": 0,  # '/'
+                    "Err": 0,   # '='
+                }
+            return agg[key]
+
+        for m in matches:
+            ta = fix_team_name(m.get("team_a") or "")
+            tb = fix_team_name(m.get("team_b") or "")
+            rallies = parse_rallies(m.get("scout_text") or "")
+            for rally in rallies:
+                if not rally:
+                    continue
+                for c in rally[1:]:
+                    if not is_defense(c):
+                        continue
+                    if not defense_selected(c):
+                        continue
+
+                    team_raw = ta if c[0] == "*" else tb
+                    num = serve_player_number(c)
+                    if num is None:
+                        continue
+
+                    rec = ensure(team_raw, num)
+                    rec["Tot"] += 1
+                    s = def_sign(c)
+                    if s == "+":
+                        rec["Perf"] += 1
+                    elif s == "!":
+                        rec["Cop"] += 1
+                    elif s == "-":
+                        rec["Neg"] += 1
+                    elif s == "/":
+                        rec["Over"] += 1
+                    elif s == "=":
+                        rec["Err"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessuna difesa trovata per i filtri selezionati.")
+            return
+
+        df = df.merge(
+            df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+            left_on=["team_norm", "N°"],
+            right_on=["team_norm", "jersey_number"],
+            how="left",
+        ).drop(columns=["jersey_number"])
+
+        df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+        df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
+        df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
+        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df = df.drop(columns=["team_raw"])
+
+        if roles_sel:
+            df = df[df["Ruolo"].isin(roles_sel)].copy()
+
+        df = df[df["Tot"] >= int(min_hits)].copy()
+        if df.empty:
+            st.info("Nessun giocatore supera il filtro del numero minimo di colpi.")
+            return
+
+        df["Perf%"] = df.apply(lambda r: pct(r["Perf"], r["Tot"]), axis=1)
+        df["Cop%"]  = df.apply(lambda r: pct(r["Cop"],  r["Tot"]), axis=1)
+        df["Neg%"]  = df.apply(lambda r: pct(r["Neg"],  r["Tot"]), axis=1)
+        df["Over%"] = df.apply(lambda r: pct(r["Over"], r["Tot"]), axis=1)
+        df["Err%"]  = df.apply(lambda r: pct(r["Err"],  r["Tot"]), axis=1)
+
+        df["EFF"] = df.apply(
+            lambda r: (
+                (r["Perf"] * 2.0 + r["Cop"] * 0.5 + r["Neg"] * 0.4 + r["Over"] * 0.3 - r["Err"])
+                / r["Tot"]
+                * 100.0
+            ) if r["Tot"] else 0.0,
+            axis=1
+        )
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        out = df[[
+            "Rank", "Nome giocatore", "Squadra", "Tot", "EFF",
+            "Perf%", "Cop%", "Neg%", "Over%", "Err%"
+        ]].rename(columns={
+            "Tot": "Tot",
+            "EFF": "Eff",
+            "Perf%": "Perf",
+            "Cop%": "Cop",
+            "Neg%": "Neg",
+            "Over%": "Over",
+            "Err%": "Err",
+        }).copy()
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["Eff"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Rank": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "Eff": "{:.1f}",
+                  "Perf": "{:.1f}",
+                  "Cop": "{:.1f}",
+                  "Neg": "{:.1f}",
+                  "Over": "{:.1f}",
+                  "Err": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+        return
+
+    st.info("In costruzione: per ora sono complete le tabelle Battuta e Ricezione (giocatori).")
+
+# =========================
+# UI: PUNTI PER SET (per ruolo) + fasi
+# =========================
+def render_points_per_set():
+    st.header("Punti per Set")
+    st.sidebar.caption("BUILD: PUNTI_PER_SET_V11 (POINTS/SET ALL)")
+
+    # ===== FILTRO RANGE GIORNATE =====
+    with engine.begin() as conn:
+        bounds = conn.execute(text("""
+            SELECT MIN(round_number) AS min_r, MAX(round_number) AS max_r
+            FROM matches
+            WHERE round_number IS NOT NULL
+        """)).mappings().first()
+
+    min_r = int((bounds["min_r"] or 1))
+    max_r = int((bounds["max_r"] or 1))
+
+    c1, c2 = st.columns(2)
+    with c1:
+        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="pps_from")
+    with c2:
+        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="pps_to")
+
+    if from_round > to_round:
+        st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
+        st.stop()
+
+    # ===== FILTRO RUOLI (da roster) =====
+    season = st.text_input("Stagione roster", value="2025-26", key="pps_season")
+    with engine.begin() as conn:
+        roster_rows = conn.execute(text("""
+            SELECT team_raw, team_norm, jersey_number, player_name, role, created_at
+            FROM roster
+            WHERE season = :season
+        """), {"season": season}).mappings().all()
+
+    if not roster_rows:
+        st.warning("Roster vuoto per questa stagione: importa prima i ruoli (pagina Import Ruoli).")
+        return
+
+    df_roster = pd.DataFrame(roster_rows)
+    df_roster["created_at"] = df_roster["created_at"].fillna("")
+    df_roster = (
+        df_roster.sort_values(by=["team_norm", "jersey_number", "created_at"])
+                 .drop_duplicates(subset=["team_norm", "jersey_number"], keep="last")
+    )
+
+    roles_all = sorted(df_roster["role"].dropna().unique().tolist())
+    roles_sel = st.multiselect(
+        "Filtri ruoli (puoi selezionarne quanti vuoi)",
+        options=roles_all,
+        default=roles_all,
+        key="pps_roles",
+    )
+
+    # ===== FASI (anche entrambe) =====
+    cf1, cf2 = st.columns(2)
+    with cf1:
+        use_sideout = st.checkbox("Fase Side Out", value=True, key="pps_so")
+    with cf2:
+        use_break = st.checkbox("Fase Break", value=True, key="pps_bp")
+
+    if not use_sideout and not use_break:
+        use_sideout = True
+        use_break = True
+
+    st.caption("I punti considerati sono solo: **Battuta (#)**, **Attacco (#)**, **Muro (#)**.")
+
+    # ===== MATCHES =====
+    with engine.begin() as conn:
+        matches = conn.execute(text("""
+            SELECT id AS match_id, team_a, team_b, scout_text
+            FROM matches
+            WHERE round_number BETWEEN :from_round AND :to_round
+        """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+    if not matches:
+        st.info("Nessun match nel range selezionato.")
+        return
+
+    SET_RE = re.compile(r"\*\*(\d)set\b", re.IGNORECASE)
+
+    def parse_rallies_and_sets(scout_text: str):
+        if not scout_text:
+            return [], set()
+
+        lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+        current_set = None
+        sets_seen = set()
+        rallies = []
+        current = []
+        current_set_for_rally = None
+
+        for ln in lines:
+            mm = SET_RE.search(ln)
+            if mm:
+                if current:
+                    rallies.append((current_set_for_rally, current))
+                    current = []
+                    current_set_for_rally = None
+                current_set = int(mm.group(1))
+                sets_seen.add(current_set)
+                continue
+
+            if current_set is None:
+                continue
+
+            c6 = code6(ln)
+            if not c6 or c6[0] not in ("*", "a"):
+                continue
+
+            if is_serve(c6):
+                if current:
+                    rallies.append((current_set_for_rally, current))
+                current = [c6]
+                current_set_for_rally = current_set
+                continue
+
+            if not current:
+                continue
+
+            current.append(c6)
+
+            if is_home_point(c6) or is_away_point(c6):
+                rallies.append((current_set_for_rally, current))
+                current = []
+                current_set_for_rally = None
+
+        if current:
+            rallies.append((current_set_for_rally, current))
+
+        return rallies, sets_seen
+
+    def player_num_from_code(c6: str):
+        mm = re.match(r"^[\*a](\d{2})", c6)
+        return int(mm.group(1)) if mm else None
+
+    def is_player_action_any(c6: str) -> bool:
+        if len(c6) < 5 or c6[0] not in ("*", "a"):
+            return False
+        if c6[3:5] in ("SQ", "SM", "RQ", "RM"):
+            return True
+        if len(c6) >= 4 and c6[3] in ("A", "B", "D"):
+            return True
+        return False
+
+    def point_kind(c6: str):
+        if len(c6) < 6 or c6[5] != "#":
+            return None
+        if c6[3:5] in ("SQ", "SM"):
+            return "serve"
+        if c6[3] == "A":
+            return "attack"
+        if c6[3] == "B":
+            return "block"
+        return None
+
+    def is_error_forced_point(c6: str) -> bool:
+        if len(c6) < 6:
+            return False
+        if c6[3:5] in ("SQ", "SM") and c6[5] == "=":
+            return True
+        if c6[3] == "A" and c6[5] == "=":
+            return True
+        if c6[3] == "B" and c6[5] == "/":
+            return True
+        return False
+
+    players = {}
+    team_tot = {}
+
+    def ensure_player(team_raw: str, num: int):
+        tnorm = team_norm(team_raw)
+        key = (tnorm, num)
+        if key not in players:
+            players[key] = {
+                "team_norm": tnorm,
+                "Nome Team": team_raw,
+                "N°": num,
+                "sets": set(),  # (match_id, set_no)
+                "pts_total": 0,
+                "pts_serve": 0,
+                "pts_attack": 0,
+                "pts_block": 0,
+            }
+        return players[key]
+
+    def ensure_team(team_raw: str):
+        tnorm = team_norm(team_raw)
+        if tnorm not in team_tot:
+            team_tot[tnorm] = {
+                "team_norm": tnorm,
+                "Nome Team": team_raw,
+                "sets_total": 0,
+                "pts_total": 0,
+                "err_avv_total": 0,
+            }
+        return team_tot[tnorm]
+
+    for m in matches:
+        match_id = int(m.get("match_id") or 0)
+        team_a = fix_team_name(m.get("team_a") or "")
+        team_b = fix_team_name(m.get("team_b") or "")
+
+        rallies, sets_seen = parse_rallies_and_sets(m.get("scout_text") or "")
+        n_sets = len(sets_seen) if sets_seen else 0
+
+        if n_sets:
+            ensure_team(team_a)["sets_total"] += n_sets
+            ensure_team(team_b)["sets_total"] += n_sets
+
+        for set_no, rally in rallies:
+            if not rally or set_no is None:
+                continue
+            first = rally[0]
+            if not is_serve(first):
+                continue
+
+            serve_prefix = first[0]
+
+            # set giocati giocatore: >=1 azione nel set (match_id, set_no)
+            for c in rally:
+                if not is_player_action_any(c):
+                    continue
+                num = player_num_from_code(c)
+                if num is None:
+                    continue
+                team_raw = team_a if c[0] == "*" else team_b
+                ensure_player(team_raw, num)["sets"].add((match_id, int(set_no)))
+
+            # winner
+            home_won = any(is_home_point(x) for x in rally)
+            away_won = any(is_away_point(x) for x in rally)
+            if home_won or away_won:
+                if home_won:
+                    win_prefix = "*"
+                    win_team = team_a
+                    lose_prefix = "a"
+                else:
+                    win_prefix = "a"
+                    win_team = team_b
+                    lose_prefix = "*"
+
+                is_break_team = (serve_prefix == win_prefix)
+                is_sideout_team = (serve_prefix != win_prefix)
+                if (is_sideout_team and use_sideout) or (is_break_team and use_break):
+                    if any((x[0] == lose_prefix and is_error_forced_point(x)) for x in rally):
+                        ensure_team(win_team)["err_avv_total"] += 1
+
+            # punti giocatore
+            for c in rally:
+                kind = point_kind(c)
+                if kind is None:
+                    continue
+                num = player_num_from_code(c)
+                if num is None:
+                    continue
+
+                player_prefix = c[0]
+                is_break = (serve_prefix == player_prefix)
+                is_sideout = (serve_prefix != player_prefix)
+
+                if (is_sideout and not use_sideout) or (is_break and not use_break):
+                    continue
+
+                team_raw = team_a if player_prefix == "*" else team_b
+                rec = ensure_player(team_raw, num)
+                rec["pts_total"] += 1
+                if kind == "serve":
+                    rec["pts_serve"] += 1
+                elif kind == "attack":
+                    rec["pts_attack"] += 1
+                elif kind == "block":
+                    rec["pts_block"] += 1
+
+                ensure_team(team_raw)["pts_total"] += 1
+
+    df_players = pd.DataFrame(list(players.values()))
+    if df_players.empty:
+        st.info("Nessun dato punti trovato nel range selezionato.")
+        return
+
+    df_players = df_players.merge(
+        df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+        left_on=["team_norm", "N°"],
+        right_on=["team_norm", "jersey_number"],
+        how="left",
+    ).drop(columns=["jersey_number"])
+
+    df_players.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+    df_players["Nome giocatore"] = df_players["Nome giocatore"].fillna(df_players["N°"].apply(lambda x: f"N°{int(x):02d}"))
+    df_players["Ruolo"] = df_players["Ruolo"].fillna("(non in roster)")
+    df_players["Nome Team"] = df_players["team_raw"].fillna(df_players["Nome Team"])
+    df_players = df_players.drop(columns=["team_raw"])
+
+    if roles_sel:
+        df_players = df_players[df_players["Ruolo"].isin(roles_sel)].copy()
+
+    df_players["Set giocati dal Giocatore"] = df_players["sets"].apply(lambda s: len(s) if isinstance(s, set) else 0)
+
+    df_team = pd.DataFrame(list(team_tot.values()))
+    df_team["Punti per Set (Team)"] = df_team.apply(lambda r: (r["pts_total"] / r["sets_total"]) if r["sets_total"] else 0.0, axis=1)
+    df_team["Errori Avv/Set"] = df_team.apply(lambda r: (r["err_avv_total"] / r["sets_total"]) if r["sets_total"] else 0.0, axis=1)
+
+    df_players = df_players.merge(
+        df_team[["team_norm", "sets_total", "Punti per Set (Team)", "Errori Avv/Set"]],
+        on="team_norm",
+        how="left",
+    )
+
+    df_players["Punti per Set (Giocatore)"] = df_players.apply(
+        lambda r: (r["pts_total"] / r["Set giocati dal Giocatore"]) if r["Set giocati dal Giocatore"] else 0.0,
+        axis=1
+    )
+
+    df_players["% Ply/Team"] = df_players.apply(
+        lambda r: (100.0 * r["Punti per Set (Giocatore)"] / r["Punti per Set (Team)"]) if (r["Punti per Set (Team)"] and r["Punti per Set (Team)"] > 0) else 0.0,
+        axis=1
+    )
+
+    df_rank = df_players.sort_values(
+        by=["Punti per Set (Giocatore)", "Set giocati dal Giocatore"],
+        ascending=[False, False]
+    ).reset_index(drop=True)
+    df_rank.insert(0, "Ranking", range(1, len(df_rank) + 1))
+
+    out = df_rank[[
+        "Ranking",
+        "Nome Team",
+        "sets_total",
+        "Punti per Set (Team)",
+        "Errori Avv/Set",
+        "Nome giocatore",
+        "Set giocati dal Giocatore",
+        "Punti per Set (Giocatore)",
+        "% Ply/Team",
+        "pts_serve",
+        "pts_attack",
+        "pts_block",
+    ]].rename(columns={
+        "sets_total": "Set giocati dal Team",
+        "pts_serve": "Punti in Battuta",
+        "pts_attack": "Punti in Attacco",
+        "pts_block": "Punti a Muro",
+    }).copy()
+
+    # --- Trasforma Punti in Battuta/Attacco/Muro in valori PER SET del giocatore ---
+    denom = pd.to_numeric(out["Set giocati dal Giocatore"], errors="coerce").replace(0, pd.NA)
+    for col in ["Punti in Battuta", "Punti in Attacco", "Punti a Muro"]:
+        out[col] = (pd.to_numeric(out[col], errors="coerce") / denom).astype(float).fillna(0.0)
+
+    # formatter 1 decimale senza zeri finali
+    def _fmt1(x):
+        try:
+            if x is None:
+                return ""
+            v = float(x)
+            s = f"{v:.1f}"
+            return s.rstrip("0").rstrip(".")
+        except Exception:
+            return x
+
+    def highlight_perugia(row):
+        is_perugia = "perugia" in str(row.get("Nome Team", "")).lower()
+        style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+        return [style] * len(row)
+
+    styled = (
+        out.style
+          .apply(highlight_perugia, axis=1)
+          .format({
+              "Punti per Set (Team)": _fmt1,
+              "Errori Avv/Set": _fmt1,
+              "Punti per Set (Giocatore)": _fmt1,
+              "% Ply/Team": _fmt1,
+              "Punti in Battuta": _fmt1,
+              "Punti in Attacco": _fmt1,
+              "Punti a Muro": _fmt1,
+          })
+    )
+
+    st.dataframe(styled, use_container_width=True, hide_index=True)
+
+
+# =========================
+# UI: HOME DASHBOARD (3 TAB)
+# =========================
+def render_home_dashboard():
+    st.header("Home – Dashboard")
+
+    # ===== RANGE GIORNATE =====
+    with engine.begin() as conn:
+        bounds = conn.execute(text("""
+            SELECT MIN(round_number) AS min_r, MAX(round_number) AS max_r
+            FROM matches
+            WHERE round_number IS NOT NULL
+        """)).mappings().first()
+
+    min_r = int((bounds["min_r"] or 1))
+    max_r = int((bounds["max_r"] or 1))
+
+    c1, c2 = st.columns(2)
+    with c1:
+        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="home_from")
+    with c2:
+        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="home_to")
+
+    if from_round > to_round:
+        st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
+        st.stop()
+
+    # ===== SQUADRA (default Perugia) =====
+    with engine.begin() as conn:
+        teams = conn.execute(text("""
+            SELECT DISTINCT team_a AS t FROM matches
+            UNION
+            SELECT DISTINCT team_b AS t FROM matches
+        """)).mappings().all()
+    team_list = sorted([fix_team_name(r["t"] or "") for r in teams if (r.get("t") or "").strip()])
+    default_team = None
+    for t in team_list:
+        if "perugia" in t.lower():
+            default_team = t
+            break
+    if not default_team and team_list:
+        default_team = team_list[0]
+
+    team_focus = st.selectbox("Squadra", team_list, index=(team_list.index(default_team) if default_team in team_list else 0), key="home_team")
+
+    # ===== DATA (matches in range) =====
+    with engine.begin() as conn:
+        matches = conn.execute(text("""
+            SELECT id AS match_id, team_a, team_b, scout_text
+            FROM matches
+            WHERE round_number BETWEEN :from_round AND :to_round
+        """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+    if not matches:
+        st.info("Nessun match nel range selezionato.")
+        return
+
+    SET_RE = re.compile(r"\*\*(\d)set\b", re.IGNORECASE)
+
+    def parse_rallies(scout_text: str):
+        if not scout_text:
+            return []
+        lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+        current_set = None
+        rallies = []
+        current = []
+
+        for ln in lines:
+            m = SET_RE.search(ln)
+            if m:
+                current_set = int(m.group(1))
+                continue
+
+            if current_set is None:
+                continue
+
+            c6 = code6(ln)
+            if not c6 or c6[0] not in ("*", "a"):
+                continue
+
+            if is_serve(c6):
+                if current:
+                    rallies.append(current)
+                current = [c6]
+                continue
+
+            if not current:
+                continue
+            current.append(c6)
+
+            if is_home_point(c6) or is_away_point(c6):
+                rallies.append(current)
+                current = []
+
+        if current:
+            rallies.append(current)
+        return rallies
+
+    def serve_sign(c6: str) -> str:
+        return c6[5] if c6 and len(c6) >= 6 else ""
+
+    def serve_type(c6: str) -> str:
+        return c6[3:5] if c6 and len(c6) >= 5 else ""
+
+    def is_rece(c6: str) -> bool:
+        return len(c6) >= 6 and c6[3:5] in ("RQ", "RM") and c6[0] in ("*", "a")
+
+    def rece_sign(c6: str) -> str:
+        return c6[5] if c6 and len(c6) >= 6 else ""
+
+    def is_attack_code(c6: str) -> bool:
+        return len(c6) >= 6 and c6[0] in ("*", "a") and c6[3] == "A"
+
+    def is_block_code(c6: str) -> bool:
+        return len(c6) >= 6 and c6[0] in ("*", "a") and c6[3] == "B"
+
+    def is_def_code(c6: str) -> bool:
+        return len(c6) >= 6 and c6[0] in ("*", "a") and c6[3] == "D"
+
+    def team_of(prefix: str, team_a: str, team_b: str) -> str:
+        return team_a if prefix == "*" else team_b
+
+    # ===== Aggregazioni per team =====
+    T = {}
+
+    def ensure_team(team_raw: str):
+        tn = team_norm(team_raw)
+        if tn not in T:
+            T[tn] = {
+                "team_norm": tn,
+                "Team": fix_team_name(team_raw),
+                "sets_total": 0,
+
+                "so_att": 0, "so_win": 0,
+                "so_spin_att": 0, "so_spin_win": 0,
+                "so_float_att": 0, "so_float_win": 0,
+                "so_dir_win": 0,
+                "so_play_att": 0, "so_play_win": 0,
+                "so_good_att": 0, "so_good_win": 0,
+                "so_exc_att": 0, "so_exc_win": 0,
+                "so_neg_att": 0, "so_neg_win": 0,
+
+                "bp_att": 0, "bp_win": 0,
+                "bp_play_att": 0, "bp_play_win": 0,
+                "bp_neg_att": 0, "bp_neg_win": 0,
+                "bp_exc_att": 0, "bp_exc_win": 0,
+                "bp_pos_att": 0, "bp_pos_win": 0,
+                "bp_half_att": 0, "bp_half_win": 0,
+                "bt_ace": 0, "bt_err": 0,
+
+                "srv_tot": 0, "srv_hash": 0, "srv_half": 0, "srv_pos": 0, "srv_exc": 0, "srv_neg": 0, "srv_err": 0,
+
+                "rec_tot": 0, "rec_hash": 0, "rec_pos": 0, "rec_exc": 0, "rec_neg": 0, "rec_half": 0, "rec_err": 0,
+
+                "att_tot": 0, "att_hash": 0, "att_pos": 0, "att_exc": 0, "att_neg": 0, "att_blk": 0, "att_err": 0,
+                "att_first_tot": 0, "att_first_hash": 0, "att_first_blk": 0, "att_first_err": 0,
+                "att_tr_tot": 0, "att_tr_hash": 0, "att_tr_blk": 0, "att_tr_err": 0,
+
+                "blk_tot": 0, "blk_hash": 0, "blk_pos": 0, "blk_neg": 0, "blk_cov": 0, "blk_inv": 0, "blk_err": 0,
+
+                "def_tot": 0, "def_pos": 0, "def_cov": 0, "def_neg": 0, "def_over": 0, "def_err": 0,
+            }
+        return T[tn]
+
+    # Sets per match
+    for m in matches:
+        ta = fix_team_name(m.get("team_a") or "")
+        tb = fix_team_name(m.get("team_b") or "")
+        scout_text = m.get("scout_text") or ""
+        sets_seen = set(int(x) for x in SET_RE.findall(scout_text))
+        n_sets = len(sets_seen)
+        if n_sets:
+            ensure_team(ta)["sets_total"] += n_sets
+            ensure_team(tb)["sets_total"] += n_sets
+
+    for m in matches:
+        ta = fix_team_name(m.get("team_a") or "")
+        tb = fix_team_name(m.get("team_b") or "")
+        rallies = parse_rallies(m.get("scout_text") or "")
+        for r in rallies:
+            if not r or not is_serve(r[0]):
+                continue
+            first = r[0]
+            s_prefix = first[0]
+            s_team = team_of(s_prefix, ta, tb)
+            rcv_prefix = "a" if s_prefix == "*" else "*"
+            rcv_team = team_of(rcv_prefix, ta, tb)
+            sgn = serve_sign(first)
+            stype = serve_type(first)
+
+            home_won = any(is_home_point(x) for x in r)
+            away_won = any(is_away_point(x) for x in r)
+            s_team_won = (home_won and s_prefix == "*") or (away_won and s_prefix == "a")
+            rcv_team_won = (home_won and rcv_prefix == "*") or (away_won and rcv_prefix == "a")
+
+            # SideOut (ricevente)
+            if any(is_rece(x) and x[0] == rcv_prefix for x in r):
+                t = ensure_team(rcv_team)
+                t["so_att"] += 1
+                if rcv_team_won:
+                    t["so_win"] += 1
+
+            if stype == "SQ":
+                t = ensure_team(rcv_team)
+                t["so_spin_att"] += 1
+                if rcv_team_won:
+                    t["so_spin_win"] += 1
+            if stype == "SM":
+                t = ensure_team(rcv_team)
+                t["so_float_att"] += 1
+                if rcv_team_won:
+                    t["so_float_win"] += 1
+
+            rece = None
+            for x in r:
+                if is_rece(x) and x[0] == rcv_prefix:
+                    rece = x
+                    break
+
+            if rece:
+                rs = rece_sign(rece)
+                t = ensure_team(rcv_team)
+                if rs in ("#", "+", "!", "-"):
+                    t["so_play_att"] += 1
+                    if rcv_team_won:
+                        t["so_play_win"] += 1
+                if rs in ("#", "+"):
+                    t["so_good_att"] += 1
+                    if rcv_team_won:
+                        t["so_good_win"] += 1
+                if rs == "!":
+                    t["so_exc_att"] += 1
+                    if rcv_team_won:
+                        t["so_exc_win"] += 1
+                if rs == "-":
+                    t["so_neg_att"] += 1
+                    if rcv_team_won:
+                        t["so_neg_win"] += 1
+
+            first_att = None
+            for x in r:
+                if is_attack_code(x) and x[0] == rcv_prefix:
+                    first_att = x
+                    break
+            if first_att and len(first_att) >= 6 and first_att[5] == "#" and rcv_team_won:
+                ensure_team(rcv_team)["so_dir_win"] += 1
+
+            # Break (battitore)
+            bt = ensure_team(s_team)
+            bt["bp_att"] += 1
+            if s_team_won:
+                bt["bp_win"] += 1
+
+            if sgn not in ("#", "="):
+                bt["bp_play_att"] += 1
+                if s_team_won:
+                    bt["bp_play_win"] += 1
+
+            if sgn == "-":
+                bt["bp_neg_att"] += 1
+                if s_team_won:
+                    bt["bp_neg_win"] += 1
+            if sgn == "!":
+                bt["bp_exc_att"] += 1
+                if s_team_won:
+                    bt["bp_exc_win"] += 1
+            if sgn == "+":
+                bt["bp_pos_att"] += 1
+                if s_team_won:
+                    bt["bp_pos_win"] += 1
+            if sgn == "/":
+                bt["bp_half_att"] += 1
+                if s_team_won:
+                    bt["bp_half_win"] += 1
+
+            if sgn == "#":
+                bt["bt_ace"] += 1
+            if sgn == "=":
+                bt["bt_err"] += 1
+
+            # Serve distribution
+            bt["srv_tot"] += 1
+            if sgn == "#":
+                bt["srv_hash"] += 1
+            elif sgn == "/":
+                bt["srv_half"] += 1
+            elif sgn == "+":
+                bt["srv_pos"] += 1
+            elif sgn == "!":
+                bt["srv_exc"] += 1
+            elif sgn == "-":
+                bt["srv_neg"] += 1
+            elif sgn == "=":
+                bt["srv_err"] += 1
+
+            # Reception distribution
+            if rece:
+                rt = ensure_team(rcv_team)
+                rt["rec_tot"] += 1
+                rs = rece_sign(rece)
+                if rs == "#":
+                    rt["rec_hash"] += 1
+                elif rs == "+":
+                    rt["rec_pos"] += 1
+                elif rs == "!":
+                    rt["rec_exc"] += 1
+                elif rs == "-":
+                    rt["rec_neg"] += 1
+                elif rs == "/":
+                    rt["rec_half"] += 1
+                elif rs == "=":
+                    rt["rec_err"] += 1
+
+            # Attack + first vs transition
+            first_attack_index = None
+            for i, x in enumerate(r[1:], start=1):
+                if is_attack_code(x):
+                    first_attack_index = i
+                    break
+
+            for i, x in enumerate(r[1:], start=1):
+                if not is_attack_code(x):
+                    continue
+                at = ensure_team(team_of(x[0], ta, tb))
+                at["att_tot"] += 1
+                sign = x[5]
+                if sign == "#":
+                    at["att_hash"] += 1
+                elif sign == "+":
+                    at["att_pos"] += 1
+                elif sign == "!":
+                    at["att_exc"] += 1
+                elif sign == "-":
+                    at["att_neg"] += 1
+                elif sign == "/":
+                    at["att_blk"] += 1
+                elif sign == "=":
+                    at["att_err"] += 1
+
+                if first_attack_index is not None:
+                    if i == first_attack_index:
+                        at["att_first_tot"] += 1
+                        if sign == "#":
+                            at["att_first_hash"] += 1
+                        if sign == "/":
+                            at["att_first_blk"] += 1
+                        if sign == "=":
+                            at["att_first_err"] += 1
+                    elif i > first_attack_index:
+                        at["att_tr_tot"] += 1
+                        if sign == "#":
+                            at["att_tr_hash"] += 1
+                        if sign == "/":
+                            at["att_tr_blk"] += 1
+                        if sign == "=":
+                            at["att_tr_err"] += 1
+
+            # Block
+            for x in r[1:]:
+                if not is_block_code(x):
+                    continue
+                bl = ensure_team(team_of(x[0], ta, tb))
+                bl["blk_tot"] += 1
+                sign = x[5]
+                if sign == "#":
+                    bl["blk_hash"] += 1
+                elif sign == "+":
+                    bl["blk_pos"] += 1
+                elif sign == "-":
+                    bl["blk_neg"] += 1
+                elif sign == "!":
+                    bl["blk_cov"] += 1
+                elif sign == "/":
+                    bl["blk_inv"] += 1
+                elif sign == "=":
+                    bl["blk_err"] += 1
+
+            # Defense
+            for x in r[1:]:
+                if not is_def_code(x):
+                    continue
+                df = ensure_team(team_of(x[0], ta, tb))
+                df["def_tot"] += 1
+                sign = x[5]
+                if sign == "+":
+                    df["def_pos"] += 1
+                elif sign == "!":
+                    df["def_cov"] += 1
+                elif sign == "-":
+                    df["def_neg"] += 1
+                elif sign == "/":
+                    df["def_over"] += 1
+                elif sign == "=":
+                    df["def_err"] += 1
+
+    dfT = pd.DataFrame(list(T.values()))
+    if dfT.empty:
+        st.info("Nessun dato nel range selezionato.")
+        return
+
+    def _pct(num, den):
+        return (100.0 * num / den) if den else 0.0
+
+    def build_df(value_series: pd.Series, higher_is_better: bool = True):
+        df = pd.DataFrame({"Team": dfT["Team"], "Value": value_series})
+        df["Value"] = pd.to_numeric(df["Value"], errors="coerce").fillna(0.0)
+        df = df.sort_values(by="Value", ascending=not higher_is_better).reset_index(drop=True)
+        df["Rank"] = range(1, len(df) + 1)
+        df.attrs["higher_is_better"] = higher_is_better
+        return df
+
+    def render_card(title: str, df: pd.DataFrame, fmt: str = "{:.1f}", higher_is_better: bool | None = None):
+        # higher_is_better: se None, prova a leggere da df.attrs
+        hib = higher_is_better
+        if hib is None:
+            hib = bool(df.attrs.get("higher_is_better", True))
+
+        # trova riga team
+        team_row = None
+        for _, r in df.iterrows():
+            if norm(r["Team"]) == norm(team_focus):
+                team_row = r
+                break
+            if "perugia" in norm(team_focus) and "perugia" in norm(r["Team"]):
+                team_row = r
+                break
+        if team_row is None:
+            team_row = df.iloc[0] if not df.empty else None
+
+        val = float(team_row["Value"]) if team_row is not None else 0.0
+        rk = int(team_row["Rank"]) if team_row is not None else 0
+
+        # delta dal 3° posto
+        third_val = float(df.iloc[2]["Value"]) if len(df) >= 3 else float(df.iloc[-1]["Value"])
+        # per metrica "più alto è meglio": delta = val - third
+        # per "più basso è meglio": delta = third - val (positivo = sei davanti, negativo = dietro)
+        delta = (val - third_val) if hib else (third_val - val)
+
+        # colore in base al rank
+        if rk and rk <= 3:
+            color = "#2f9e44"   # green
+        elif rk and rk <= 6:
+            color = "#f08c00"   # orange
+        else:
+            color = "#495057"   # gray
+
+        st.markdown(f"**{title}**")
+
+        # valore + rank + delta (stile 'da panchina')
+        delta_txt = f"{delta:+.1f} vs 3°"
+        # se 'lower is better' e delta==inf (es. Err/Pti), gestisci
+        if not (delta == delta and abs(delta) != float("inf")):
+            delta_txt = "—"
+
+        st.markdown(
+            f"""
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:8px 10px; border:1px solid #e9ecef; border-radius:12px;">
+              <div>
+                <div style="font-size:34px; font-weight:900; color:{color}; line-height:1;">{fmt.format(val)}</div>
+                <div style="font-size:14px; color:#868e96; margin-top:2px;">{team_focus} • Rank {rk}/12</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:14px; color:#868e96;">gap podio</div>
+                <div style="font-size:18px; font-weight:800; color:#343a40;">{delta_txt}</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        top3 = df.head(3).copy()
+        top3["Value"] = top3["Value"].astype(float).round(1)
+        st.dataframe(top3[["Rank", "Team", "Value"]], use_container_width=True, hide_index=True)
+
+    tab_so, tab_bp, tab_eff = st.tabs(["SIDE OUT", "BREAK", "EFFICIENZE"])
+
+    with tab_so:
+        cols = st.columns(3)
+        metrics = [
+            ("Side Out TOTALE", build_df(dfT.apply(lambda r: _pct(r["so_win"], r["so_att"]), axis=1))),
+            ("Side Out SPIN", build_df(dfT.apply(lambda r: _pct(r["so_spin_win"], r["so_spin_att"]), axis=1))),
+            ("Side Out FLOAT", build_df(dfT.apply(lambda r: _pct(r["so_float_win"], r["so_float_att"]), axis=1))),
+            ("Side Out DIRETTO", build_df(dfT.apply(lambda r: _pct(r["so_dir_win"], r["so_att"]), axis=1))),
+            ("Side Out GIOCATO", build_df(dfT.apply(lambda r: _pct(r["so_play_win"], r["so_play_att"]), axis=1))),
+            ("Side Out con RICE BUONA", build_df(dfT.apply(lambda r: _pct(r["so_good_win"], r["so_good_att"]), axis=1))),
+            ("Side Out con RICE ESCLAMATIVA", build_df(dfT.apply(lambda r: _pct(r["so_exc_win"], r["so_exc_att"]), axis=1))),
+            ("Side Out con RICE NEGATIVA", build_df(dfT.apply(lambda r: _pct(r["so_neg_win"], r["so_neg_att"]), axis=1))),
+        ]
+        for i, (title, dfm) in enumerate(metrics):
+            with cols[i % 3]:
+                render_card(title, dfm)
+
+    with tab_bp:
+        cols = st.columns(3)
+
+        def ratio_err_ace(r):
+            ace = r["bt_ace"]
+            err = r["bt_err"]
+            return (err / ace) if ace else float("inf")
+
+        metrics = [
+            ("BREAK TOTALE", build_df(dfT.apply(lambda r: _pct(r["bp_win"], r["bp_att"]), axis=1))),
+            ("BREAK GIOCATO", build_df(dfT.apply(lambda r: _pct(r["bp_play_win"], r["bp_play_att"]), axis=1))),
+            ("BREAK con BT. NEGATIVA", build_df(dfT.apply(lambda r: _pct(r["bp_neg_win"], r["bp_neg_att"]), axis=1))),
+            ("BREAK con BT. ESCLAMATIVA", build_df(dfT.apply(lambda r: _pct(r["bp_exc_win"], r["bp_exc_att"]), axis=1))),
+            ("BREAK con BT. POSITIVA", build_df(dfT.apply(lambda r: _pct(r["bp_pos_win"], r["bp_pos_att"]), axis=1))),
+            ("BREAK con BT. 1/2 PUNTO", build_df(dfT.apply(lambda r: _pct(r["bp_half_win"], r["bp_half_att"]), axis=1))),
+            ("BT punto/errore/ratio (Err/Pti)", build_df(dfT.apply(lambda r: ratio_err_ace(r), axis=1), higher_is_better=False)),
+        ]
+
+        for i, (title, dfm) in enumerate(metrics):
+            with cols[i % 3]:
+                if "Err/Pti" in title:
+                    render_card(title, dfm, fmt="{:.2f}", higher_is_better=False)
+                else:
+                    render_card(title, dfm)
+
+    with tab_eff:
+        st.subheader("Filtri Efficienze")
+        cflag = st.columns(3)
+        with cflag[0]:
+            st.checkbox("Battuta SPIN", value=True, key="home_srv_spin")
+            st.checkbox("Battuta FLOAT", value=True, key="home_srv_float")
+        with cflag[1]:
+            st.checkbox("Ricezione SPIN", value=True, key="home_rec_spin")
+            st.checkbox("Ricezione FLOAT", value=True, key="home_rec_float")
+        with cflag[2]:
+            att_first = st.checkbox("Attacco dopo Ricezione", value=True, key="home_att_first")
+            att_tr = st.checkbox("Attacco di Transizione", value=True, key="home_att_tr")
+
+        if not att_first and not att_tr:
+            att_first = att_tr = True
+
+        def eff_serve(r):
+            tot = r["srv_tot"]
+            if not tot:
+                return 0.0
+            return ((r["srv_hash"] + r["srv_half"]*0.8 + r["srv_pos"]*0.45 + r["srv_exc"]*0.3 + r["srv_neg"]*0.15 - r["srv_err"]) / tot) * 100.0
+
+        def eff_rece(r):
+            tot = r["rec_tot"]
+            if not tot:
+                return 0.0
+            ok = r["rec_hash"] + r["rec_pos"]
+            return ((ok*0.77 + r["rec_exc"]*0.55 + r["rec_neg"]*0.38 - r["rec_half"]*0.8 - r["rec_err"]) / tot) * 100.0
+
+        def eff_att_total(r):
+            tot = r["att_tot"]
+            if not tot:
+                return 0.0
+            ko = r["att_blk"] + r["att_err"]
+            return ((r["att_hash"] - ko) / tot) * 100.0
+
+        def eff_att_first(r):
+            tot = r["att_first_tot"]
+            if not tot:
+                return 0.0
+            ko = r["att_first_blk"] + r["att_first_err"]
+            return ((r["att_first_hash"] - ko) / tot) * 100.0
+
+        def eff_att_tr(r):
+            tot = r["att_tr_tot"]
+            if not tot:
+                return 0.0
+            ko = r["att_tr_blk"] + r["att_tr_err"]
+            return ((r["att_tr_hash"] - ko) / tot) * 100.0
+
+        def eff_block(r):
+            tot = r["blk_tot"]
+            if not tot:
+                return 0.0
+            return ((r["blk_hash"]*2 + r["blk_pos"]*0.7 + r["blk_neg"]*0.07 + r["blk_cov"]*0.15 - r["blk_inv"] - r["blk_err"]) / tot) * 100.0
+
+        def eff_def(r):
+            tot = r["def_tot"]
+            if not tot:
+                return 0.0
+            return ((r["def_pos"]*2 + r["def_cov"]*0.5 + r["def_neg"]*0.4 + r["def_over"]*0.3 - r["def_err"]) / tot) * 100.0
+
+        cols = st.columns(3)
+        eff_cards = [
+            ("Efficienza BATTUTA", build_df(dfT.apply(lambda r: eff_serve(r), axis=1))),
+            ("Efficienza RICEZIONE", build_df(dfT.apply(lambda r: eff_rece(r), axis=1))),
+        ]
+
+        if att_first and att_tr:
+            eff_cards.append(("Efficienza ATTACCO (Tot)", build_df(dfT.apply(lambda r: eff_att_total(r), axis=1))))
+        elif att_first:
+            eff_cards.append(("Efficienza ATTACCO (Dopo Ricezione)", build_df(dfT.apply(lambda r: eff_att_first(r), axis=1))))
+        else:
+            eff_cards.append(("Efficienza ATTACCO (Transizione)", build_df(dfT.apply(lambda r: eff_att_tr(r), axis=1))))
+
+        eff_cards += [
+            ("Efficienza MURO TOTALE", build_df(dfT.apply(lambda r: eff_block(r), axis=1))),
+            ("Efficienza DIFESA TOTALE", build_df(dfT.apply(lambda r: eff_def(r), axis=1))),
+        ]
+
+        for i, (title, dfm) in enumerate(eff_cards):
+            with cols[i % 3]:
+                render_card(title, dfm, fmt="{:.1f}")
 
 
 # =========================
@@ -4441,8 +6836,7 @@ page = st.sidebar.radio(
 ADMIN_MODE = st.sidebar.checkbox("Modalità staff (admin)", value=True)
 
 if page == "Home":
-    st.header("Home")
-    st.info("Usa il menu a sinistra per navigare. L'import è riservato allo staff.")
+    render_home_dashboard()
 
 elif page == "Import DVW (solo staff)":
     render_import(ADMIN_MODE)
@@ -4469,6 +6863,12 @@ elif page == "Indici Break Point - Giocatori (per ruolo)":
 
 elif page == "Classifiche Fondamentali - Squadre":
     render_fondamentali_team()
+
+elif page == "Classifiche Fondamentali - Giocatori (per ruolo)":
+    render_fondamentali_players()
+
+elif page == "Punti per Set":
+    render_points_per_set()
 
 else:
     st.header(page)
