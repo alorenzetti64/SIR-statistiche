@@ -3178,9 +3178,13 @@ def render_sideout_players_by_role():
 
     voce = st.radio(
         "Seleziona indice",
-        ["SIDE OUT TOTALE", "SIDE OUT SPIN", "SIDE OUT FLOAT"],
+        [
+            "SIDE OUT TOTALE",
+            "SIDE OUT SPIN",
+            "SIDE OUT FLOAT",
+        ],
         index=0,
-        key="sop_voce",
+        key="so_pl_voce",
     )
 
     # ===== RANGE GIORNATE =====
@@ -3191,34 +3195,46 @@ def render_sideout_players_by_role():
             WHERE round_number IS NOT NULL
         """)).mappings().first()
 
-    min_r = int(bounds["min_r"] or 1)
-    max_r = int(bounds["max_r"] or 1)
+    min_r = int((bounds["min_r"] or 1))
+    max_r = int((bounds["max_r"] or 1))
 
     c1, c2 = st.columns(2)
     with c1:
-        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="sop_from")
+        from_round = st.number_input("Da giornata", min_value=min_r, max_value=max_r, value=min_r, step=1, key="so_pl_from")
     with c2:
-        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="sop_to")
+        to_round = st.number_input("A giornata", min_value=min_r, max_value=max_r, value=max_r, step=1, key="so_pl_to")
 
     if from_round > to_round:
         st.error("Range non valido: 'Da giornata' deve essere <= 'A giornata'.")
         st.stop()
 
-    # ===== RUOLI (multi) + MIN RICE =====
-    with engine.begin() as conn:
-        role_rows = conn.execute(text("""
-            SELECT DISTINCT role
-            FROM roster
-            WHERE role IS NOT NULL AND TRIM(role) <> ''
-            ORDER BY role
-        """)).mappings().all()
-    role_options = [r["role"] for r in role_rows] if role_rows else []
+    # ===== FILTRO RUOLI + MIN RICEZIONI =====
+    season = st.text_input("Stagione roster", value="2025-26", key="so_pl_season")
 
-    sel_roles = st.multiselect(
+    with engine.begin() as conn:
+        roster_rows = conn.execute(text("""
+            SELECT team_raw, team_norm, jersey_number, player_name, role, created_at
+            FROM roster
+            WHERE season = :season
+        """), {"season": season}).mappings().all()
+
+    if not roster_rows:
+        st.warning("Roster vuoto per questa stagione: importa prima i ruoli (pagina Import Ruoli).")
+        return
+
+    df_roster = pd.DataFrame(roster_rows)
+    df_roster["created_at"] = df_roster["created_at"].fillna("")
+    df_roster = (
+        df_roster.sort_values(by=["team_norm", "jersey_number", "created_at"])
+                 .drop_duplicates(subset=["team_norm", "jersey_number"], keep="last")
+    )
+
+    roles_all = sorted(df_roster["role"].dropna().unique().tolist())
+    roles_sel = st.multiselect(
         "Filtra per ruolo (selezione multipla)",
-        options=role_options,
-        default=role_options,
-        key="sop_roles",
+        options=roles_all,
+        default=roles_all,
+        key="so_pl_roles",
     )
 
     min_recv = st.number_input(
@@ -3226,7 +3242,7 @@ def render_sideout_players_by_role():
         min_value=0,
         value=10,
         step=1,
-        key="sop_minrecv",
+        key="so_pl_minrecv",
     )
 
     st.info(
@@ -3234,7 +3250,7 @@ def render_sideout_players_by_role():
         "Selezionando il titolo di ciascuna colonna, i nominativi saranno ordinati in base al parametro corrispondente."
     )
 
-    # ===== MATCHES NEL RANGE =====
+    # ===== MATCHES =====
     with engine.begin() as conn:
         matches = conn.execute(text("""
             SELECT team_a, team_b, scout_text
@@ -3243,229 +3259,202 @@ def render_sideout_players_by_role():
         """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
 
     if not matches:
-        st.info("Nessun match nel range.")
+        st.info("Nessun match nel range selezionato.")
         return
 
-    # ===== ROSTER LOOKUP (team_norm + jersey -> name/role) =====
-    # NB: usiamo team_norm per ridurre varianti di nome squadra
-    def team_norm_key(name: str) -> str:
-        return norm(name)
+    SET_RE = re.compile(r"\*\*(\d)set\b", re.IGNORECASE)
 
-    with engine.begin() as conn:
-        roster = conn.execute(text("""
-            SELECT season, team_norm, jersey_number, player_name, role
-            FROM roster
-        """)).mappings().all()
-
-    roster_map = {}
-    for r in roster:
-        tn = (r.get("team_norm") or "").strip().lower()
-        jn = r.get("jersey_number")
-        if tn and jn is not None:
-            roster_map[(tn, int(jn))] = {
-                "player_name": (r.get("player_name") or "").strip(),
-                "role": (r.get("role") or "").strip(),
-            }
-
-    # ===== Parse rallies =====
     def parse_rallies(scout_text: str):
         if not scout_text:
             return []
-        lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and str(ln).strip()]
+        lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+        current_set = None
         rallies = []
-        cur = []
-        for raw in lines:
-            c = code6(raw)
-            if not c:
+        current = []
+        for ln in lines:
+            mm = SET_RE.search(ln)
+            if mm:
+                current_set = int(mm.group(1))
                 continue
-            if is_serve(c):
-                if cur:
-                    rallies.append(cur)
-                cur = [c]
+            if current_set is None:
                 continue
-            if not cur:
+            c6 = code6(ln)
+            if not c6 or c6[0] not in ("*", "a"):
                 continue
-            cur.append(c)
-            if is_home_point(c) or is_away_point(c):
-                rallies.append(cur)
-                cur = []
-        if cur:
-            rallies.append(cur)
+            if is_serve(c6):
+                if current:
+                    rallies.append(current)
+                current = [c6]
+                continue
+            if not current:
+                continue
+            current.append(c6)
+            if is_home_point(c6) or is_away_point(c6):
+                rallies.append(current)
+                current = []
+        if current:
+            rallies.append(current)
         return rallies
 
-    def is_recv_code(c6: str, prefix: str) -> bool:
-        # ricezione = RQ o RM
-        return len(c6) >= 5 and c6[0] == prefix and c6[3:5] in ("RQ", "RM")
+    def player_num(c6: str):
+        mm = re.match(r"^[\*a](\d{2})", c6)
+        return int(mm.group(1)) if mm else None
 
-    def recv_kind_ok(c6: str) -> bool:
-        # filtro indice: totale / spin / float
-        # Qui "SPIN" = ricezioni RQ ; "FLOAT" = ricezioni RM (non battuta SQ/SM)
-        if voce == "SIDE OUT TOTALE":
-            return True
-        if voce == "SIDE OUT SPIN":
-            return len(c6) >= 5 and c6[3:5] == "RQ"
-        if voce == "SIDE OUT FLOAT":
-            return len(c6) >= 5 and c6[3:5] == "RM"
-        return True
-        if voce == "SIDE OUT SPIN":
-            return is_home_spin(c6) or is_away_spin(c6)
-        if voce == "SIDE OUT FLOAT":
-            return is_home_float(c6) or is_away_float(c6)
-        return True
+    def is_rece(c6: str) -> bool:
+        return len(c6) >= 6 and c6[0] in ("*", "a") and c6[3:5] in ("RQ", "RM")
 
-    # ===== Accumulator per player =====
-    # key = (team_norm, jersey_number)
-    acc = {}
+    def is_spin_serve(c6: str) -> bool:
+        return len(c6) >= 5 and c6[3:5] == "SQ"
 
-    def bump(team_name: str, jersey: int, win: bool, direct: bool):
-        tn = team_norm_key(team_name)
-        k = (tn, int(jersey))
-        if k not in acc:
-            acc[k] = {"team": team_name, "jersey": int(jersey), "recv_att": 0, "so_win": 0, "so_dir": 0}
-        acc[k]["recv_att"] += 1
-        if win:
-            acc[k]["so_win"] += 1
-        if direct:
-            acc[k]["so_dir"] += 1
+    def is_float_serve(c6: str) -> bool:
+        return len(c6) >= 5 and c6[3:5] == "SM"
 
-    # ===== Scan matches =====
+    def is_attack(c6: str) -> bool:
+        return len(c6) >= 6 and c6[0] in ("*", "a") and c6[3] == "A"
+
+    def rece_player_and_sign(rally, rece_prefix):
+        for x in rally:
+            if is_rece(x) and x[0] == rece_prefix:
+                return player_num(x), x[5]
+        return None, None
+
+    def first_attack_winner_after_rece(rally, rece_prefix):
+        seen_rece = False
+        for x in rally:
+            if not seen_rece:
+                if is_rece(x) and x[0] == rece_prefix:
+                    seen_rece = True
+                continue
+            if is_attack(x) and x[0] == rece_prefix:
+                return (len(x) >= 6 and x[5] == "#")
+        return False
+
+    P = {}
+    team_recv_tot = {}
+
+    def ensure_player_rec(team_raw: str, num: int):
+        tn = team_norm(team_raw)
+        key = (tn, int(num))
+        if key not in P:
+            P[key] = {"team_norm": tn, "Squadra": fix_team_name(team_raw), "N°": int(num), "recv": 0, "so": 0, "sod": 0}
+        return P[key]
+
+    def add_team_recv(team_raw: str, n: int):
+        tn = team_norm(team_raw)
+        team_recv_tot[tn] = team_recv_tot.get(tn, 0) + int(n)
+
     for m in matches:
-        team_a = m.get("team_a") or ""
-        team_b = m.get("team_b") or ""
+        ta = fix_team_name(m.get("team_a") or "")
+        tb = fix_team_name(m.get("team_b") or "")
         rallies = parse_rallies(m.get("scout_text") or "")
 
         for r in rallies:
-            # ricezione home/away (c'è una sola ricezione per rally, prendiamo la prima che troviamo)
-            home_recv = next((x for x in r if is_recv_code(x, "*") and recv_kind_ok(x)), None)
-            away_recv = next((x for x in r if is_recv_code(x, "a") and recv_kind_ok(x)), None)
+            if not r or not is_serve(r[0]):
+                continue
+            serve = r[0]
 
-            home_point = any(is_home_point(x) for x in r)
-            away_point = any(is_away_point(x) for x in r)
+            if voce == "SIDE OUT SPIN" and not is_spin_serve(serve):
+                continue
+            if voce == "SIDE OUT FLOAT" and not is_float_serve(serve):
+                continue
 
-            if home_recv:
-                # jersey number 2 cifre pos 1-2
-                try:
-                    jersey = int(home_recv[1:3])
-                except Exception:
-                    continue
-                direct = bool(home_point and first_attack_after_reception_is_winner(r, "*"))
-                bump(team_a, jersey, win=home_point, direct=direct)
+            s_prefix = serve[0]
+            rece_prefix = "a" if s_prefix == "*" else "*"
+            rece_team = ta if rece_prefix == "*" else tb
 
-            if away_recv:
-                try:
-                    jersey = int(away_recv[1:3])
-                except Exception:
-                    continue
-                direct = bool(away_point and first_attack_after_reception_is_winner(r, "a"))
-                bump(team_b, jersey, win=away_point, direct=direct)
+            pnum, _ = rece_player_and_sign(r, rece_prefix)
+            if pnum is None:
+                continue
 
-    if not acc:
-        st.info("Nessuna ricezione trovata nel range selezionato.")
-        return
+            home_won = any(is_home_point(x) for x in r)
+            away_won = any(is_away_point(x) for x in r)
+            rece_team_won = (home_won and rece_prefix == "*") or (away_won and rece_prefix == "a")
 
-    # ===== Build dataframe =====
-    rows = []
-    for (tn, jersey), v in acc.items():
-        info = roster_map.get((tn, jersey), {"player_name": f"N°{jersey:02d}", "role": ""})
-        rows.append({
-            "Nome giocatore": (info.get("player_name") or f"N°{jersey:02d}").strip(),
-            "Ruolo": (info.get("role") or "").strip(),
-            "Squadra": v["team"],
-            "recv_att": int(v["recv_att"]),
-            "so_win": int(v["so_win"]),
-            "so_dir": int(v["so_dir"]),
-        })
+            rec = ensure_player_rec(rece_team, pnum)
+            rec["recv"] += 1
+            add_team_recv(rece_team, 1)
 
-    df = pd.DataFrame(rows)
+            if rece_team_won:
+                rec["so"] += 1
+                if first_attack_winner_after_rece(r, rece_prefix):
+                    rec["sod"] += 1
 
-    # filtro ruoli
-    if sel_roles:
-        df = df[df["Ruolo"].isin(sel_roles)].copy()
-
-    # filtro minimo ricezioni
-    df = df[df["recv_att"] >= int(min_recv)].copy()
-
+    df = pd.DataFrame(list(P.values()))
     if df.empty:
-        st.info("Nessun giocatore soddisfa i filtri selezionati.")
+        st.info("Nessun dato trovato nel range.")
         return
 
-    # Tot ricezioni di squadra (per % Ply/Team)
-    team_tot = df.groupby("Squadra", as_index=False)["recv_att"].sum().rename(columns={"recv_att": "team_recv"})
-    df = df.merge(team_tot, on="Squadra", how="left")
+    df = df.merge(
+        df_roster[["team_norm", "jersey_number", "player_name", "role", "team_raw"]],
+        left_on=["team_norm", "N°"],
+        right_on=["team_norm", "jersey_number"],
+        how="left",
+    ).drop(columns=["jersey_number"])
 
-    df["% Ply/Team"] = df.apply(lambda r: pct(int(r["recv_att"]), int(r["team_recv"])), axis=1)
-    df["% di SO"] = df.apply(lambda r: pct(int(r["so_win"]), int(r["recv_att"])), axis=1)
-    df["% di SO-d"] = df.apply(lambda r: pct(int(r["so_dir"]), int(r["recv_att"])), axis=1)
+    df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
+    df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
+    df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
+    df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+    df = df.drop(columns=["team_raw"])
 
-    # Dedup robusto: stessa persona può comparire due volte per errori roster -> raggruppo per Nome+Squadra
-    df = df.groupby(["Nome giocatore", "Squadra"], as_index=False).agg({
-        "Ruolo": "first",
-        "recv_att": "sum",
-        "so_win": "sum",
-        "so_dir": "sum",
-        "team_recv": "first",
-    })
-    df["% Ply/Team"] = df.apply(lambda r: pct(int(r["recv_att"]), int(r["team_recv"])), axis=1)
-    df["% di SO"] = df.apply(lambda r: pct(int(r["so_win"]), int(r["recv_att"])), axis=1)
-    df["% di SO-d"] = df.apply(lambda r: pct(int(r["so_dir"]), int(r["recv_att"])), axis=1)
+    if roles_sel:
+        df = df[df["Ruolo"].isin(roles_sel)].copy()
 
-    # Ranking fisso su % di SO (poi n ricezioni)
-    df_rank = df.sort_values(by=["% di SO", "recv_att"], ascending=[False, False]).reset_index(drop=True)
+    df = df[df["recv"] >= int(min_recv)].copy()
+    if df.empty:
+        st.info("Nessun giocatore sopra il minimo ricezioni nel filtro selezionato.")
+        return
+
+    df["% di SO"] = df.apply(lambda r: (100.0 * r["so"] / r["recv"]) if r["recv"] else 0.0, axis=1)
+    df["% di SO-d"] = df.apply(lambda r: (100.0 * r["sod"] / r["recv"]) if r["recv"] else 0.0, axis=1)
+    df["% Ply/Team"] = df.apply(lambda r: (100.0 * r["recv"] / team_recv_tot.get(r["team_norm"], 0)) if team_recv_tot.get(r["team_norm"], 0) else 0.0, axis=1)
+
+    df_rank = df.sort_values(by=["% di SO", "recv"], ascending=[False, False]).reset_index(drop=True)
     df_rank.insert(0, "Ranking", range(1, len(df_rank) + 1))
 
-    out = df_rank[[
-        "Ranking",
-        "Team",
-        "sets_total",
-        "Punti Team/Set",
-        "Nome giocatore",
-        "Set giocati",
-        "Punti/Set Giocatore",
-        "% Ply/Team",
-        "pts_serve",
-        "pts_attack",
-        "pts_block",
-    ]].rename(columns={
-        "Team": "Nome Team",
-        "sets_total": "Set giocati dal Team",
-        "Punti Team/Set": "Punti per Set (Team)",
-        "Set giocati": "Set giocati dal Giocatore",
-        "Punti/Set Giocatore": "Punti per Set (Giocatore)",
-        "% Ply/Team": "% Ply/Team",
-        "pts_serve": "Punti in Battuta",
-        "pts_attack": "Punti in Attacco",
-        "pts_block": "Punti a Muro",
+    out = df_rank[["Ranking", "Nome giocatore", "Squadra", "recv", "% Ply/Team", "% di SO", "% di SO-d"]].rename(columns={
+        "recv": "N° ricezioni fatte",
     }).copy()
 
-    # Trasforma i punti per fondamentale in "per set giocati dal giocatore"
-    if "Set giocati dal Giocatore" in out.columns and out["Set giocati dal Giocatore"].notna().any():
-        denom = out["Set giocati dal Giocatore"].replace(0, pd.NA).astype("float")
-        for col in ["Punti in Battuta", "Punti in Attacco", "Punti a Muro"]:
-            if col in out.columns:
-                out[col] = (out[col].astype("float") / denom).fillna(0.0).round(1)
-
-    # ===== Styling =====
     def highlight_perugia(row):
-        return ["background-color: #fff3cd; font-weight: 800;" if "perugia" in str(row["Squadra"]).lower() else "" for _ in row]
+        is_perugia = "perugia" in str(row.get("Squadra", "")).lower()
+        style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+        return [style] * len(row)
+
+    def _fmt1(x):
+        try:
+            v = float(x)
+            s = f"{v:.1f}"
+            return s.rstrip("0").rstrip(".")
+        except Exception:
+            return x
+
+    def _highlight_col(df_):
+        styles = pd.DataFrame("", index=df_.index, columns=df_.columns)
+        col = "% di SO"
+        if col in df_.columns:
+            styles[col] = "background-color: #e7f5ff; font-weight: 900;"
+        return styles
 
     styled = (
         out.style
           .apply(highlight_perugia, axis=1)
+          .apply(_highlight_col, axis=None)
           .format({
-              "Ranking": "{:.0f}",
+              "% di SO": _fmt1,
+              "% di SO-d": _fmt1,
+              "% Ply/Team": _fmt1,
               "N° ricezioni fatte": "{:.0f}",
-              "% Ply/Team": "{:.1f}",
-              "% di SO": "{:.1f}",
-              "% di SO-d": "{:.1f}",
+              "Ranking": "{:.0f}",
           })
           .set_table_styles([
-              {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "10px 12px")]},
-              {"selector": "td", "props": [("font-size", "21px"), ("padding", "10px 12px")]},
+              {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+              {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
           ])
-          .set_properties(subset=["% di SO"], **{"font-weight": "900", "background-color": "#e8f5e9"})
     )
 
-    st.dataframe(styled, width="stretch", hide_index=True)
+    st.dataframe(styled, use_container_width=True, hide_index=True)
+
 
 # =========================
 # UI: BREAK POINT - GIOCATORI (per ruolo)
