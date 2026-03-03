@@ -6971,13 +6971,13 @@ st.sidebar.title("Volley App")
 # Filtri Partite (Andata/Ritorno/Playoff)
 # sidebar_match_filters()  # disabled duplicate call
 page = st.sidebar.radio(
-    "Vai a:", key="nav_page",
+    "Vai a:",
     [
         "Home",
         "Import DVW (solo staff)",
         "Import Ruoli (solo staff)",
         "Indici Side Out - Squadre",
-        "Indici Fase Break – Squadre",
+        "Indici Fase Break - Squadre",
         "GRAFICI 4 Quadranti",
         "Indici Side Out - Giocatori (per ruolo)",
         "Indici Break Point - Giocatori (per ruolo)",
@@ -6985,8 +6985,8 @@ page = st.sidebar.radio(
         "Classifiche Fondamentali - Giocatori (per ruolo)",
         "Punti per Set",
     ],
+    key="nav_page",
 )
-
 ADMIN_MODE = st.sidebar.checkbox("Modalità staff (admin)", value=True)
 
 if page == "Home":
@@ -7027,3 +7027,4 @@ elif page == "Punti per Set":
 else:
     st.header(page)
     st.info("In costruzione.")
+
