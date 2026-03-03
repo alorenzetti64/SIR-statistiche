@@ -28,6 +28,37 @@ def norm(s: str | None) -> str:
     return s
 
 
+
+# =========================
+# TEAM CANON (sponsor/variants -> 12 teams)
+# =========================
+def canonical_team(name: str | None) -> str:
+    """Map raw team names (with sponsors/variants) to canonical labels."""
+    if not name:
+        return ""
+    s = str(name).strip().lower()
+    s = " ".join(s.split())
+    # substring rules (broad, to catch sponsor variants)
+    rules = [
+        ("PERUGIA",    ["perugia", "sir", "susa"]),
+        ("MODENA",     ["modena", "valsa"]),
+        ("TRENTO",     ["trentino", "trento", "itas"]),
+        ("MILANO",     ["milano", "allianz"]),
+        ("PIACENZA",   ["piacenza", "gas sales", "bluenergy"]),
+        ("CIVITANOVA", ["civitanova", "lube", "cucine lube"]),
+        ("VERONA",     ["verona", "rana"]),
+        ("CUNEO",      ["cuneo", "bernardo", "s. bernardo", "s bernardo", "ma acqua"]),
+        ("CISTERNA",   ["cisterna"]),
+        ("PADOVA",     ["padova", "sonepar"]),
+        ("MONZA",      ["monza", "vero volley"]),
+        ("GROTTA",     ["grotta", "grottazzolina", "yuasa"]),
+    ]
+    for canon, needles in rules:
+        if any(n in s for n in needles):
+            return canon
+    # fallback: keep readable
+    return str(name).strip().upper()
+
 def build_match_key(team_a: str, team_b: str, competition: str | None, phase: str, round_number: int) -> str:
     return f"{norm(team_a)}|{norm(team_b)}|{norm(competition)}|{phase}{round_number:02d}"
 
@@ -1185,6 +1216,7 @@ def render_sideout_team():
             df.style
               .apply(highlight_perugia, axis=1)
               .format(fmt)
+              .set_properties(subset=[c for c in df.columns if ('%' in str(c))], **{'background-color': '#e7f5ff', 'font-weight': '800'})
               .set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
@@ -1227,9 +1259,19 @@ def render_sideout_team():
             "n_ricezioni": "n° ricezioni",
             "n_sideout": "n° Side Out",
         })
-        df.insert(0, "Rank", range(1, len(df) + 1))
-        df = df[["Rank", "squadra", "% S.O.", "n° ricezioni", "n° Side Out"]].copy()
-        show_table(df, {"Rank": "{:.0f}", "% S.O.": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out": "{:.0f}"})
+        # Canonicalizza nomi squadra (sponsor/varianti) e raggruppa a 12 squadre
+        df["TEAM_CANON"] = df["squadra"].apply(canonical_team)
+        df = (df.groupby("TEAM_CANON", as_index=False)
+                .agg({"n° ricezioni": "sum", "n° Side Out": "sum"}))
+        df["% S.O."] = (100.0 * df["n° Side Out"] / df["n° ricezioni"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df = df.rename(columns={"TEAM_CANON": "squadra"})
+        # Ordina per % S.O. (colonna guida) e poi per volume
+        df = df.sort_values(["% S.O.", "n° ricezioni"], ascending=[False, False])
+        # Ranking 1..12 come prima colonna
+        df = df.head(12).reset_index(drop=True)
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+        df = df[["Ranking", "squadra", "% S.O.", "n° ricezioni", "n° Side Out"]].copy()
+        show_table(df, {"Ranking": "{:.0f}", "% S.O.": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out": "{:.0f}"})
 
     # --- SPIN ---
     elif voce == "Side Out SPIN":
@@ -1240,6 +1282,7 @@ def render_sideout_team():
                         squadra,
                         SUM(spin_att) AS spin_att,
                         SUM(spin_win) AS spin_win,
+                        SUM(tot_att) AS tot_att,
                         COALESCE(ROUND(100.0 * SUM(spin_win) / NULLIF(SUM(spin_att), 0), 1), 0.0) AS so_spin_pct,
                         COALESCE(ROUND(100.0 * SUM(spin_att) / NULLIF(SUM(tot_att), 0), 1), 0.0) AS spin_share_pct
                     FROM (
@@ -1269,10 +1312,21 @@ def render_sideout_team():
             "spin_att": "n° ricezioni SPIN",
             "spin_win": "n° Side Out SPIN",
             "spin_share_pct": "% SPIN su TOT",
+            "tot_att": "n° ricezioni TOT",
         })
-        df_spin.insert(0, "Rank", range(1, len(df_spin) + 1))
-        df_spin = df_spin[["Rank", "squadra", "% S.O. SPIN", "n° ricezioni SPIN", "n° Side Out SPIN", "% SPIN su TOT"]].copy()
-        show_table(df_spin, {"Rank": "{:.0f}", "% S.O. SPIN": "{:.1f}", "n° ricezioni SPIN": "{:.0f}",
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_spin["TEAM_CANON"] = df_spin["squadra"].apply(canonical_team)
+        df_spin = (df_spin.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni SPIN": "sum", "n° Side Out SPIN": "sum", "n° ricezioni TOT": "sum"}))
+        df_spin = df_spin.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_spin["% S.O. SPIN"] = (100.0 * df_spin["n° Side Out SPIN"] / df_spin["n° ricezioni SPIN"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_spin["% SPIN su TOT"] = (100.0 * df_spin["n° ricezioni SPIN"] / df_spin["n° ricezioni TOT"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_spin = df_spin.sort_values(['% S.O. SPIN', 'n° ricezioni SPIN'], ascending=[False, False])
+        df_spin = df_spin.head(12).reset_index(drop=True)
+        df_spin.insert(0, "Ranking", range(1, len(df_spin) + 1))
+        df_spin = df_spin[['Ranking', 'squadra', '% S.O. SPIN', 'n° ricezioni SPIN', 'n° Side Out SPIN', '% SPIN su TOT']].copy()
+        show_table(df_spin, {"Ranking": "{:.0f}", "% S.O. SPIN": "{:.1f}", "n° ricezioni SPIN": "{:.0f}",
                              "n° Side Out SPIN": "{:.0f}", "% SPIN su TOT": "{:.1f}"})
 
     # --- FLOAT ---
@@ -1284,6 +1338,7 @@ def render_sideout_team():
                         squadra,
                         SUM(float_att) AS float_att,
                         SUM(float_win) AS float_win,
+                        SUM(tot_att) AS tot_att,
                         COALESCE(ROUND(100.0 * SUM(float_win) / NULLIF(SUM(float_att), 0), 1), 0.0) AS so_float_pct,
                         COALESCE(ROUND(100.0 * SUM(float_att) / NULLIF(SUM(tot_att), 0), 1), 0.0) AS float_share_pct
                     FROM (
@@ -1313,10 +1368,21 @@ def render_sideout_team():
             "float_att": "n° ricezioni FLOAT",
             "float_win": "n° Side Out FLOAT",
             "float_share_pct": "% FLOAT su TOT",
+            "tot_att": "n° ricezioni TOT",
         })
-        df_float.insert(0, "Rank", range(1, len(df_float) + 1))
-        df_float = df_float[["Rank", "squadra", "% S.O. FLOAT", "n° ricezioni FLOAT", "n° Side Out FLOAT", "% FLOAT su TOT"]].copy()
-        show_table(df_float, {"Rank": "{:.0f}", "% S.O. FLOAT": "{:.1f}", "n° ricezioni FLOAT": "{:.0f}",
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_float["TEAM_CANON"] = df_float["squadra"].apply(canonical_team)
+        df_float = (df_float.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni FLOAT": "sum", "n° Side Out FLOAT": "sum", "n° ricezioni TOT": "sum"}))
+        df_float = df_float.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_float["% S.O. FLOAT"] = (100.0 * df_float["n° Side Out FLOAT"] / df_float["n° ricezioni FLOAT"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_float["% FLOAT su TOT"] = (100.0 * df_float["n° ricezioni FLOAT"] / df_float["n° ricezioni TOT"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_float = df_float.sort_values(['% S.O. FLOAT', 'n° ricezioni FLOAT'], ascending=[False, False])
+        df_float = df_float.head(12).reset_index(drop=True)
+        df_float.insert(0, "Ranking", range(1, len(df_float) + 1))
+        df_float = df_float[['Ranking', 'squadra', '% S.O. FLOAT', 'n° ricezioni FLOAT', 'n° Side Out FLOAT', '% FLOAT su TOT']].copy()
+        show_table(df_float, {"Ranking": "{:.0f}", "% S.O. FLOAT": "{:.1f}", "n° ricezioni FLOAT": "{:.0f}",
                               "n° Side Out FLOAT": "{:.0f}", "% FLOAT su TOT": "{:.1f}"})
 
     # --- DIRETTO ---
@@ -1354,9 +1420,18 @@ def render_sideout_team():
             "n_ricezioni": "n° ricezioni",
             "n_sideout_dir": "n° Side Out DIR",
         })
-        df_dir.insert(0, "Rank", range(1, len(df_dir) + 1))
-        df_dir = df_dir[["Rank", "squadra", "% S.O. DIR", "n° ricezioni", "n° Side Out DIR"]].copy()
-        show_table(df_dir, {"Rank": "{:.0f}", "% S.O. DIR": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out DIR": "{:.0f}"})
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_dir["TEAM_CANON"] = df_dir["squadra"].apply(canonical_team)
+        df_dir = (df_dir.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni": "sum", "n° Side Out DIR": "sum"}))
+        df_dir = df_dir.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_dir["% S.O. DIR"] = (100.0 * df_dir["n° Side Out DIR"] / df_dir["n° ricezioni"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_dir = df_dir.sort_values(['% S.O. DIR', 'n° ricezioni'], ascending=[False, False])
+        df_dir = df_dir.head(12).reset_index(drop=True)
+        df_dir.insert(0, "Ranking", range(1, len(df_dir) + 1))
+        df_dir = df_dir[['Ranking', 'squadra', '% S.O. DIR', 'n° ricezioni', 'n° Side Out DIR']].copy()
+        show_table(df_dir, {"Ranking": "{:.0f}", "% S.O. DIR": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out DIR": "{:.0f}"})
 
     # --- GIOCATO ---
     elif voce == "Side Out GIOCATO":
@@ -1393,9 +1468,18 @@ def render_sideout_team():
             "n_ricezioni_giocato": "n° ricezioni (giocabili)",
             "n_sideout_giocato": "n° Side Out",
         })
-        df_g.insert(0, "Rank", range(1, len(df_g) + 1))
-        df_g = df_g[["Rank", "squadra", "% S.O. GIOCATO", "n° ricezioni (giocabili)", "n° Side Out"]].copy()
-        show_table(df_g, {"Rank": "{:.0f}", "% S.O. GIOCATO": "{:.1f}", "n° ricezioni (giocabili)": "{:.0f}", "n° Side Out": "{:.0f}"})
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_g["TEAM_CANON"] = df_g["squadra"].apply(canonical_team)
+        df_g = (df_g.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni (giocabili)": "sum", "n° Side Out": "sum"}))
+        df_g = df_g.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_g["% S.O. GIOCATO"] = (100.0 * df_g["n° Side Out"] / df_g["n° ricezioni (giocabili)"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_g = df_g.sort_values(['% S.O. GIOCATO', 'n° ricezioni (giocabili)'], ascending=[False, False])
+        df_g = df_g.head(12).reset_index(drop=True)
+        df_g.insert(0, "Ranking", range(1, len(df_g) + 1))
+        df_g = df_g[['Ranking', 'squadra', '% S.O. GIOCATO', 'n° ricezioni (giocabili)', 'n° Side Out']].copy()
+        show_table(df_g, {"Ranking": "{:.0f}", "% S.O. GIOCATO": "{:.1f}", "n° ricezioni (giocabili)": "{:.0f}", "n° Side Out": "{:.0f}"})
 
     # --- BUONA ---
     elif voce == "Side Out con RICE BUONA":
@@ -1432,9 +1516,18 @@ def render_sideout_team():
             "n_ricezioni_buone": "n° ricezioni (#,+)",
             "n_sideout_buone": "n° Side Out",
         })
-        df_b.insert(0, "Rank", range(1, len(df_b) + 1))
-        df_b = df_b[["Rank", "squadra", "% S.O. RICE BUONA", "n° ricezioni (#,+)", "n° Side Out"]].copy()
-        show_table(df_b, {"Rank": "{:.0f}", "% S.O. RICE BUONA": "{:.1f}", "n° ricezioni (#,+)": "{:.0f}", "n° Side Out": "{:.0f}"})
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_b["TEAM_CANON"] = df_b["squadra"].apply(canonical_team)
+        df_b = (df_b.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni (#,+)": "sum", "n° Side Out": "sum"}))
+        df_b = df_b.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_b["% S.O. RICE BUONA"] = (100.0 * df_b["n° Side Out"] / df_b["n° ricezioni (#,+)"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_b = df_b.sort_values(['% S.O. RICE BUONA', 'n° ricezioni (#,+)'], ascending=[False, False])
+        df_b = df_b.head(12).reset_index(drop=True)
+        df_b.insert(0, "Ranking", range(1, len(df_b) + 1))
+        df_b = df_b[['Ranking', 'squadra', '% S.O. RICE BUONA', 'n° ricezioni (#,+)', 'n° Side Out']].copy()
+        show_table(df_b, {"Ranking": "{:.0f}", "% S.O. RICE BUONA": "{:.1f}", "n° ricezioni (#,+)": "{:.0f}", "n° Side Out": "{:.0f}"})
 
     # --- ESCLAMATIVA ---
     elif voce == "Side Out con RICE ESCALAMATIVA":
@@ -1471,9 +1564,18 @@ def render_sideout_team():
             "n_ricezioni_exc": "n° ricezioni (!)",
             "n_sideout_exc": "n° Side Out",
         })
-        df_e.insert(0, "Rank", range(1, len(df_e) + 1))
-        df_e = df_e[["Rank", "squadra", "% S.O. RICE !", "n° ricezioni (!)", "n° Side Out"]].copy()
-        show_table(df_e, {"Rank": "{:.0f}", "% S.O. RICE !": "{:.1f}", "n° ricezioni (!)": "{:.0f}", "n° Side Out": "{:.0f}"})
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_e["TEAM_CANON"] = df_e["squadra"].apply(canonical_team)
+        df_e = (df_e.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni (!)": "sum", "n° Side Out": "sum"}))
+        df_e = df_e.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_e["% S.O. RICE !"] = (100.0 * df_e["n° Side Out"] / df_e["n° ricezioni (!)"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_e = df_e.sort_values(['% S.O. RICE !', 'n° ricezioni (!)'], ascending=[False, False])
+        df_e = df_e.head(12).reset_index(drop=True)
+        df_e.insert(0, "Ranking", range(1, len(df_e) + 1))
+        df_e = df_e[['Ranking', 'squadra', '% S.O. RICE !', 'n° ricezioni (!)', 'n° Side Out']].copy()
+        show_table(df_e, {"Ranking": "{:.0f}", "% S.O. RICE !": "{:.1f}", "n° ricezioni (!)": "{:.0f}", "n° Side Out": "{:.0f}"})
 
     # --- NEGATIVA ---
     elif voce == "Side Out con RICE NEGATIVA":
@@ -1510,9 +1612,18 @@ def render_sideout_team():
             "n_ricezioni_neg": "n° ricezioni (-)",
             "n_sideout_neg": "n° Side Out",
         })
-        df_n.insert(0, "Rank", range(1, len(df_n) + 1))
-        df_n = df_n[["Rank", "squadra", "% S.O. RICE -", "n° ricezioni (-)", "n° Side Out"]].copy()
-        show_table(df_n, {"Rank": "{:.0f}", "% S.O. RICE -": "{:.1f}", "n° ricezioni (-)": "{:.0f}", "n° Side Out": "{:.0f}"})
+        # Canonicalizza e raggruppa squadre (sponsor/varianti -> 12)
+        df_n["TEAM_CANON"] = df_n["squadra"].apply(canonical_team)
+        df_n = (df_n.groupby("TEAM_CANON", as_index=False)
+                          .agg({"n° ricezioni (-)": "sum", "n° Side Out": "sum"}))
+        df_n = df_n.rename(columns={"TEAM_CANON": "squadra"})
+        # Ricalcolo percentuali dopo raggruppamento
+        df_n["% S.O. RICE -"] = (100.0 * df_n["n° Side Out"] / df_n["n° ricezioni (-)"].replace({0: pd.NA})).round(1).fillna(0.0)
+        df_n = df_n.sort_values(['% S.O. RICE -', 'n° ricezioni (-)'], ascending=[False, False])
+        df_n = df_n.head(12).reset_index(drop=True)
+        df_n.insert(0, "Ranking", range(1, len(df_n) + 1))
+        df_n = df_n[['Ranking', 'squadra', '% S.O. RICE -', 'n° ricezioni (-)', 'n° Side Out']].copy()
+        show_table(df_n, {"Ranking": "{:.0f}", "% S.O. RICE -": "{:.1f}", "n° ricezioni (-)": "{:.0f}", "n° Side Out": "{:.0f}"})
 
 
 # =========================
@@ -1555,19 +1666,8 @@ def render_break_team():
         st.stop()
 
     def fix_team(name: str) -> str:
-        n = " ".join((name or "").split())
-        low = n.lower()
-        # mapping esplicito richiesto
-        if low.startswith("gas sales bluenergy p"):
-            return "Gas Sales Bluenergy Piacenza"
-        if low == "gas sales bluenergy piacenza":
-            return "Gas Sales Bluenergy Piacenza"
-        if low == "grottazzolina":
-            return "Yuasa Battery Grottazzolina"
-        # normalizza eventuali varianti di maiuscole
-        if "yuasa" in low and "grottazzolina" in low:
-            return "Yuasa Battery Grottazzolina"
-        return n
+        # Canonicalizza sempre (sponsor/varianti -> 12 squadre)
+        return canonical_team(name)
 
     def highlight_perugia(row):
         is_perugia = "perugia" in str(row["squadra"]).lower()
@@ -1587,6 +1687,7 @@ def render_break_team():
             df.style
               .apply(highlight_perugia, axis=1)
               .format(fmt)
+              .set_properties(subset=[c for c in df.columns if ('%' in str(c))], **{'background-color': '#e7f5ff', 'font-weight': '800'})
               .set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
@@ -1746,10 +1847,10 @@ def render_break_team():
         })
 
         df = df.sort_values(by=["% B.Point", "n° Battute"], ascending=[False, False]).reset_index(drop=True)
-        df.insert(0, "Rank", range(1, len(df) + 1))
-        df = df[["Rank", "squadra", "% B.Point", "n° Battute", "n° B.Point"]].copy()
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+        df = df[["Ranking", "squadra", "% B.Point", "n° Battute", "n° B.Point"]].copy()
 
-        show_table(df, {"Rank": "{:.0f}", "% B.Point": "{:.1f}", "n° Battute": "{:.0f}", "n° B.Point": "{:.0f}"})
+        show_table(df, {"Ranking": "{:.0f}", "% B.Point": "{:.1f}", "n° Battute": "{:.0f}", "n° B.Point": "{:.0f}"})
 
     # ===== BREAK GIOCATO (BT = '-' '+' '!') =====
     elif voce == "BREAK GIOCATO":
@@ -1767,10 +1868,10 @@ def render_break_team():
         })
 
         df = df.sort_values(by=["% B.Point (Giocato)", "n° Battute (BT)"], ascending=[False, False]).reset_index(drop=True)
-        df.insert(0, "Rank", range(1, len(df) + 1))
+        df.insert(0, "Ranking", range(1, len(df) + 1))
 
-        df = df[["Rank", "squadra", "% B.Point (Giocato)", "n° Battute (BT)", "n° B.Point"]].copy()
-        show_table(df, {"Rank": "{:.0f}", "% B.Point (Giocato)": "{:.1f}", "n° Battute (BT)": "{:.0f}", "n° B.Point": "{:.0f}"})
+        df = df[["Ranking", "squadra", "% B.Point (Giocato)", "n° Battute (BT)", "n° B.Point"]].copy()
+        show_table(df, {"Ranking": "{:.0f}", "% B.Point (Giocato)": "{:.1f}", "n° Battute (BT)": "{:.0f}", "n° B.Point": "{:.0f}"})
 
     # ===== BT NEGATIVA / POSITIVA / ESCLAMATIVA =====
     elif voce == "BREAK con BT. NEGATIVA":
@@ -1797,12 +1898,7 @@ def render_break_team():
             return
 
         def fix_team(name: str) -> str:
-            n = " ".join((name or "").split())
-            if n.lower().startswith("gas sales bluenergy p"):
-                return "Gas Sales Bluenergy Piacenza"
-            if "grottazzolina" in n.lower():
-                return "Yuasa Battery Grottazzolina"
-            return n
+            return canonical_team(name)
 
         agg = {}
         def ensure(team: str):
@@ -1891,7 +1987,8 @@ def render_break_team():
             out.style
               .apply(highlight_perugia_row, axis=1)
               .format({"Ranking": "{:.0f}", "% B.Point con Bt-": "{:.1f}", "% Bt-/Bt Tot": "{:.1f}"})
-              .set_table_styles([
+              
+              .set_properties(subset=[c for c in ["% B.Point con Bt-"] if c in out.columns], **{'background-color': '#e7f5ff', 'font-weight': '800'}).set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
@@ -1921,12 +2018,7 @@ def render_break_team():
             return
 
         def fix_team(name: str) -> str:
-            n = " ".join((name or "").split())
-            if n.lower().startswith("gas sales bluenergy p"):
-                return "Gas Sales Bluenergy Piacenza"
-            if "grottazzolina" in n.lower():
-                return "Yuasa Battery Grottazzolina"
-            return n
+            return canonical_team(name)
 
         agg = {}
         def ensure(team: str):
@@ -2019,7 +2111,8 @@ def render_break_team():
             out.style
               .apply(highlight_perugia_row, axis=1)
               .format({"Ranking": "{:.0f}", "% B.Point con Bt+": "{:.1f}", "% Bt+/Bt Tot": "{:.1f}"})
-              .set_table_styles([
+              
+              .set_properties(subset=[c for c in ["% B.Point con Bt+"] if c in out.columns], **{'background-color': '#e7f5ff', 'font-weight': '800'}).set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
@@ -2049,12 +2142,7 @@ def render_break_team():
             return
 
         def fix_team(name: str) -> str:
-            n = " ".join((name or "").split())
-            if n.lower().startswith("gas sales bluenergy p"):
-                return "Gas Sales Bluenergy Piacenza"
-            if "grottazzolina" in n.lower():
-                return "Yuasa Battery Grottazzolina"
-            return n
+            return canonical_team(name)
 
         agg = {}
         def ensure(team: str):
@@ -2144,7 +2232,8 @@ def render_break_team():
             out.style
               .apply(highlight_perugia_row, axis=1)
               .format({"Ranking": "{:.0f}", "% B.Point con Bt!": "{:.1f}", "% Bt!/Bt Tot": "{:.1f}"})
-              .set_table_styles([
+              
+              .set_properties(subset=[c for c in ["% B.Point con Bt!"] if c in out.columns], **{'background-color': '#e7f5ff', 'font-weight': '800'}).set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
@@ -2176,12 +2265,7 @@ def render_break_team():
             return
 
         def fix_team(name: str) -> str:
-            n = " ".join((name or "").split())
-            if n.lower().startswith("gas sales bluenergy p"):
-                return "Gas Sales Bluenergy Piacenza"
-            if "grottazzolina" in n.lower():
-                return "Yuasa Battery Grottazzolina"
-            return n
+            return canonical_team(name)
 
         agg = {}
         def ensure(team: str):
@@ -2272,7 +2356,8 @@ def render_break_team():
             out.style
               .apply(highlight_perugia_row, axis=1)
               .format({"Ranking": "{:.0f}", "% B.Point con Bt½": "{:.1f}", "% Bt½/Bt Tot": "{:.1f}"})
-              .set_table_styles([
+              
+              .set_properties(subset=[c for c in ["% B.Point con Bt½", "% B.Point con Bt1/2"] if c in out.columns], **{'background-color': '#e7f5ff', 'font-weight': '800'}).set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
@@ -2308,12 +2393,7 @@ def render_break_team():
             return
 
         def fix_team(name: str) -> str:
-            n = " ".join((name or "").split())
-            if n.lower().startswith("gas sales bluenergy p"):
-                return "Gas Sales Bluenergy Piacenza"
-            if "grottazzolina" in n.lower():
-                return "Yuasa Battery Grottazzolina"
-            return n
+            return canonical_team(name)
 
         agg = {}
         def ensure(team: str):
@@ -2405,7 +2485,8 @@ def render_break_team():
                   "% Bt Errore/Tot Bt": "{:.1f}",
                   "Ratio Errore/Punto": "{:.2f}",
               })
-              .set_table_styles([
+              
+              .set_properties(subset=[c for c in ["% Bt Punto/Tot Bt"] if c in out.columns], **{'background-color': '#e7f5ff', 'font-weight': '800'}).set_table_styles([
                   {"selector": "th", "props": [("font-size", "24px"), ("text-align", "left"), ("padding", "10px 12px")]},
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
@@ -2959,12 +3040,8 @@ def render_grafici_4_quadranti():
         return
 
     def fix_team(name: str) -> str:
-        n = " ".join((name or "").split())
-        if n.lower().startswith("gas sales bluenergy p"):
-            return "Gas Sales Bluenergy Piacenza"
-        if "grottazzolina" in n.lower():
-            return "Yuasa Battery Grottazzolina"
-        return n
+        # Canonicalizza: sponsor/varianti -> sola città (12 squadre)
+        return canonical_team(name)
 
     def safe_pct(num: float, den: float) -> float:
         return (float(num) / float(den) * 100.0) if den else 0.0
@@ -3513,7 +3590,7 @@ def render_sideout_players_by_role():
         tn = team_norm(team_raw)
         key = (tn, int(num))
         if key not in P:
-            P[key] = {"team_norm": tn, "Squadra": fix_team_name(team_raw), "N°": int(num), "recv": 0, "so": 0, "sod": 0}
+            P[key] = {"team_norm": tn, "Squadra": canonical_team(team_raw), "N°": int(num), "recv": 0, "so": 0, "sod": 0}
         return P[key]
 
     def add_team_recv(team_raw: str, n: int):
@@ -3521,8 +3598,10 @@ def render_sideout_players_by_role():
         team_recv_tot[tn] = team_recv_tot.get(tn, 0) + int(n)
 
     for m in matches:
-        ta = fix_team_name(m.get("team_a") or "")
-        tb = fix_team_name(m.get("team_b") or "")
+        ta_raw = (m.get("team_a") or "")
+        tb_raw = (m.get("team_b") or "")
+        ta = ta_raw
+        tb = tb_raw
         rallies = parse_rallies(m.get("scout_text") or "")
 
         for r in rallies:
@@ -3571,8 +3650,12 @@ def render_sideout_players_by_role():
     df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
     df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
     df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
-    df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+    df["Squadra"] = df["team_raw"].apply(canonical_team).fillna(df["Squadra"])
     df = df.drop(columns=["team_raw"])
+
+    # Canonicalizza sempre la colonna Squadra (solo città)
+    df["Squadra"] = df["Squadra"].apply(canonical_team)
+
 
     if roles_sel:
         df = df[df["Ruolo"].isin(roles_sel)].copy()
@@ -3588,6 +3671,9 @@ def render_sideout_players_by_role():
 
     df_rank = df.sort_values(by=["% di SO", "recv"], ascending=[False, False]).reset_index(drop=True)
     df_rank.insert(0, "Ranking", range(1, len(df_rank) + 1))
+    # Canonicalizza sempre la colonna Squadra (solo città)
+    df_rank["Squadra"] = df_rank["Squadra"].apply(canonical_team)
+
 
     out = df_rank[["Ranking", "Nome giocatore", "Squadra", "recv", "% Ply/Team", "% di SO", "% di SO-d"]].rename(columns={
         "recv": "N° ricezioni fatte",
@@ -3737,7 +3823,7 @@ def render_break_players_by_role():
         if key not in agg:
             agg[key] = {
                 "team_norm": tnorm,
-                "Squadra": team_raw,
+                "Squadra": canonical_team(team_raw),
                 "N°": num,
                 "serves": 0,
                 "bp_win": 0,
@@ -3751,12 +3837,12 @@ def render_break_players_by_role():
     def ensure_team(team_raw: str):
         tnorm = team_norm(team_raw)
         if tnorm not in team_agg:
-            team_agg[tnorm] = {"team_norm": tnorm, "Squadra": team_raw, "serves": 0, "bp_win": 0}
+            team_agg[tnorm] = {"team_norm": tnorm, "Squadra": canonical_team(team_raw), "serves": 0, "bp_win": 0}
         return team_agg[tnorm]
 
     for m in matches:
-        team_a = fix_team_name(m.get("team_a") or "")
-        team_b = fix_team_name(m.get("team_b") or "")
+        team_a = (m.get("team_a") or "")
+        team_b = (m.get("team_b") or "")
 
         rallies = parse_rallies(m.get("scout_text") or "")
         for rally in rallies:
@@ -3936,6 +4022,211 @@ def render_fondamentali_team():
         st.stop()
 
 
+    # =======================
+    # DIFESA (SQUADRE) — come tabella giocatori (Efficienza difesa)
+    # =======================
+    if voce == "Difesa":
+        st.subheader("Difesa")
+
+        # stato iniziale (toggle identico alla tabella giocatori)
+        if "fund_tm_def_total" not in st.session_state:
+            st.session_state.fund_tm_def_total = True
+        for k in ("dt", "dq", "dm", "dh"):
+            kk = f"fund_tm_def_{k}"
+            if kk not in st.session_state:
+                st.session_state[kk] = False
+
+        def _toggle_total_tm():
+            if st.session_state.fund_tm_def_total:
+                st.session_state.fund_tm_def_dt = False
+                st.session_state.fund_tm_def_dq = False
+                st.session_state.fund_tm_def_dm = False
+                st.session_state.fund_tm_def_dh = False
+
+        def _toggle_specific_tm():
+            if (st.session_state.fund_tm_def_dt or st.session_state.fund_tm_def_dq or
+                st.session_state.fund_tm_def_dm or st.session_state.fund_tm_def_dh):
+                st.session_state.fund_tm_def_total = False
+            if (not st.session_state.fund_tm_def_total and
+                not st.session_state.fund_tm_def_dt and not st.session_state.fund_tm_def_dq and
+                not st.session_state.fund_tm_def_dm and not st.session_state.fund_tm_def_dh):
+                st.session_state.fund_tm_def_total = True
+
+        c1, c2, c3, c4, c5 = st.columns(5)
+        with c1:
+            st.checkbox("Difesa su palla Spinta", key="fund_tm_def_dt", on_change=_toggle_specific_tm)
+        with c2:
+            st.checkbox("Difesa su 1°tempo", key="fund_tm_def_dq", on_change=_toggle_specific_tm)
+        with c3:
+            st.checkbox("Difesa su PIPE", key="fund_tm_def_dm", on_change=_toggle_specific_tm)
+        with c4:
+            st.checkbox("Difesa su H-ball", key="fund_tm_def_dh", on_change=_toggle_specific_tm)
+        with c5:
+            st.checkbox("Difesa TOTALE", key="fund_tm_def_total", on_change=_toggle_total_tm)
+
+        st.caption(
+            "L’efficienza della difesa è calcolata in questo modo: "
+            "(Buone*2 + Coperture*0,5 + Negative*0,4 + OverTheNet*0,3 – Errori) / Tot * 100."
+        )
+
+        # ===== MATCHES NEL RANGE =====
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT team_a, team_b, scout_text
+                    FROM matches
+                    WHERE ( (CASE matches.phase WHEN 'A' THEN 1 WHEN 'R' THEN 2 WHEN 'POQ' THEN 3 WHEN 'POS' THEN 4 WHEN 'POF' THEN 5 ELSE 99 END) * 100 + COALESCE(matches.round_number,0) ) BETWEEN :from_round AND :to_round
+                """),
+                {"from_round": int(from_round), "to_round": int(to_round)}
+            ).mappings().all()
+
+        if not rows:
+            st.info("Nessun match nel range selezionato.")
+            return
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            _lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in _lines if ln[0] in ("*", "a")]
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c6 = code6(raw)
+                if not c6:
+                    continue
+                if is_serve(c6):
+                    if current:
+                        rallies.append(current)
+                    current = [c6]
+                    continue
+                if not current:
+                    continue
+                current.append(c6)
+                if is_home_point(c6) or is_away_point(c6):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        def is_defense(c6: str) -> bool:
+            return len(c6) >= 6 and c6[3] == "D" and c6[0] in ("*", "a")
+
+        def def_type(c6: str) -> str:
+            return c6[3:5] if c6 and len(c6) >= 5 else ""
+
+        def def_sign(c6: str) -> str:
+            return c6[5] if c6 and len(c6) >= 6 else ""
+
+        def defense_selected(c6: str) -> bool:
+            if st.session_state.fund_tm_def_total:
+                return True
+            t = def_type(c6)
+            s = def_sign(c6)
+            if st.session_state.fund_tm_def_dt and t == "DT":
+                return s != "!"
+            if st.session_state.fund_tm_def_dq and t == "DQ":
+                return s != "!"
+            if st.session_state.fund_tm_def_dm and t == "DM":
+                return s != "!"
+            if st.session_state.fund_tm_def_dh and t == "DH":
+                return s != "!"
+            return False
+
+        agg = {}  # team -> counts
+        def ensure(team_raw: str):
+            team = canonical_team(team_raw)
+            if team not in agg:
+                agg[team] = {"Squadra": team, "Tot": 0, "Buone": 0, "Cop": 0, "Neg": 0, "Over": 0, "Err": 0}
+            return agg[team]
+
+        for m in rows:
+            ta_raw = (m.get("team_a") or "")
+            tb_raw = (m.get("team_b") or "")
+            rallies = parse_rallies(m.get("scout_text") or "")
+            for rally in rallies:
+                if not rally:
+                    continue
+                for c in rally[1:]:
+                    if not is_defense(c):
+                        continue
+                    if not defense_selected(c):
+                        continue
+                    team_raw = ta_raw if c[0] == "*" else tb_raw
+                    rec = ensure(team_raw)
+                    rec["Tot"] += 1
+                    s = def_sign(c)
+                    if s == "+":
+                        rec["Buone"] += 1
+                    elif s == "!":
+                        rec["Cop"] += 1
+                    elif s == "-":
+                        rec["Neg"] += 1
+                    elif s == "/":
+                        rec["Over"] += 1
+                    elif s == "=":
+                        rec["Err"] += 1
+
+        df = pd.DataFrame(list(agg.values()))
+        if df.empty:
+            st.info("Nessuna difesa trovata nel range selezionato.")
+            return
+
+        def pct(num, den):
+            return (100.0 * num / den) if den else 0.0
+
+        df["Buone%"] = df.apply(lambda r: pct(r["Buone"], r["Tot"]), axis=1)
+        df["Cop%"]   = df.apply(lambda r: pct(r["Cop"],   r["Tot"]), axis=1)
+        df["Neg%"]   = df.apply(lambda r: pct(r["Neg"],   r["Tot"]), axis=1)
+        df["Over%"]  = df.apply(lambda r: pct(r["Over"],  r["Tot"]), axis=1)
+        df["Err%"]   = df.apply(lambda r: pct(r["Err"],   r["Tot"]), axis=1)
+
+        df["EFF"] = df.apply(
+            lambda r: ((r["Buone"] * 2.0 + r["Cop"] * 0.5 + r["Neg"] * 0.4 + r["Over"] * 0.3 - r["Err"]) / r["Tot"] * 100.0) if r["Tot"] else 0.0,
+            axis=1
+        )
+
+        df = df.sort_values(by=["EFF", "Tot"], ascending=[False, False]).reset_index(drop=True)
+        df = df.head(12).reset_index(drop=True)
+        df.insert(0, "Ranking", range(1, len(df) + 1))
+
+        out = df[["Ranking", "Squadra", "Tot", "EFF", "Buone%", "Cop%", "Neg%", "Over%", "Err%"]].rename(columns={
+            "Squadra": "squadra",
+            "EFF": "Eff",
+            "Buone%": "Buone",
+            "Cop%": "Cop",
+            "Neg%": "Neg",
+            "Over%": "Over",
+            "Err%": "Err",
+        }).copy()
+
+        def highlight_perugia(row):
+            is_perugia = "perugia" in str(row["squadra"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_perugia else ""
+            return [style] * len(row)
+
+        styled = (
+            out.style
+              .apply(highlight_perugia, axis=1)
+              .set_properties(subset=["Eff"], **{"background-color": "#e7f5ff", "font-weight": "900"})
+              .format({
+                  "Ranking": "{:.0f}",
+                  "Tot": "{:.0f}",
+                  "Eff": "{:.1f}",
+                  "Buone": "{:.1f}",
+                  "Cop": "{:.1f}",
+                  "Neg": "{:.1f}",
+                  "Over": "{:.1f}",
+                  "Err": "{:.1f}",
+              })
+              .set_table_styles([
+                  {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
+                  {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
+              ])
+        )
+        st.dataframe(styled, width="stretch", hide_index=True)
+        return
+
+
     st.info("Sezione in costruzione. Ho già impostato il menu dei fondamentali: ora decidiamo insieme le metriche e le tabelle per ciascuna voce.")
 
     # Placeholder strutturale per sviluppo step-by-step (senza patch sparse)
@@ -4008,7 +4299,7 @@ def render_fondamentali_team():
 
         def fix_team(name: str) -> str:
             # riusa le stesse regole già usate altrove
-            return fix_team_name(name)
+            return canonical_team(name)
 
         agg = {}  # team -> counts
 
@@ -4964,7 +5255,7 @@ def render_fondamentali_players():
             if key not in agg:
                 agg[key] = {
                     "team_norm": tnorm,
-                    "Squadra": team_raw,
+                    "Squadra": canonical_team(team_raw),
                     "N°": num,
                     "Tot": 0,
                     "Punti": 0,
@@ -5039,8 +5330,12 @@ def render_fondamentali_players():
         df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
         df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
         df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
-        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df["Squadra"] = df["team_raw"].apply(canonical_team).fillna(df["Squadra"])
         df = df.drop(columns=["team_raw"])
+
+        # Canonicalizza sempre la colonna Squadra (solo città)
+        df["Squadra"] = df["Squadra"].apply(canonical_team)
+
 
         if roles_sel:
             df = df[df["Ruolo"].isin(roles_sel)].copy()
@@ -5174,7 +5469,7 @@ def render_fondamentali_players():
             if key not in agg:
                 agg[key] = {
                     "team_norm": tnorm,
-                    "Squadra": team_raw,
+                    "Squadra": canonical_team(team_raw),
                     "N°": num,
                     "Tot": 0,
                     "Perf": 0,
@@ -5244,8 +5539,12 @@ def render_fondamentali_players():
         df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
         df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
         df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
-        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df["Squadra"] = df["team_raw"].apply(canonical_team).fillna(df["Squadra"])
         df = df.drop(columns=["team_raw"])
+
+        # Canonicalizza sempre la colonna Squadra (solo città)
+        df["Squadra"] = df["Squadra"].apply(canonical_team)
+
 
         if roles_sel:
             df = df[df["Ruolo"].isin(roles_sel)].copy()
@@ -5370,7 +5669,7 @@ def render_fondamentali_players():
             if key not in agg:
                 agg[key] = {
                     "team_norm": tnorm,
-                    "Squadra": team_raw,
+                    "Squadra": canonical_team(team_raw),
                     "N°": num,
                     "Tot": 0,
                     "Punti": 0,
@@ -5442,8 +5741,12 @@ def render_fondamentali_players():
         df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
         df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
         df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
-        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df["Squadra"] = df["team_raw"].apply(canonical_team).fillna(df["Squadra"])
         df = df.drop(columns=["team_raw"])
+
+        # Canonicalizza sempre la colonna Squadra (solo città)
+        df["Squadra"] = df["Squadra"].apply(canonical_team)
+
 
         if roles_sel:
             df = df[df["Ruolo"].isin(roles_sel)].copy()
@@ -5584,7 +5887,7 @@ def render_fondamentali_players():
             if key not in agg:
                 agg[key] = {
                     "team_norm": tnorm,
-                    "Squadra": team_raw,
+                    "Squadra": canonical_team(team_raw),
                     "N°": num,
                     "Tot": 0,
                     "Perf": 0,
@@ -5683,8 +5986,12 @@ def render_fondamentali_players():
         df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
         df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
         df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
-        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df["Squadra"] = df["team_raw"].apply(canonical_team).fillna(df["Squadra"])
         df = df.drop(columns=["team_raw"])
+
+        # Canonicalizza sempre la colonna Squadra (solo città)
+        df["Squadra"] = df["Squadra"].apply(canonical_team)
+
 
         if roles_sel:
             df = df[df["Ruolo"].isin(roles_sel)].copy()
@@ -5856,7 +6163,7 @@ def render_fondamentali_players():
             if key not in agg:
                 agg[key] = {
                     "team_norm": tnorm,
-                    "Squadra": team_raw,
+                    "Squadra": canonical_team(team_raw),
                     "N°": num,
                     "Tot": 0,
                     "Perf": 0,  # '+'
@@ -5914,8 +6221,12 @@ def render_fondamentali_players():
         df.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
         df["Nome giocatore"] = df["Nome giocatore"].fillna(df["N°"].apply(lambda x: f"N°{int(x):02d}"))
         df["Ruolo"] = df["Ruolo"].fillna("(non in roster)")
-        df["Squadra"] = df["team_raw"].fillna(df["Squadra"])
+        df["Squadra"] = df["team_raw"].apply(canonical_team).fillna(df["Squadra"])
         df = df.drop(columns=["team_raw"])
+
+        # Canonicalizza sempre la colonna Squadra (solo città)
+        df["Squadra"] = df["Squadra"].apply(canonical_team)
+
 
         if roles_sel:
             df = df[df["Ruolo"].isin(roles_sel)].copy()
@@ -6155,7 +6466,7 @@ def render_points_per_set():
         if key not in players:
             players[key] = {
                 "team_norm": tnorm,
-                "Nome Team": team_raw,
+                "Nome Team": canonical_team(team_raw),
                 "N°": num,
                 "sets": set(),  # (match_id, set_no)
                 "pts_total": 0,
@@ -6170,7 +6481,7 @@ def render_points_per_set():
         if tnorm not in team_tot:
             team_tot[tnorm] = {
                 "team_norm": tnorm,
-                "Nome Team": team_raw,
+                "Nome Team": canonical_team(team_raw),
                 "sets_total": 0,
                 "pts_total": 0,
                 "err_avv_total": 0,
@@ -6179,8 +6490,8 @@ def render_points_per_set():
 
     for m in matches:
         match_id = int(m.get("match_id") or 0)
-        team_a = fix_team_name(m.get("team_a") or "")
-        team_b = fix_team_name(m.get("team_b") or "")
+        team_a = (m.get("team_a") or "")
+        team_b = (m.get("team_b") or "")
 
         rallies, sets_seen = parse_rallies_and_sets(m.get("scout_text") or "")
         n_sets = len(sets_seen) if sets_seen else 0
@@ -6270,8 +6581,12 @@ def render_points_per_set():
     df_players.rename(columns={"player_name": "Nome giocatore", "role": "Ruolo"}, inplace=True)
     df_players["Nome giocatore"] = df_players["Nome giocatore"].fillna(df_players["N°"].apply(lambda x: f"N°{int(x):02d}"))
     df_players["Ruolo"] = df_players["Ruolo"].fillna("(non in roster)")
-    df_players["Nome Team"] = df_players["team_raw"].fillna(df_players["Nome Team"])
+    df_players["Nome Team"] = df_players["team_raw"].apply(canonical_team).fillna(df_players["Nome Team"])
     df_players = df_players.drop(columns=["team_raw"])
+
+    # Canonicalizza sempre il nome squadra (solo città)
+    df_players["Nome Team"] = df_players["Nome Team"].apply(canonical_team)
+
 
     if roles_sel:
         df_players = df_players[df_players["Ruolo"].isin(roles_sel)].copy()
@@ -6525,8 +6840,10 @@ def render_home_dashboard():
 
     # Sets per match
     for m in matches:
-        ta = fix_team_name(m.get("team_a") or "")
-        tb = fix_team_name(m.get("team_b") or "")
+        ta_raw = (m.get("team_a") or "")
+        tb_raw = (m.get("team_b") or "")
+        ta = ta_raw
+        tb = tb_raw
         scout_text = m.get("scout_text") or ""
         sets_seen = set(int(x) for x in SET_RE.findall(scout_text))
         n_sets = len(sets_seen)
@@ -6535,8 +6852,10 @@ def render_home_dashboard():
             ensure_team(tb)["sets_total"] += n_sets
 
     for m in matches:
-        ta = fix_team_name(m.get("team_a") or "")
-        tb = fix_team_name(m.get("team_b") or "")
+        ta_raw = (m.get("team_a") or "")
+        tb_raw = (m.get("team_b") or "")
+        ta = ta_raw
+        tb = tb_raw
         rallies = parse_rallies(m.get("scout_text") or "")
         for r in rallies:
             if not r or not is_serve(r[0]):
