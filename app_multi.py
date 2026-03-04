@@ -382,6 +382,45 @@ def fix_team_name(name: str) -> str:
     return n
 
 
+
+# =============================================================
+# TEAM CANONICALIZATION (12 città) – usata per raggruppare sponsor/varianti
+# =============================================================
+import unicodedata
+import re as _re
+
+TEAM_RULES_CANON = [
+    ("PERUGIA",    ["perugia", "sir", "susa scai"]),
+    ("MODENA",     ["modena", "valsa"]),
+    ("TRENTO",     ["trentino", "trento", "itas"]),
+    ("MILANO",     ["milano", "allianz"]),
+    ("PIACENZA",   ["piacenza", "gas sales", "bluenergy"]),
+    ("CIVITANOVA", ["civitanova", "lube", "cucine lube"]),
+    ("VERONA",     ["verona", "rana"]),
+    ("CUNEO",      ["cuneo", "bernardo", "s bernardo", "acqua"]),
+    ("CISTERNA",   ["cisterna"]),
+    ("PADOVA",     ["padova", "sonepar"]),
+    ("MONZA",      ["monza", "vero volley"]),
+    ("GROTTA",     ["grotta", "grottazzolina", "yuasa"]),
+]
+
+def _canon_norm(val: str) -> str:
+    if val is None:
+        return ""
+    s = str(val).strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = _re.sub(r"[^a-z0-9\s]", " ", s)
+    s = _re.sub(r"\s+", " ", s).strip()
+    return s
+
+def canonical_team(name: str) -> str:
+    n = _canon_norm(name)
+    for canon, needles in TEAM_RULES_CANON:
+        if any(k in n for k in needles):
+            return canon
+    return str(name).strip().upper() if name is not None else "UNKNOWN"
+
 def team_norm(name: str) -> str:
     """Chiave stabile (lower + pulizia) per join DB."""
     n = fix_team_name(name).strip().lower()
