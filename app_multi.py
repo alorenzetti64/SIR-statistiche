@@ -27,6 +27,133 @@ def norm(s: str | None) -> str:
     s = " ".join(s.split())
     return s
 
+# =============================================================
+# TABLE RENDERER (auto width like Excel-ish) + Perugia highlight
+# =============================================================
+import html as _html
+
+def render_table_auto(
+    df: pd.DataFrame,
+    fmt: dict | None = None,
+    team_col: str | None = None,
+    perugia_word: str = "perugia",
+    highlight_cols: list[str] | None = None,
+    max_rows: int | None = None,
+):
+    """Render a DataFrame as HTML table with column widths based on content.
+    - Auto column widths (character-based)
+    - 1 decimal for floats by default
+    - Highlight Perugia row (if team column found)
+    - Highlight selected columns (e.g., % columns or guide column)
+    """
+    if df is None or getattr(df, "empty", True):
+        st.info("Nessun dato.")
+        return
+
+    df = df.copy()
+    if max_rows is not None:
+        df = df.head(int(max_rows)).copy()
+
+    fmt = fmt or {}
+    highlight_cols = highlight_cols or []
+
+    # pick team column automatically if not provided
+    if team_col is None:
+        for cand in ["squadra", "Team", "Squadra", "Nome Team"]:
+            if cand in df.columns:
+                team_col = cand
+                break
+
+    cols = list(df.columns)
+
+    # format cells to strings
+    def _format_cell(col, v):
+        f = fmt.get(col)
+        if f is not None:
+            try:
+                return f.format(v)
+            except Exception:
+                return "" if pd.isna(v) else str(v)
+        # default formats
+        if isinstance(v, (int,)) and not isinstance(v, bool):
+            return f"{v:d}"
+        if isinstance(v, (float,)):
+            return f"{v:.1f}"
+        return "" if pd.isna(v) else str(v)
+
+    str_rows = []
+    for _, row in df.iterrows():
+        str_rows.append([_format_cell(c, row[c]) for c in cols])
+
+    # compute widths (in ch)
+    sample_n = min(40, len(str_rows))
+    widths = []
+    for j, c in enumerate(cols):
+        header_len = len(str(c))
+        cell_lens = [len(str_rows[i][j]) for i in range(sample_n)]
+        mx = max([header_len] + cell_lens) if cell_lens else header_len
+        mx = max(6, min(28, mx))  # clamp
+        widths.append(mx)
+
+    team_idx = cols.index(team_col) if (team_col in cols) else None
+    hi_idx = {cols.index(c) for c in highlight_cols if c in cols}
+
+    # if no explicit highlight cols, highlight all % columns
+    if not hi_idx:
+        hi_idx = {i for i,c in enumerate(cols) if "%" in str(c)}
+
+    css = """
+    <style>
+    .tblwrap { overflow-x:auto; }
+    table.autotbl { border-collapse: collapse; width: max-content; min-width: 100%; }
+    table.autotbl th, table.autotbl td { border: 1px solid #e9ecef; padding: 8px 10px; white-space: nowrap; }
+    table.autotbl th { position: sticky; top: 0; background: #f8f9fa; font-weight: 800; text-align: left; }
+    table.autotbl td.num { text-align: right; }
+    table.autotbl tr.perugia td { background: #fff3cd; font-weight: 800; }
+    table.autotbl td.hicol { background: #e7f5ff; font-weight: 900; }
+    </style>
+    """
+
+    # header
+    ths = []
+    for c,w in zip(cols, widths):
+        ths.append(f'<th style="min-width:{w}ch">{_html.escape(str(c))}</th>')
+    html_rows = ["<tr>" + "".join(ths) + "</tr>"]
+
+    # body
+    for r in str_rows:
+        is_perugia = False
+        if team_idx is not None:
+            is_perugia = perugia_word in (r[team_idx] or "").lower()
+
+        tds = []
+        for j,(val,w) in enumerate(zip(r, widths)):
+            classes = []
+            # numeric align heuristic
+            sval = val or ""
+            if j != team_idx and sval and sval.replace(".", "", 1).replace("-", "", 1).isdigit():
+                classes.append("num")
+            if j in hi_idx:
+                classes.append("hicol")
+            cls = " ".join(classes).strip()
+            cls_attr = f' class="{cls}"' if cls else ""
+            tds.append(f'<td{cls_attr} style="min-width:{w}ch">{_html.escape(sval)}</td>')
+
+        tr_cls = ' class="perugia"' if is_perugia else ""
+        html_rows.append(f"<tr{tr_cls}>" + "".join(tds) + "</tr>")
+
+    st.markdown(css + '<div class="tblwrap"><table class="autotbl">' + "".join(html_rows) + "</table></div>", unsafe_allow_html=True)
+
+
+def render_any_table(obj, fmt: dict | None = None, team_col: str | None = None, highlight_cols: list[str] | None = None, max_rows: int | None = None):
+    """Accept a DataFrame OR a pandas Styler and render with auto-width HTML."""
+    df = None
+    try:
+        # pandas Styler has .data
+        df = obj.data  # type: ignore
+    except Exception:
+        df = obj
+    render_table_auto(df, fmt=fmt, team_col=team_col, highlight_cols=highlight_cols, max_rows=max_rows)
 
 
 # =========================
@@ -1222,7 +1349,7 @@ def render_sideout_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
     # --- TOTALE ---
     if voce == "Side Out TOTALE":
@@ -1693,7 +1820,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
     # ===== helper: calcola BT giocato/segni direttamente da scout_text (NON usa colonne bp_play_*/bt_* nel DB) =====
     def compute_break_bt_agg() -> pd.DataFrame:
@@ -1993,7 +2120,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
     elif voce == "BREAK con BT. POSITIVA":
         # ==========================================================
         # TABELLA POSITIVA (stesso modello della NEGATIVA):
@@ -2117,7 +2244,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
     elif voce == "BREAK con BT. ESCLAMATIVA":
         # ==========================================================
         # TABELLA ESCLAMATIVA (solo '!'):
@@ -2238,7 +2365,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "BREAK con BT. 1/2 PUNTO":
@@ -2362,7 +2489,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "BT punto/errore/ratio":
@@ -2491,7 +2618,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "Confronto TEAM":
@@ -2725,7 +2852,7 @@ def render_break_team():
                   {"selector": "td", "props": [("font-size", "23px"), ("padding", "10px 12px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
     elif voce == "GRAFICI":
         # ==========================================================
@@ -3716,7 +3843,7 @@ def render_sideout_players_by_role():
           ])
     )
 
-    st.dataframe(styled, width='stretch', hide_index=True)
+    render_any_table(styled)
 
 
 # =========================
@@ -3981,7 +4108,7 @@ def render_break_players_by_role():
         {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
     ])
 
-    st.dataframe(styled, width="stretch", hide_index=True)
+    render_any_table(styled)
 
 
 # =========================
@@ -4223,7 +4350,7 @@ def render_fondamentali_team():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
         return
 
 
@@ -4444,7 +4571,7 @@ def render_fondamentali_team():
               ])
         )
 
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "Ricezione":
@@ -4674,7 +4801,7 @@ def render_fondamentali_team():
               ])
         )
 
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "Attacco":
@@ -4876,7 +5003,7 @@ def render_fondamentali_team():
               ])
         )
 
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "Muro":
@@ -5124,7 +5251,7 @@ def render_fondamentali_team():
               ])
         )
 
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
 
 
     elif voce == "Difesa":
@@ -5398,7 +5525,7 @@ def render_fondamentali_players():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
         return
 
     # =======================
@@ -5604,7 +5731,7 @@ def render_fondamentali_players():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
         return
 
     
@@ -5808,7 +5935,7 @@ def render_fondamentali_players():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
         return
 
     
@@ -6054,7 +6181,7 @@ def render_fondamentali_players():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
         return
 
     
@@ -6286,7 +6413,7 @@ def render_fondamentali_players():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
-        st.dataframe(styled, width="stretch", hide_index=True)
+        render_any_table(styled)
         return
 
     st.info("In costruzione: per ora sono complete le tabelle Battuta e Ricezione (giocatori).")
@@ -6674,7 +6801,7 @@ def render_points_per_set():
           })
     )
 
-    st.dataframe(styled, width='stretch', hide_index=True)
+    render_any_table(styled)
 
 
 # =========================
