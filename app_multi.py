@@ -5,6 +5,31 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+
+import hmac
+
+# =============================================================
+# STAFF LOCK (import pages only for Angelo)
+# =============================================================
+STAFF_PASSWORD = "Agl64@Volley"
+
+def staff_unlocked() -> bool:
+    """Return True if staff area is unlocked via password."""
+    if "staff_ok" not in st.session_state:
+        st.session_state.staff_ok = False
+
+    if st.session_state.staff_ok:
+        return True
+
+    with st.sidebar.expander("Area riservata", expanded=False):
+        pw = st.text_input("Password", type="password", key="staff_pw")
+        if st.button("Sblocca", key="staff_unlock_btn"):
+            st.session_state.staff_ok = hmac.compare_digest(str(pw), STAFF_PASSWORD)
+            if not st.session_state.staff_ok:
+                st.error("Password errata.")
+
+    return st.session_state.staff_ok
+
 from sqlalchemy import create_engine, text
 
 # =========================
@@ -7587,11 +7612,15 @@ if page == "Home":
     render_home_dashboard()
 
 elif page == "Import DVW (solo staff)":
+    if not staff_unlocked():
+        st.error("Area riservata.")
+        st.stop()
     render_import(ADMIN_MODE)
-
 elif page == "Import Ruoli (solo staff)":
+    if not staff_unlocked():
+        st.error("Area riservata.")
+        st.stop()
     render_import_ruoli(ADMIN_MODE)
-
 elif page == "Indici Side Out - Squadre":
     render_sideout_team()
 
