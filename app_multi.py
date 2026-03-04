@@ -1766,6 +1766,15 @@ def render_sideout_team():
             "n_ricezioni": "n° ricezioni",
             "n_sideout": "n° Side Out",
         })
+        # Canonicalizza squadre (solo città) + raggruppa davvero a 12
+        df["squadra"] = df["squadra"].apply(canonical_team)
+        num_cols = [c for c in df.columns if c != "squadra"]
+        df = df.groupby("squadra", as_index=False)[num_cols].sum()
+        df["% S.O."] = df.apply(lambda r: (100.0 * r["n° Side Out"] / r["n° ricezioni"]) if r["n° ricezioni"] else 0.0, axis=1)
+        df = df.sort_values(by=["% S.O.", "n° ricezioni"], ascending=[False, False]).reset_index(drop=True)
+        df = df.head(12).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
         df.insert(0, "Rank", range(1, len(df) + 1))
         df = df[["Rank", "squadra", "% S.O.", "n° ricezioni", "n° Side Out"]].copy()
         show_table(df, {"Rank": "{:.0f}", "% S.O.": "{:.1f}", "n° ricezioni": "{:.0f}", "n° Side Out": "{:.0f}"})
@@ -2285,6 +2294,26 @@ def render_break_team():
         })
 
         df = df.sort_values(by=["% B.Point", "n° Battute"], ascending=[False, False]).reset_index(drop=True)
+        # Canonicalizza squadre (solo città) + raggruppa davvero a 12
+        df["squadra"] = df["squadra"].apply(canonical_team)
+        num_cols = [c for c in df.columns if c != "squadra"]
+        df = df.groupby("squadra", as_index=False)[num_cols].sum()
+        df["% S.O. SPIN"] = df.apply(lambda r: (100.0 * r["n° S.O. SPIN"] / r["n° ricezioni SPIN"]) if r["n° ricezioni SPIN"] else 0.0, axis=1)
+        df["% SPIN/TOT"] = df.apply(lambda r: (100.0 * r["n° ricezioni SPIN"] / r["n° ricezioni TOT"]) if r["n° ricezioni TOT"] else 0.0, axis=1)
+        df = df.sort_values(by=["% S.O. SPIN", "n° ricezioni SPIN"], ascending=[False, False]).reset_index(drop=True)
+        df = df.head(12).reset_index(drop=True)
+        # Canonicalizza squadre (solo città) + raggruppa davvero a 12
+        df["squadra"] = df["squadra"].apply(canonical_team)
+        num_cols = [c for c in df.columns if c != "squadra"]
+        df = df.groupby("squadra", as_index=False)[num_cols].sum()
+        df["% S.O. FLOAT"] = df.apply(lambda r: (100.0 * r["n° S.O. FLOAT"] / r["n° ricezioni FLOAT"]) if r["n° ricezioni FLOAT"] else 0.0, axis=1)
+        df["% FLOAT/TOT"] = df.apply(lambda r: (100.0 * r["n° ricezioni FLOAT"] / r["n° ricezioni TOT"]) if r["n° ricezioni TOT"] else 0.0, axis=1)
+        df = df.sort_values(by=["% S.O. FLOAT", "n° ricezioni FLOAT"], ascending=[False, False]).reset_index(drop=True)
+        df = df.head(12).reset_index(drop=True)
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
+        df.insert(0, "Rank", range(1, len(df) + 1))
+
         df.insert(0, "Rank", range(1, len(df) + 1))
         df = df[["Rank", "squadra", "% B.Point", "n° Battute", "n° B.Point"]].copy()
 
