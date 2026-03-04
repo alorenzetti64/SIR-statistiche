@@ -6708,14 +6708,9 @@ def render_home_dashboard():
             UNION
             SELECT DISTINCT team_b AS t FROM matches
         """)).mappings().all()
-    team_list = sorted([fix_team_name(r["t"] or "") for r in teams if (r.get("t") or "").strip()])
-    default_team = None
-    for t in team_list:
-        if "perugia" in t.lower():
-            default_team = t
-            break
-    if not default_team and team_list:
-        default_team = team_list[0]
+    team_list = sorted({canonical_team(r["t"] or "") for r in teams if (r.get("t") or "").strip()})
+    # default: PERUGIA se presente
+    default_team = "PERUGIA" if "PERUGIA" in team_list else (team_list[0] if team_list else "")
 
     team_focus = st.selectbox("Squadra", team_list, index=(team_list.index(default_team) if default_team in team_list else 0), key="home_team")
 
@@ -6800,11 +6795,11 @@ def render_home_dashboard():
     T = {}
 
     def ensure_team(team_raw: str):
-        tn = team_norm(team_raw)
-        if tn not in T:
-            T[tn] = {
-                "team_norm": tn,
-                "Team": fix_team_name(team_raw),
+        key_team = canonical_team(team_raw)
+        if key_team not in T:
+            T[key_team] = {
+                "team_norm": key_team,
+                "Team": key_team,
                 "sets_total": 0,
 
                 "so_att": 0, "so_win": 0,
@@ -6836,7 +6831,7 @@ def render_home_dashboard():
 
                 "def_tot": 0, "def_pos": 0, "def_cov": 0, "def_neg": 0, "def_over": 0, "def_err": 0,
             }
-        return T[tn]
+        return T[key_team]
 
     # Sets per match
     for m in matches:
@@ -7078,11 +7073,149 @@ def render_home_dashboard():
         st.info("Nessun dato nel range selezionato.")
         return
 
+    # ===== DF team da DB (come tabelle nelle sezioni) per SIDE OUT + BREAK =====
+    # Questo evita discrepanze: la Home usa gli stessi numeratori/denominatori importati nel DB.
+    with engine.begin() as conn:
+        rows_db = conn.execute(text("""
+            SELECT
+                team_a, team_b,
+                COALESCE(so_home_attempts,0) AS so_home_attempts,
+                COALESCE(so_home_wins,0)     AS so_home_wins,
+                COALESCE(so_away_attempts,0) AS so_away_attempts,
+                COALESCE(so_away_wins,0)     AS so_away_wins,
+
+                COALESCE(so_spin_home_attempts,0) AS so_spin_home_attempts,
+                COALESCE(so_spin_home_wins,0)     AS so_spin_home_wins,
+                COALESCE(so_spin_away_attempts,0) AS so_spin_away_attempts,
+                COALESCE(so_spin_away_wins,0)     AS so_spin_away_wins,
+
+                COALESCE(so_float_home_attempts,0) AS so_float_home_attempts,
+                COALESCE(so_float_home_wins,0)     AS so_float_home_wins,
+                COALESCE(so_float_away_attempts,0) AS so_float_away_attempts,
+                COALESCE(so_float_away_wins,0)     AS so_float_away_wins,
+
+                COALESCE(so_dir_home_wins,0) AS so_dir_home_wins,
+                COALESCE(so_dir_away_wins,0) AS so_dir_away_wins,
+
+                COALESCE(so_play_home_attempts,0) AS so_play_home_attempts,
+                COALESCE(so_play_home_wins,0)     AS so_play_home_wins,
+                COALESCE(so_play_away_attempts,0) AS so_play_away_attempts,
+                COALESCE(so_play_away_wins,0)     AS so_play_away_wins,
+
+                COALESCE(so_good_home_attempts,0) AS so_good_home_attempts,
+                COALESCE(so_good_home_wins,0)     AS so_good_home_wins,
+                COALESCE(so_good_away_attempts,0) AS so_good_away_attempts,
+                COALESCE(so_good_away_wins,0)     AS so_good_away_wins,
+
+                COALESCE(so_exc_home_attempts,0) AS so_exc_home_attempts,
+                COALESCE(so_exc_home_wins,0)     AS so_exc_home_wins,
+                COALESCE(so_exc_away_attempts,0) AS so_exc_away_attempts,
+                COALESCE(so_exc_away_wins,0)     AS so_exc_away_wins,
+
+                COALESCE(so_neg_home_attempts,0) AS so_neg_home_attempts,
+                COALESCE(so_neg_home_wins,0)     AS so_neg_home_wins,
+                COALESCE(so_neg_away_attempts,0) AS so_neg_away_attempts,
+                COALESCE(so_neg_away_wins,0)     AS so_neg_away_wins,
+
+                COALESCE(bp_home_attempts,0) AS bp_home_attempts,
+                COALESCE(bp_home_wins,0)     AS bp_home_wins,
+                COALESCE(bp_away_attempts,0) AS bp_away_attempts,
+                COALESCE(bp_away_wins,0)     AS bp_away_wins,
+
+                COALESCE(bp_play_home_attempts,0) AS bp_play_home_attempts,
+                COALESCE(bp_play_home_wins,0)     AS bp_play_home_wins,
+                COALESCE(bp_play_away_attempts,0) AS bp_play_away_attempts,
+                COALESCE(bp_play_away_wins,0)     AS bp_play_away_wins
+            FROM matches
+            WHERE ( (CASE matches.phase WHEN 'A' THEN 1 WHEN 'R' THEN 2 WHEN 'POQ' THEN 3 WHEN 'POS' THEN 4 WHEN 'POF' THEN 5 ELSE 99 END) * 100 + COALESCE(matches.round_number,0) ) BETWEEN :from_round AND :to_round
+        """), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
+
+    agg_db = {}
+    def _ensure_db(team_raw: str):
+        t = canonical_team(team_raw)
+        if t not in agg_db:
+            agg_db[t] = {
+                "Team": t,
+                "so_att": 0, "so_win": 0,
+                "so_spin_att": 0, "so_spin_win": 0,
+                "so_float_att": 0, "so_float_win": 0,
+                "so_dir_win": 0,
+                "so_play_att": 0, "so_play_win": 0,
+                "so_good_att": 0, "so_good_win": 0,
+                "so_exc_att": 0, "so_exc_win": 0,
+                "so_neg_att": 0, "so_neg_win": 0,
+                "bp_att": 0, "bp_win": 0,
+                "bp_play_att": 0, "bp_play_win": 0,
+            }
+        return agg_db[t]
+
+    for r in rows_db:
+        ha = _ensure_db(r.get('team_a') or '')
+        hb = _ensure_db(r.get('team_b') or '')
+        ha["so_att"] += int(r.get('so_home_attempts') or 0)
+        ha["so_win"] += int(r.get('so_home_wins') or 0)
+        hb["so_att"] += int(r.get('so_away_attempts') or 0)
+        hb["so_win"] += int(r.get('so_away_wins') or 0)
+
+        ha["so_spin_att"] += int(r.get('so_spin_home_attempts') or 0)
+        ha["so_spin_win"] += int(r.get('so_spin_home_wins') or 0)
+        hb["so_spin_att"] += int(r.get('so_spin_away_attempts') or 0)
+        hb["so_spin_win"] += int(r.get('so_spin_away_wins') or 0)
+
+        ha["so_float_att"] += int(r.get('so_float_home_attempts') or 0)
+        ha["so_float_win"] += int(r.get('so_float_home_wins') or 0)
+        hb["so_float_att"] += int(r.get('so_float_away_attempts') or 0)
+        hb["so_float_win"] += int(r.get('so_float_away_wins') or 0)
+
+        ha["so_dir_win"] += int(r.get('so_dir_home_wins') or 0)
+        hb["so_dir_win"] += int(r.get('so_dir_away_wins') or 0)
+
+        ha["so_play_att"] += int(r.get('so_play_home_attempts') or 0)
+        ha["so_play_win"] += int(r.get('so_play_home_wins') or 0)
+        hb["so_play_att"] += int(r.get('so_play_away_attempts') or 0)
+        hb["so_play_win"] += int(r.get('so_play_away_wins') or 0)
+
+        ha["so_good_att"] += int(r.get('so_good_home_attempts') or 0)
+        ha["so_good_win"] += int(r.get('so_good_home_wins') or 0)
+        hb["so_good_att"] += int(r.get('so_good_away_attempts') or 0)
+        hb["so_good_win"] += int(r.get('so_good_away_wins') or 0)
+
+        ha["so_exc_att"] += int(r.get('so_exc_home_attempts') or 0)
+        ha["so_exc_win"] += int(r.get('so_exc_home_wins') or 0)
+        hb["so_exc_att"] += int(r.get('so_exc_away_attempts') or 0)
+        hb["so_exc_win"] += int(r.get('so_exc_away_wins') or 0)
+
+        ha["so_neg_att"] += int(r.get('so_neg_home_attempts') or 0)
+        ha["so_neg_win"] += int(r.get('so_neg_home_wins') or 0)
+        hb["so_neg_att"] += int(r.get('so_neg_away_attempts') or 0)
+        hb["so_neg_win"] += int(r.get('so_neg_away_wins') or 0)
+
+        ha["bp_att"] += int(r.get('bp_home_attempts') or 0)
+        ha["bp_win"] += int(r.get('bp_home_wins') or 0)
+        hb["bp_att"] += int(r.get('bp_away_attempts') or 0)
+        hb["bp_win"] += int(r.get('bp_away_wins') or 0)
+
+        ha["bp_play_att"] += int(r.get('bp_play_home_attempts') or 0)
+        ha["bp_play_win"] += int(r.get('bp_play_home_wins') or 0)
+        hb["bp_play_att"] += int(r.get('bp_play_away_attempts') or 0)
+        hb["bp_play_win"] += int(r.get('bp_play_away_wins') or 0)
+
+    dfT_SO_BP = pd.DataFrame(list(agg_db.values()))
+
     def _pct(num, den):
         return (100.0 * num / den) if den else 0.0
 
     def build_df(value_series: pd.Series, higher_is_better: bool = True):
         df = pd.DataFrame({"Team": dfT["Team"], "Value": value_series})
+        df["Value"] = pd.to_numeric(df["Value"], errors="coerce").fillna(0.0)
+        df = df.sort_values(by="Value", ascending=not higher_is_better).reset_index(drop=True)
+        df["Rank"] = range(1, len(df) + 1)
+        df.attrs["higher_is_better"] = higher_is_better
+        return df
+
+    def build_df_db(value_series: pd.Series, higher_is_better: bool = True):
+        # usa dfT_SO_BP (coerente con le tabelle nelle sezioni)
+        df = pd.DataFrame({"Team": dfT_SO_BP["Team"], "Value": value_series})
         df["Value"] = pd.to_numeric(df["Value"], errors="coerce").fillna(0.0)
         df = df.sort_values(by="Value", ascending=not higher_is_better).reset_index(drop=True)
         df["Rank"] = range(1, len(df) + 1)
@@ -7149,22 +7282,36 @@ def render_home_dashboard():
         )
 
         top3 = df.head(3).copy()
+        top3["Team"] = top3["Team"].apply(canonical_team)
         top3["Value"] = top3["Value"].astype(float).round(1)
-        st.dataframe(top3[["Rank", "Team", "Value"]], width='stretch', hide_index=True)
+
+        def _hl_perugia_top3(row):
+            is_per = "perugia" in str(row["Team"]).lower()
+            style = "background-color: #fff3cd; font-weight: 800;" if is_per else ""
+            return [style] * len(row)
+
+        st.dataframe(
+            top3[["Rank", "Team", "Value"]]
+                .style
+                .apply(_hl_perugia_top3, axis=1)
+                .format({"Rank": "{:.0f}", "Value": "{:.1f}"}),
+            width="stretch",
+            hide_index=True,
+        )
 
     tab_so, tab_bp, tab_eff = st.tabs(["SIDE OUT", "BREAK", "EFFICIENZE"])
 
     with tab_so:
         cols = st.columns(3)
         metrics = [
-            ("Side Out TOTALE", build_df(dfT.apply(lambda r: _pct(r["so_win"], r["so_att"]), axis=1))),
-            ("Side Out SPIN", build_df(dfT.apply(lambda r: _pct(r["so_spin_win"], r["so_spin_att"]), axis=1))),
-            ("Side Out FLOAT", build_df(dfT.apply(lambda r: _pct(r["so_float_win"], r["so_float_att"]), axis=1))),
-            ("Side Out DIRETTO", build_df(dfT.apply(lambda r: _pct(r["so_dir_win"], r["so_att"]), axis=1))),
-            ("Side Out GIOCATO", build_df(dfT.apply(lambda r: _pct(r["so_play_win"], r["so_play_att"]), axis=1))),
-            ("Side Out con RICE BUONA", build_df(dfT.apply(lambda r: _pct(r["so_good_win"], r["so_good_att"]), axis=1))),
-            ("Side Out con RICE ESCLAMATIVA", build_df(dfT.apply(lambda r: _pct(r["so_exc_win"], r["so_exc_att"]), axis=1))),
-            ("Side Out con RICE NEGATIVA", build_df(dfT.apply(lambda r: _pct(r["so_neg_win"], r["so_neg_att"]), axis=1))),
+            ("Side Out TOTALE", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_win"], r["so_att"]), axis=1))),
+            ("Side Out SPIN", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_spin_win"], r["so_spin_att"]), axis=1))),
+            ("Side Out FLOAT", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_float_win"], r["so_float_att"]), axis=1))),
+            ("Side Out DIRETTO", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_dir_win"], r["so_att"]), axis=1))),
+            ("Side Out GIOCATO", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_play_win"], r["so_play_att"]), axis=1))),
+            ("Side Out con RICE BUONA", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_good_win"], r["so_good_att"]), axis=1))),
+            ("Side Out con RICE ESCLAMATIVA", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_exc_win"], r["so_exc_att"]), axis=1))),
+            ("Side Out con RICE NEGATIVA", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["so_neg_win"], r["so_neg_att"]), axis=1))),
         ]
         for i, (title, dfm) in enumerate(metrics):
             with cols[i % 3]:
@@ -7174,13 +7321,13 @@ def render_home_dashboard():
         cols = st.columns(3)
 
         def ratio_err_ace(r):
-            ace = r["bt_ace"]
-            err = r["bt_err"]
+            ace = float(r.get("bt_ace", 0) or 0)
+            err = float(r.get("bt_err", 0) or 0)
             return (err / ace) if ace else float("inf")
 
         metrics = [
-            ("BREAK TOTALE", build_df(dfT.apply(lambda r: _pct(r["bp_win"], r["bp_att"]), axis=1))),
-            ("BREAK GIOCATO", build_df(dfT.apply(lambda r: _pct(r["bp_play_win"], r["bp_play_att"]), axis=1))),
+            ("BREAK TOTALE", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["bp_win"], r["bp_att"]), axis=1))),
+            ("BREAK GIOCATO", build_df_db(dfT_SO_BP.apply(lambda r: _pct(r["bp_play_win"], r["bp_play_att"]), axis=1))),
             ("BREAK con BT. NEGATIVA", build_df(dfT.apply(lambda r: _pct(r["bp_neg_win"], r["bp_neg_att"]), axis=1))),
             ("BREAK con BT. ESCLAMATIVA", build_df(dfT.apply(lambda r: _pct(r["bp_exc_win"], r["bp_exc_att"]), axis=1))),
             ("BREAK con BT. POSITIVA", build_df(dfT.apply(lambda r: _pct(r["bp_pos_win"], r["bp_pos_att"]), axis=1))),
