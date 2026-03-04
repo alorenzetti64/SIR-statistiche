@@ -184,6 +184,36 @@ def render_any_table(obj, fmt: dict | None = None, team_col: str | None = None, 
 # =========================
 # TEAM CANON (sponsor/variants -> 12 teams)
 # =========================
+
+def render_focus_4_players(out: pd.DataFrame, key_base: str, name_col: str = "Nome giocatore"):
+    """Render a 'Focus 4 players' selector + mini table, keeping ranking from the main table."""
+    if out is None or getattr(out, "empty", True):
+        return
+    # Ranking column can be 'Ranking' or 'Rank'
+    rank_col = "Ranking" if "Ranking" in out.columns else ("Rank" if "Rank" in out.columns else None)
+    if rank_col is None or name_col not in out.columns:
+        return
+
+    st.subheader("Focus 4 giocatori")
+    names = out[name_col].dropna().astype(str).tolist()
+    if not names:
+        return
+
+    default = names[:4] if len(names) >= 4 else names
+    picked = st.multiselect(
+        "Scegli fino a 4 giocatori (dal filtro attuale)",
+        options=names,
+        default=default,
+        max_selections=4,
+        key=f"focus_{key_base}",
+    )
+
+    if picked:
+        focus_df = out[out[name_col].isin(picked)].copy()
+        focus_df = focus_df.sort_values(by=rank_col, ascending=True)
+        render_any_table(focus_df, highlight_cols=[rank_col], max_rows=4)
+    st.divider()
+
 def canonical_team(name: str | None) -> str:
     """Map raw team names (with sponsors/variants) to canonical labels."""
     if not name:
@@ -3867,6 +3897,8 @@ def render_sideout_players_by_role():
               {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
           ])
     )
+    render_focus_4_players(out, key_base=f"so_{voce}_{from_round}_{to_round}")
+
 
     render_any_table(styled)
 
@@ -4132,6 +4164,8 @@ def render_break_players_by_role():
         {"selector": "th", "props": [("font-size", "22px"), ("text-align", "left"), ("padding", "8px 10px")]},
         {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
     ])
+    render_focus_4_players(out, key_base=f"bp_{from_round}_{to_round}")
+
 
     render_any_table(styled)
 
@@ -5550,6 +5584,8 @@ def render_fondamentali_players():
                   {"selector": "td", "props": [("font-size", "21px"), ("padding", "8px 10px")]},
               ])
         )
+        render_focus_4_players(out, key_base=f"fund_{fondamentale}_{from_round}_{to_round}")
+
         render_any_table(styled)
         return
 
@@ -6825,6 +6861,8 @@ def render_points_per_set():
               "Punti a Muro": _fmt1,
           })
     )
+    render_focus_4_players(out, key_base=f"pps_{from_round}_{to_round}")
+
 
     render_any_table(styled)
 
