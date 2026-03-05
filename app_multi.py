@@ -3154,82 +3154,233 @@ def render_grafici_4_quadranti():
     # Metriche disponibili (per match / per squadra)
     # Ogni metrica definisce (num_col, den_col) per HOME e AWAY.
     # ---------------------------------------------------------
+
     METRICS = {
-        "Side Out % (Totale)": {
-            "home_num": "so_home_wins",
-            "home_den": "so_home_attempts",
-            "away_num": "so_away_wins",
-            "away_den": "so_away_attempts",
+        # ------------------------
+        # SIDE OUT (percentuali)
+        # ------------------------
+        "Side Out TOTALE": {
+            "home_num": "so_home_wins", "home_den": "so_home_attempts",
+            "away_num": "so_away_wins", "away_den": "so_away_attempts",
+            "kind": "pct",
         },
-        "Break % (Totale)": {
-            "home_num": "bp_home_wins",
-            "home_den": "bp_home_attempts",
-            "away_num": "bp_away_wins",
-            "away_den": "bp_away_attempts",
+        "Side Out SPIN": {
+            "home_num": "so_spin_home_wins", "home_den": "so_spin_home_attempts",
+            "away_num": "so_spin_away_wins", "away_den": "so_spin_away_attempts",
+            "kind": "pct",
         },
-        "Side Out % (SPIN)": {
-            "home_num": "so_spin_home_wins",
-            "home_den": "so_spin_home_attempts",
-            "away_num": "so_spin_away_wins",
-            "away_den": "so_spin_away_attempts",
+        "Side Out FLOAT": {
+            "home_num": "so_float_home_wins", "home_den": "so_float_home_attempts",
+            "away_num": "so_float_away_wins", "away_den": "so_float_away_attempts",
+            "kind": "pct",
         },
-        "Side Out % (FLOAT)": {
-            "home_num": "so_float_home_wins",
-            "home_den": "so_float_home_attempts",
-            "away_num": "so_float_away_wins",
-            "away_den": "so_float_away_attempts",
+        # quota di Side Out diretto sul totale Side Out (share)
+        "Side Out DIRETTO": {
+            "home_num": "so_dir_home_wins", "home_den": "so_home_wins",
+            "away_num": "so_dir_away_wins", "away_den": "so_away_wins",
+            "kind": "pct",
         },
-        "Break % (Giocato)": {
-            "home_num": "bp_play_home_wins",
-            "home_den": "bp_play_home_attempts",
-            "away_num": "bp_play_away_wins",
-            "away_den": "bp_play_away_attempts",
+        "Side Out GIOCATO": {
+            "home_num": "so_play_home_wins", "home_den": "so_play_home_attempts",
+            "away_num": "so_play_away_wins", "away_den": "so_play_away_attempts",
+            "kind": "pct",
         },
+        "Side Out con RICE BUONA": {
+            "home_num": "so_good_home_wins", "home_den": "so_good_home_attempts",
+            "away_num": "so_good_away_wins", "away_den": "so_good_away_attempts",
+            "kind": "pct",
+        },
+        "Side Out con RICE ESCLAMATIVA": {
+            "home_num": "so_exc_home_wins", "home_den": "so_exc_home_attempts",
+            "away_num": "so_exc_away_wins", "away_den": "so_exc_away_attempts",
+            "kind": "pct",
+        },
+        "Side Out con RICE NEGATIVA": {
+            "home_num": "so_neg_home_wins", "home_den": "so_neg_home_attempts",
+            "away_num": "so_neg_away_wins", "away_den": "so_neg_away_attempts",
+            "kind": "pct",
+        },
+
+        # ------------------------
+        # BREAK (percentuali)
+        # ------------------------
+        "BREAK TOTALE": {
+            "home_num": "bp_home_wins", "home_den": "bp_home_attempts",
+            "away_num": "bp_away_wins", "away_den": "bp_away_attempts",
+            "kind": "pct",
+        },
+        "BREAK GIOCATO": {
+            "home_num": "bp_play_home_wins", "home_den": "bp_play_home_attempts",
+            "away_num": "bp_play_away_wins", "away_den": "bp_play_away_attempts",
+            "kind": "pct",
+        },
+        "BREAK con BT. NEGATIVA": {
+            "home_num": "bp_neg_home_wins", "home_den": "bp_neg_home_attempts",
+            "away_num": "bp_neg_away_wins", "away_den": "bp_neg_away_attempts",
+            "kind": "pct",
+        },
+        "BREAK con BT. ESCLAMATIVA": {
+            "home_num": "bp_exc_home_wins", "home_den": "bp_exc_home_attempts",
+            "away_num": "bp_exc_away_wins", "away_den": "bp_exc_away_attempts",
+            "kind": "pct",
+        },
+        "BREAK con BT. POSITIVA": {
+            "home_num": "bp_pos_home_wins", "home_den": "bp_pos_home_attempts",
+            "away_num": "bp_pos_away_wins", "away_den": "bp_pos_away_attempts",
+            "kind": "pct",
+        },
+        "BREAK con BT. 1/2 PUNTO": {
+            "home_num": "bp_half_home_wins", "home_den": "bp_half_home_attempts",
+            "away_num": "bp_half_away_wins", "away_den": "bp_half_away_attempts",
+            "kind": "pct",
+        },
+
+        # ------------------------
+        # BATTUTA – punti/errori/ratio (per battuta)
+        # ------------------------
+        "BT punto": {
+            "home_num": "bt_home_ace", "home_den": "bp_home_attempts",
+            "away_num": "bt_away_ace", "away_den": "bp_away_attempts",
+            "kind": "pct",
+        },
+        "Bt errore": {
+            "home_num": "bt_home_err", "home_den": "bp_home_attempts",
+            "away_num": "bt_away_err", "away_den": "bp_away_attempts",
+            "kind": "pct",
+        },
+        "Bt errore/punto": {
+            "home_num": "bt_home_err", "home_den": "bt_home_ace",
+            "away_num": "bt_away_err", "away_den": "bt_away_ace",
+            "kind": "ratio",
+        },
+
+        # ------------------------
+        # EFFICIENZE FONDAMENTALI
+        # (per ora come placeholder: le agganciamo nella prossima iterazione
+        #  a contatori per match o a parsing scout_text per giornata)
+        # ------------------------
+        "Eff. Battuta": {"kind": "eff_battuta"},
+        "Eff. Ricezione": {"kind": "eff_ricezione"},
+        "Eff. Attacco": {"kind": "eff_attacco"},
+        "Eff. Muro": {"kind": "eff_muro"},
+        "Eff. Difesa": {"kind": "eff_difesa"},
     }
+
 
     col1, col2 = st.columns(2)
     with col1:
-        x_metric = st.selectbox("Ascisse (X)", list(METRICS.keys()), index=0, key="g4q_x")
+        x_metric = st.selectbox("Ascisse (X)", list(METRICS.keys()), index=list(METRICS.keys()).index("Side Out TOTALE"), key="g4q_x")
     with col2:
-        y_metric = st.selectbox("Ordinate (Y)", list(METRICS.keys()), index=1, key="g4q_y")
+        y_metric = st.selectbox("Ordinate (Y)", list(METRICS.keys()), index=list(METRICS.keys()).index("BREAK TOTALE"), key="g4q_y")
+        # Selezione Efficienze (fondamentali): non ancora disponibili nel grafico per giornata
+        if METRICS.get(x_metric, {}).get("kind") == "todo" or METRICS.get(y_metric, {}).get("kind") == "todo":
+            st.warning("Le voci Eff. (fondamentali) saranno disponibili a breve nel grafico. Per ora scegli un indice Side Out / Break / BT.")
+            return
 
     # Carico match nel range
     with engine.begin() as conn:
-        rows = conn.execute(
-            text(f"""
-                SELECT
-                    phase, round_number,
-                    team_a, team_b,
-                    COALESCE(so_home_attempts,0) AS so_home_attempts,
-                    COALESCE(so_home_wins,0)     AS so_home_wins,
-                    COALESCE(so_away_attempts,0) AS so_away_attempts,
-                    COALESCE(so_away_wins,0)     AS so_away_wins,
+        # Colonne presenti nel DB (evita crash se mancano colonne in alcune installazioni)
+        cols = conn.execute(text("PRAGMA table_info(matches)")).mappings().all()
+        present = {c["name"] for c in cols}
 
-                    COALESCE(bp_home_attempts,0) AS bp_home_attempts,
-                    COALESCE(bp_home_wins,0)     AS bp_home_wins,
-                    COALESCE(bp_away_attempts,0) AS bp_away_attempts,
-                    COALESCE(bp_away_wins,0)     AS bp_away_wins,
+        def _c(col: str, alias: str, numeric: bool = True):
+            """Return a safe SELECT expression for a possibly-missing column."""
+            if col in present:
+                if numeric:
+                    return f"COALESCE({col},0) AS {alias}"
+                return f"COALESCE({col},'') AS {alias}"
+            return ("0" if numeric else "''") + f" AS {alias}"
 
-                    COALESCE(so_spin_home_attempts,0) AS so_spin_home_attempts,
-                    COALESCE(so_spin_home_wins,0)     AS so_spin_home_wins,
-                    COALESCE(so_spin_away_attempts,0) AS so_spin_away_attempts,
-                    COALESCE(so_spin_away_wins,0)     AS so_spin_away_wins,
+        select_cols = [
+            "phase",
+            "round_number",
+            "team_a",
+            "team_b",
+            _c("scout_text", "scout_text", numeric=False),
 
-                    COALESCE(so_float_home_attempts,0) AS so_float_home_attempts,
-                    COALESCE(so_float_home_wins,0)     AS so_float_home_wins,
-                    COALESCE(so_float_away_attempts,0) AS so_float_away_attempts,
-                    COALESCE(so_float_away_wins,0)     AS so_float_away_wins,
+            _c("so_home_attempts", "so_home_attempts"),
+            _c("so_home_wins", "so_home_wins"),
+            _c("so_away_attempts", "so_away_attempts"),
+            _c("so_away_wins", "so_away_wins"),
 
-                    COALESCE(bp_play_home_attempts,0) AS bp_play_home_attempts,
-                    COALESCE(bp_play_home_wins,0)     AS bp_play_home_wins,
-                    COALESCE(bp_play_away_attempts,0) AS bp_play_away_attempts,
-                    COALESCE(bp_play_away_wins,0)     AS bp_play_away_wins
-                FROM matches
-                WHERE {match_order_sql('matches')} BETWEEN :from_round AND :to_round
-                ORDER BY {match_order_sql('matches')} ASC
-            """),
-            {"from_round": int(from_round), "to_round": int(to_round)},
-        ).mappings().all()
+            _c("bp_home_attempts", "bp_home_attempts"),
+            _c("bp_home_wins", "bp_home_wins"),
+            _c("bp_away_attempts", "bp_away_attempts"),
+            _c("bp_away_wins", "bp_away_wins"),
+
+            _c("so_spin_home_attempts", "so_spin_home_attempts"),
+            _c("so_spin_home_wins", "so_spin_home_wins"),
+            _c("so_spin_away_attempts", "so_spin_away_attempts"),
+            _c("so_spin_away_wins", "so_spin_away_wins"),
+
+            _c("so_float_home_attempts", "so_float_home_attempts"),
+            _c("so_float_home_wins", "so_float_home_wins"),
+            _c("so_float_away_attempts", "so_float_away_attempts"),
+            _c("so_float_away_wins", "so_float_away_wins"),
+
+            _c("bp_play_home_attempts", "bp_play_home_attempts"),
+            _c("bp_play_home_wins", "bp_play_home_wins"),
+            _c("bp_play_away_attempts", "bp_play_away_attempts"),
+            _c("bp_play_away_wins", "bp_play_away_wins"),
+
+            _c("so_play_home_attempts", "so_play_home_attempts"),
+            _c("so_play_home_wins", "so_play_home_wins"),
+            _c("so_play_away_attempts", "so_play_away_attempts"),
+            _c("so_play_away_wins", "so_play_away_wins"),
+
+            _c("so_dir_home_attempts", "so_dir_home_attempts"),
+            _c("so_dir_home_wins", "so_dir_home_wins"),
+            _c("so_dir_away_attempts", "so_dir_away_attempts"),
+            _c("so_dir_away_wins", "so_dir_away_wins"),
+
+            _c("so_good_home_attempts", "so_good_home_attempts"),
+            _c("so_good_home_wins", "so_good_home_wins"),
+            _c("so_good_away_attempts", "so_good_away_attempts"),
+            _c("so_good_away_wins", "so_good_away_wins"),
+
+            _c("so_exc_home_attempts", "so_exc_home_attempts"),
+            _c("so_exc_home_wins", "so_exc_home_wins"),
+            _c("so_exc_away_attempts", "so_exc_away_attempts"),
+            _c("so_exc_away_wins", "so_exc_away_wins"),
+
+            _c("so_neg_home_attempts", "so_neg_home_attempts"),
+            _c("so_neg_home_wins", "so_neg_home_wins"),
+            _c("so_neg_away_attempts", "so_neg_away_attempts"),
+            _c("so_neg_away_wins", "so_neg_away_wins"),
+
+            _c("bp_neg_home_attempts", "bp_neg_home_attempts"),
+            _c("bp_neg_home_wins", "bp_neg_home_wins"),
+            _c("bp_neg_away_attempts", "bp_neg_away_attempts"),
+            _c("bp_neg_away_wins", "bp_neg_away_wins"),
+
+            _c("bp_exc_home_attempts", "bp_exc_home_attempts"),
+            _c("bp_exc_home_wins", "bp_exc_home_wins"),
+            _c("bp_exc_away_attempts", "bp_exc_away_attempts"),
+            _c("bp_exc_away_wins", "bp_exc_away_wins"),
+
+            _c("bp_pos_home_attempts", "bp_pos_home_attempts"),
+            _c("bp_pos_home_wins", "bp_pos_home_wins"),
+            _c("bp_pos_away_attempts", "bp_pos_away_attempts"),
+            _c("bp_pos_away_wins", "bp_pos_away_wins"),
+
+            _c("bp_half_home_attempts", "bp_half_home_attempts"),
+            _c("bp_half_home_wins", "bp_half_home_wins"),
+            _c("bp_half_away_attempts", "bp_half_away_attempts"),
+            _c("bp_half_away_wins", "bp_half_away_wins"),
+
+            _c("bt_home_ace", "bt_home_ace"),
+            _c("bt_home_err", "bt_home_err"),
+            _c("bt_away_ace", "bt_away_ace"),
+            _c("bt_away_err", "bt_away_err"),
+        ]
+
+        sql = f"""
+            SELECT {', '.join(select_cols)}
+            FROM matches
+            WHERE {match_order_sql('matches')} BETWEEN :from_round AND :to_round
+            ORDER BY {match_order_sql('matches')} ASC
+        """
+        rows = conn.execute(text(sql), {"from_round": int(from_round), "to_round": int(to_round)}).mappings().all()
 
     if not rows:
         st.info("Nessun match nel range selezionato.")
@@ -3265,6 +3416,234 @@ def render_grafici_4_quadranti():
 
     def build_points(metric_key: str) -> pd.DataFrame:
         mdef = METRICS[metric_key]
+        kind = mdef.get("kind")
+
+        def _round_label(ph, rn):
+            ph = str(ph or "")
+            rn = int(rn or 0)
+            if ph in ("A", "R"):
+                return f"{ph}{rn:02d}"
+            return f"{ph}{rn}"
+
+        def _pct(num, den):
+            return (100.0 * float(num) / float(den)) if den else 0.0
+
+        def parse_rallies(scout_text: str):
+            if not scout_text:
+                return []
+            lines = [ln.strip() for ln in str(scout_text).splitlines() if ln and ln.strip()]
+            scout_lines = [ln for ln in lines if ln[0] in ("*", "a")]
+            rallies = []
+            current = []
+            for raw in scout_lines:
+                c = code6(raw)
+                if not c:
+                    continue
+                if is_serve(c):
+                    if current:
+                        rallies.append(current)
+                    current = [c]
+                    continue
+                if not current:
+                    continue
+                current.append(c)
+                if is_home_point(c) or is_away_point(c):
+                    rallies.append(current)
+                    current = []
+            return rallies
+
+        # -------------------------------------------------
+        # Efficienze fondamentali per giornata (per match)
+        # -------------------------------------------------
+        if kind in ("eff_battuta", "eff_ricezione", "eff_attacco", "eff_muro", "eff_difesa"):
+            pts = []
+            for _, r in dfm.iterrows():
+                lab = _round_label(r["phase"], r["round_number"])
+                ordv = match_order_value(str(r["phase"]), int(r["round_number"]))
+
+                ta = canonical_team(fix_team_name(r["team_a"]))
+                tb = canonical_team(fix_team_name(r["team_b"]))
+                rallies = parse_rallies(r.get("scout_text", ""))
+
+                if kind == "eff_battuta":
+                    # Eff Battuta: (Punti + Half*0.8 + Pos*0.45 + Esc*0.3 + Neg*0.15 - Err) / Tot * 100
+                    counts = {ta: {"Tot":0,"Punti":0,"Half":0,"Pos":0,"Esc":0,"Neg":0,"Err":0},
+                              tb: {"Tot":0,"Punti":0,"Half":0,"Pos":0,"Esc":0,"Neg":0,"Err":0}}
+                    def serve_type(c6: str) -> str:
+                        return c6[3:5] if c6 and len(c6) >= 5 else ""
+                    def serve_sign(c6: str) -> str:
+                        return c6[5] if c6 and len(c6) >= 6 else ""
+                    for rally in rallies:
+                        if not rally or not is_serve(rally[0]):
+                            continue
+                        first = rally[0]
+                        stype = serve_type(first)
+                        if stype not in ("SQ","SM"):  # includi tutto
+                            continue
+                        team = ta if first[0] == "*" else tb
+                        rec = counts[team]
+                        rec["Tot"] += 1
+                        s = serve_sign(first)
+                        if s == "#":
+                            rec["Punti"] += 1
+                        elif s == "/":
+                            rec["Half"] += 1
+                        elif s == "+":
+                            rec["Pos"] += 1
+                        elif s == "!":
+                            rec["Esc"] += 1
+                        elif s == "-":
+                            rec["Neg"] += 1
+                        elif s == "=":
+                            rec["Err"] += 1
+                    for team, c in counts.items():
+                        tot = c["Tot"]
+                        eff = ((c["Punti"] + c["Half"]*0.8 + c["Pos"]*0.45 + c["Esc"]*0.3 + c["Neg"]*0.15 - c["Err"]) / tot * 100.0) if tot else 0.0
+                        pts.append({"Team": team, "Round": lab, "order": ordv, "value": eff})
+
+                elif kind == "eff_ricezione":
+                    # Eff Ricezione: (Ok*0.77 + Escl*0.55 + Neg*0.38 - Mez*0.8 - Err) / Tot * 100
+                    counts = {ta: {"Tot":0,"Perf":0,"Pos":0,"Escl":0,"Neg":0,"Mez":0,"Err":0},
+                              tb: {"Tot":0,"Perf":0,"Pos":0,"Escl":0,"Neg":0,"Mez":0,"Err":0}}
+                    def serve_type(c6: str) -> str:
+                        return c6[3:5] if c6 and len(c6) >= 5 else ""
+                    def first_reception(rally: list[str], prefix: str):
+                        for c in rally:
+                            if len(c) >= 6 and c[0] == prefix and c[3:5] in ("RQ","RM"):
+                                return c
+                        return None
+                    for rally in rallies:
+                        if not rally or not is_serve(rally[0]):
+                            continue
+                        first = rally[0]
+                        stype = serve_type(first)
+                        if stype not in ("SQ","SM"):
+                            continue
+                        if first[0] == "*":  # home served -> away receives
+                            recv_team = tb
+                            recv_prefix = "a"
+                        else:
+                            recv_team = ta
+                            recv_prefix = "*"
+                        rece = first_reception(rally, recv_prefix)
+                        if not rece:
+                            continue
+                        s = rece[5]
+                        rec = counts[recv_team]
+                        rec["Tot"] += 1
+                        if s == "#":
+                            rec["Perf"] += 1
+                        elif s == "+":
+                            rec["Pos"] += 1
+                        elif s == "!":
+                            rec["Escl"] += 1
+                        elif s == "-":
+                            rec["Neg"] += 1
+                        elif s == "/":
+                            rec["Mez"] += 1
+                        elif s == "=":
+                            rec["Err"] += 1
+                    for team, c in counts.items():
+                        tot = c["Tot"]
+                        ok_cnt = c["Perf"] + c["Pos"]
+                        eff = ((ok_cnt*0.77 + c["Escl"]*0.55 + c["Neg"]*0.38 - c["Mez"]*0.8 - c["Err"]) / tot * 100.0) if tot else 0.0
+                        pts.append({"Team": team, "Round": lab, "order": ordv, "value": eff})
+
+                elif kind == "eff_attacco":
+                    # Eff Attacco: (Punti - Murate - Errori) / Tot * 100 (includi primo attacco + transizione)
+                    counts = {ta: {"Tot":0,"Punti":0,"Mur":0,"Err":0},
+                              tb: {"Tot":0,"Punti":0,"Mur":0,"Err":0}}
+                    def is_attack_code(c: str) -> bool:
+                        return len(c) >= 6 and c[3] == "A" and c[0] in ("*", "a")
+                    for rally in rallies:
+                        for c in rally:
+                            if not is_attack_code(c):
+                                continue
+                            team = ta if c[0] == "*" else tb
+                            rec = counts[team]
+                            rec["Tot"] += 1
+                            s = c[5]
+                            if s == "#":
+                                rec["Punti"] += 1
+                            elif s == "/":
+                                rec["Mur"] += 1
+                            elif s == "=":
+                                rec["Err"] += 1
+                    for team, c in counts.items():
+                        tot = c["Tot"]
+                        eff = ((c["Punti"] - c["Mur"] - c["Err"]) / tot * 100.0) if tot else 0.0
+                        pts.append({"Team": team, "Round": lab, "order": ordv, "value": eff})
+
+                elif kind == "eff_muro":
+                    # Eff Muro: (Vincenti*2 + Pos*0.7 + Neg*0.07 + Cop*0.15 - Inv - Err) / Tot * 100
+                    counts = {ta: {"Tot":0,"Perf":0,"Pos":0,"Neg":0,"Cop":0,"Inv":0,"Err":0},
+                              tb: {"Tot":0,"Perf":0,"Pos":0,"Neg":0,"Cop":0,"Inv":0,"Err":0}}
+                    def is_block(c: str) -> bool:
+                        return len(c) >= 6 and c[3] == "B" and c[0] in ("*", "a")
+                    for rally in rallies:
+                        for c in rally:
+                            if not is_block(c):
+                                continue
+                            team = ta if c[0] == "*" else tb
+                            rec = counts[team]
+                            rec["Tot"] += 1
+                            s = c[5]
+                            if s == "#":
+                                rec["Perf"] += 1
+                            elif s == "+":
+                                rec["Pos"] += 1
+                            elif s == "-":
+                                rec["Neg"] += 1
+                            elif s == "!":
+                                rec["Cop"] += 1
+                            elif s == "/":
+                                rec["Inv"] += 1
+                            elif s == "=":
+                                rec["Err"] += 1
+                    for team, c in counts.items():
+                        tot = c["Tot"]
+                        eff = ((c["Perf"]*2.0 + c["Pos"]*0.7 + c["Neg"]*0.07 + c["Cop"]*0.15 - c["Inv"] - c["Err"]) / tot * 100.0) if tot else 0.0
+                        pts.append({"Team": team, "Round": lab, "order": ordv, "value": eff})
+
+                elif kind == "eff_difesa":
+                    # Eff Difesa: ((Perf+Cop) - (Neg+Over+Err)) / Tot * 100
+                    counts = {ta: {"Tot":0,"Perf":0,"Cop":0,"Neg":0,"Over":0,"Err":0},
+                              tb: {"Tot":0,"Perf":0,"Cop":0,"Neg":0,"Over":0,"Err":0}}
+                    def is_def(c: str) -> bool:
+                        return len(c) >= 6 and c[3] == "D" and c[0] in ("*", "a")
+                    for rally in rallies:
+                        for c in rally:
+                            if not is_def(c):
+                                continue
+                            team = ta if c[0] == "*" else tb
+                            rec = counts[team]
+                            rec["Tot"] += 1
+                            s = c[5]
+                            if s == "+":
+                                rec["Perf"] += 1
+                            elif s == "!":
+                                rec["Cop"] += 1
+                            elif s == "-":
+                                rec["Neg"] += 1
+                            elif s == "/":
+                                rec["Over"] += 1
+                            elif s == "=":
+                                rec["Err"] += 1
+                    for team, c in counts.items():
+                        tot = c["Tot"]
+                        eff = (((c["Perf"] + c["Cop"]) - (c["Neg"] + c["Over"] + c["Err"])) / tot * 100.0) if tot else 0.0
+                        pts.append({"Team": team, "Round": lab, "order": ordv, "value": eff})
+
+            dfp = pd.DataFrame(pts)
+            if dfp.empty:
+                return dfp
+            # per Team+Round: media ponderata su Tot? qui value già per match. Usiamo media semplice se ci sono più match nello stesso Round (caso raro)
+            dfp = dfp.groupby(["Team", "Round", "order"], as_index=False).agg({"value": "mean"})
+            return dfp
+
+        # -------------------------------------------------
+        # Indici num/den (SideOut/Break/BT) – default
+        # -------------------------------------------------
         pts = []
         for _, r in dfm.iterrows():
             lab = _round_label(r["phase"], r["round_number"])
@@ -3284,6 +3663,11 @@ def render_grafici_4_quadranti():
 
     dfx = build_points(x_metric).rename(columns={"value": "X"})
     dfy = build_points(y_metric).rename(columns={"value": "Y"})
+
+    required = {"Team","Round","order","X"}
+    if not required.issubset(set(dfx.columns)) or not {"Team","Round","order","Y"}.issubset(set(dfy.columns)):
+        st.warning("Dati insufficienti per costruire il grafico con le metriche selezionate (per ora supportati: Side Out / Break / BT).")
+        return
 
     df = dfx.merge(dfy[["Team", "Round", "order", "Y"]], on=["Team", "Round", "order"], how="inner")
     df = df[df["Team"].isin(selected)].copy()
