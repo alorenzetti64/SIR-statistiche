@@ -37,11 +37,20 @@ from sqlalchemy import create_engine, text
 # =========================
 st.set_page_config(page_title="Volley App", layout="wide")
 
-DB_PATH = Path(__file__).resolve().parent / "volley.db"
-DB_URL = f"sqlite:///{DB_PATH.as_posix()}"
-engine = create_engine(DB_URL, future=True)
+# =========================
+# CONFIG
+# =========================
+st.set_page_config(page_title="Volley App", layout="wide")
 
+# =========================
+# DB CONFIG (Supabase Postgres)
+# =========================
+DB_URL = st.secrets.get("DATABASE_URL", "").strip()
+if not DB_URL:
+    st.error("DATABASE_URL mancante in Secrets (Streamlit Cloud).")
+    st.stop()
 
+engine = create_engine(DB_URL, future=True, pool_pre_ping=True)
 # =========================
 # HELPERS
 # =========================
@@ -965,13 +974,14 @@ def compute_counts_from_scout(scout_lines: list[str]) -> dict:
 # DB INIT + MIGRATION
 # =========================
 def init_db():
+    """Create required tables on Postgres (Supabase)."""
     with engine.begin() as conn:
         # =========================
-        # MATCHES (con colonne BT/BREAK giocato incluse)
+        # MATCHES
         # =========================
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS matches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id BIGSERIAL PRIMARY KEY,
                 filename TEXT,
                 phase TEXT,
                 round_number INTEGER,
@@ -989,15 +999,15 @@ def init_db():
                 so_home_wins INTEGER,
                 so_away_attempts INTEGER,
                 so_away_wins INTEGER,
-                sideout_home_pct REAL,
-                sideout_away_pct REAL,
+                sideout_home_pct DOUBLE PRECISION,
+                sideout_away_pct DOUBLE PRECISION,
 
                 bp_home_attempts INTEGER,
                 bp_home_wins INTEGER,
                 bp_away_attempts INTEGER,
                 bp_away_wins INTEGER,
-                break_home_pct REAL,
-                break_away_pct REAL,
+                break_home_pct DOUBLE PRECISION,
+                break_away_pct DOUBLE PRECISION,
 
                 so_spin_home_attempts INTEGER,
                 so_spin_home_wins INTEGER,
@@ -1032,7 +1042,7 @@ def init_db():
                 so_neg_away_attempts INTEGER,
                 so_neg_away_wins INTEGER,
 
-                -- NEW: Break “giocato” + BT
+                -- Break “giocato” + BT
                 bp_play_home_attempts INTEGER,
                 bp_play_home_wins INTEGER,
                 bp_play_away_attempts INTEGER,
@@ -1047,94 +1057,15 @@ def init_db():
                 bt_pos_away INTEGER,
                 bt_exc_away INTEGER,
                 bt_half_away INTEGER
-            )
+            );
         """))
 
         # =========================
-        # MIGRATION (ALTER TABLE safe)
-        # =========================
-        cols_to_add = [
-            ("scout_text", "TEXT"),
-            ("preview", "TEXT"),
-            ("n_azioni", "INTEGER"),
-
-            ("so_home_attempts", "INTEGER"),
-            ("so_home_wins", "INTEGER"),
-            ("so_away_attempts", "INTEGER"),
-            ("so_away_wins", "INTEGER"),
-            ("sideout_home_pct", "REAL"),
-            ("sideout_away_pct", "REAL"),
-
-            ("bp_home_attempts", "INTEGER"),
-            ("bp_home_wins", "INTEGER"),
-            ("bp_away_attempts", "INTEGER"),
-            ("bp_away_wins", "INTEGER"),
-            ("break_home_pct", "REAL"),
-            ("break_away_pct", "REAL"),
-
-            ("so_spin_home_attempts", "INTEGER"),
-            ("so_spin_home_wins", "INTEGER"),
-            ("so_spin_away_attempts", "INTEGER"),
-            ("so_spin_away_wins", "INTEGER"),
-
-            ("so_float_home_attempts", "INTEGER"),
-            ("so_float_home_wins", "INTEGER"),
-            ("so_float_away_attempts", "INTEGER"),
-            ("so_float_away_wins", "INTEGER"),
-
-            ("so_dir_home_wins", "INTEGER"),
-            ("so_dir_away_wins", "INTEGER"),
-
-            ("so_play_home_attempts", "INTEGER"),
-            ("so_play_home_wins", "INTEGER"),
-            ("so_play_away_attempts", "INTEGER"),
-            ("so_play_away_wins", "INTEGER"),
-
-            ("so_good_home_attempts", "INTEGER"),
-            ("so_good_home_wins", "INTEGER"),
-            ("so_good_away_attempts", "INTEGER"),
-            ("so_good_away_wins", "INTEGER"),
-
-            ("so_exc_home_attempts", "INTEGER"),
-            ("so_exc_home_wins", "INTEGER"),
-            ("so_exc_away_attempts", "INTEGER"),
-            ("so_exc_away_wins", "INTEGER"),
-
-            ("so_neg_home_attempts", "INTEGER"),
-            ("so_neg_home_wins", "INTEGER"),
-            ("so_neg_away_attempts", "INTEGER"),
-            ("so_neg_away_wins", "INTEGER"),
-
-            # NEW: Break “giocato” + BT
-            ("bp_play_home_attempts", "INTEGER"),
-            ("bp_play_home_wins", "INTEGER"),
-            ("bp_play_away_attempts", "INTEGER"),
-            ("bp_play_away_wins", "INTEGER"),
-
-            ("bt_neg_home", "INTEGER"),
-            ("bt_pos_home", "INTEGER"),
-            ("bt_exc_home", "INTEGER"),
-            ("bt_half_home", "INTEGER"),
-
-            ("bt_neg_away", "INTEGER"),
-            ("bt_pos_away", "INTEGER"),
-            ("bt_exc_away", "INTEGER"),
-            ("bt_half_away", "INTEGER"),
-        ]
-
-        for col, coltype in cols_to_add:
-            try:
-                conn.execute(text(f"ALTER TABLE matches ADD COLUMN {col} {coltype}"))
-            except Exception:
-                # col già presente => ok
-                pass
-
-        # =========================
-        # ROSTER (ruoli giocatori)
+        # ROSTER
         # =========================
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS roster (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id BIGSERIAL PRIMARY KEY,
                 season TEXT,
                 team_raw TEXT,
                 team_norm TEXT,
@@ -1143,8 +1074,15 @@ def init_db():
                 role TEXT,
                 created_at TEXT,
                 UNIQUE(season, team_norm, jersey_number)
-            )
+            );
         """))
+
+        # =========================
+        # INDICI
+        # =========================
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_matches_round ON matches(round_number);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_matches_key ON matches(match_key);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_roster_season_team ON roster(season, team_norm);"))
 
 def render_import(admin_mode: bool):
     st.header("Import multiplo DVW (settimana)")
