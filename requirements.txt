@@ -40,3 +40,4 @@ urllib3==2.6.3
 watchdog==6.0.0
 matplotlib==3.10.8
 openpyxl
+psycopg2-binary==2.9.9
