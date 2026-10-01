@@ -317,6 +317,40 @@ body{
   .item{grid-template-columns:39px 1fr;padding:10px}
   .icon{width:39px;height:39px}
 }
+
+.program-app{
+  margin-top:16px;
+  padding:18px 14px 16px;
+  text-align:center;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+}
+.program-app-note{
+  max-width:520px;
+  margin:0 auto 12px;
+  color:#555b64;
+  font-size:13.5px;
+  line-height:1.45;
+  font-weight:650;
+}
+.program-app-link{
+  display:inline-block;
+  max-width:100%;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 8px 20px rgba(17,19,23,.12);
+  transition:transform .16s ease, box-shadow .16s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.program-app-link:active{transform:scale(.985)}
+.program-app-link img{
+  display:block;
+  width:min(285px,100%);
+  height:auto;
+}
+
 </style>
 </head>
 <body>
@@ -357,6 +391,18 @@ body{
   <section class="closing">
     <div class="closing-text" id="closing"></div>
     <div class="signature">Angelo</div>
+  </section>
+
+
+  <section class="program-app">
+    <div class="program-app-note" id="appNote"></div>
+    <a class="program-app-link"
+       href="https://programma-squadra.olegna64.chatgpt.site/"
+       target="_blank"
+       rel="noopener noreferrer"
+       aria-label="Apri SIR PROGRAMMA">
+      <img src="assets/sir-programma.png" alt="PROGRAMMA SQUADRA — Perugia · Stagione 2026–27">
+    </a>
   </section>
 
   <div class="micro">SIR SAFETY PERUGIA</div>
@@ -491,6 +537,15 @@ cs:{
 }
 };
 
+
+const APP_NOTE = {
+  it:"Se volete passare direttamente all’applicazione SIR PROGRAMMA, toccate l’icona qui sotto.",
+  en:"If you want to go directly to the SIR PROGRAMMA app, tap the icon below.",
+  fa:"اگر می‌خواهید مستقیماً وارد اپلیکیشن SIR PROGRAMMA شوید، روی آیکون زیر بزنید.",
+  fr:"Si vous souhaitez passer directement à l’application SIR PROGRAMMA, touchez l’icône ci-dessous.",
+  cs:"Pokud chcete přejít přímo do aplikace SIR PROGRAMMA, klepněte na ikonu níže."
+};
+
 function render(lang){
   const d=T[lang]||T.it;
   document.documentElement.lang=lang;
@@ -503,6 +558,7 @@ function render(lang){
   document.getElementById("date").textContent=d.date;
   document.getElementById("sectionLabel").textContent=d.sectionLabel;
   document.getElementById("closing").innerHTML=d.closing;
+  document.getElementById("appNote").textContent=APP_NOTE[lang]||APP_NOTE.it;
 
   document.getElementById("timeline").innerHTML=d.groups.map(g=>{
     const klass="block"+(g.speech?" speech":"")+(g.items.length===1?" single":"");
