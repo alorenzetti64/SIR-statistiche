@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="it" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>SIR Perugia — Allenamento di lunedì</title>
+<style>
+  :root{--bg:#050505;--panel:#111;--panel2:#171717;--text:#f7f7f7;--muted:#a7a7a7;--line:#2b2b2b;--red:#e21c2a;--red2:#ff3344;--shadow:0 18px 55px rgba(0,0,0,.42)}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;background:var(--bg)}
+  body{margin:0;background:
+    radial-gradient(circle at 85% 0%,rgba(226,28,42,.13),transparent 34rem),
+    linear-gradient(180deg,#090909 0%,#050505 100%);
+    color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}
+  .wrap{width:min(760px,100%);margin:0 auto;padding:22px 18px 48px}
+  .brand{display:flex;align-items:center;justify-content:center;margin:6px 0 16px}
+  .logoBox{width:104px;height:104px;border-radius:24px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.12)}
+  .logoBox img{width:92px;height:92px;object-fit:contain}
+  .logoFallback{display:none;font-size:18px;font-weight:900;color:#111;text-align:center;line-height:1.05}
+  .langbar{position:sticky;top:0;z-index:10;padding:10px 0 12px;background:linear-gradient(180deg,rgba(5,5,5,.98),rgba(5,5,5,.87),transparent);backdrop-filter:blur(10px)}
+  .langs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .lang{appearance:none;border:1px solid #333;background:#121212;color:#d9d9d9;border-radius:999px;padding:9px 13px;font-size:12px;font-weight:800;letter-spacing:.04em;cursor:pointer;transition:.18s ease}
+  .lang:hover{border-color:#666;transform:translateY(-1px)}
+  .lang[aria-pressed="true"]{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 8px 25px rgba(226,28,42,.27)}
+  .hero{text-align:center;padding:14px 4px 22px}
+  .eyebrow{font-size:12px;font-weight:900;letter-spacing:.19em;text-transform:uppercase;color:var(--red2);margin-bottom:10px}
+  h1{margin:0;font-size:clamp(30px,7vw,50px);line-height:1.02;letter-spacing:-.04em}
+  .intro{margin:14px auto 0;max-width:610px;color:#cfcfcf;font-size:16px;line-height:1.55}
+  .date{display:inline-flex;margin-top:16px;border:1px solid #2d2d2d;background:#0f0f0f;border-radius:999px;padding:8px 12px;font-size:12px;color:#d8d8d8;font-weight:750}
+  .schedule{display:grid;gap:12px}
+  .card{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:start;background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:22px;padding:17px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .time{font-size:22px;line-height:1;font-weight:950;letter-spacing:-.04em;color:#fff;padding-top:3px}
+  .tag{display:inline-flex;align-items:center;width:max-content;max-width:100%;background:rgba(226,28,42,.12);border:1px solid rgba(226,28,42,.28);color:#ff6975;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px}
+  .title{font-size:18px;font-weight:900;line-height:1.25;margin:0 0 5px}
+  .text{font-size:14px;line-height:1.55;color:#c7c7c7;margin:0}
+  .names{color:#fff;font-weight:850}
+  .speech{margin-top:14px;border-color:rgba(226,28,42,.55);background:linear-gradient(145deg,rgba(226,28,42,.13),#101010 45%);position:relative;overflow:hidden}
+  .speech:after{content:"";position:absolute;right:-55px;top:-55px;width:145px;height:145px;border-radius:50%;background:rgba(226,28,42,.13);filter:blur(3px)}
+  .speech .time{color:#ff5966}
+  .speech .text{font-size:15px;color:#dedede}
+  .closing{text-align:center;margin:28px auto 0;padding:20px 12px;color:#d7d7d7;line-height:1.55}
+  .signature{margin-top:10px;color:#fff;font-weight:900;font-size:19px}
+  .micro{margin-top:26px;text-align:center;color:#666;font-size:10px;letter-spacing:.05em}
+  [dir="rtl"] .card{grid-template-columns:1fr 88px}
+  [dir="rtl"] .time{grid-column:2;grid-row:1}
+  [dir="rtl"] .card>div:last-child{grid-column:1;grid-row:1;text-align:right}
+  [dir="rtl"] .tag{margin-left:auto}
+  @media(max-width:560px){
+    .wrap{padding:14px 13px 34px}
+    .logoBox{width:88px;height:88px;border-radius:20px}.logoBox img{width:78px;height:78px}
+    .lang{padding:8px 10px;font-size:11px}
+    .card{grid-template-columns:68px 1fr;gap:11px;padding:15px;border-radius:19px}
+    .time{font-size:19px}
+    [dir="rtl"] .card{grid-template-columns:1fr 68px}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="brand">
+    <div class="logoBox">
+      <img src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Sir_Safety_Umbria_Volley_Perugia_-_wordmark.png" alt="SIR Perugia" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div class="logoFallback">SIR<br>PERUGIA</div>
+    </div>
+  </div>
+
+  <div class="langbar" aria-label="Language selector">
+    <div class="langs">
+      <button class="lang" data-lang="it" aria-pressed="true">ITA</button>
+      <button class="lang" data-lang="en" aria-pressed="false">ENG</button>
+      <button class="lang" data-lang="fa" aria-pressed="false">فارسی</button>
+      <button class="lang" data-lang="fr" aria-pressed="false">FRA</button>
+      <button class="lang" data-lang="cs" aria-pressed="false">ČES</button>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="heading"></h1>
+    <p class="intro" id="intro"></p>
+    <div class="date" id="date"></div>
+  </section>
+
+  <section class="schedule" id="schedule"></section>
+  <section class="closing">
+    <div id="closing"></div>
+    <div class="signature">Angelo</div>
+  </section>
+  <div class="micro">SIR SAFETY PERUGIA</div>
+</main>
+
+<script>
+const T = {
+it:{
+  eyebrow:"TRAINING PLAN",heading:"LUNEDÌ — ORGANIZZAZIONE ALLENAMENTO",
+  intro:"Un promemoria per arrivare in palestra sapendo già come sarà organizzato il pomeriggio.",
+  date:"Lunedì 5 ottobre",
+  closing:"Spero sia tutto chiaro.<br><strong>Ci vediamo in palestra.</strong>",
+  items:[
+    ["16:00","LAVORO METABOLICO","#04 HENNO & #16 SEMENIUK","Lavoro metabolico con Carotti."],
+    ["16:00","LIBERI","Attività con i LIBERI","Attività dedicata ai liberi."],
+    ["16:00","WARM-UP","Warm-up","Warm-up con Carotti."],
+    ["16:15","MURO","#08 LOSER & #11 SOLÉ","Lavoro specifico sul muro."],
+    ["16:20","TECNICA","Tecnica","Tutti, esclusi <span class='names'>#04 HENNO & #16 SEMENIUK</span>.<br>Per sapere cosa faremo nella parte tecnica, potrete leggere il programma direttamente nell’applicazione <span class='names'>SIR PROGRAMMA</span>."],
+    ["18:00","SPEECH","Speech","Come vedrete quando aprirete l’allenamento nell’applicazione <span class='names'>SIR PROGRAMMA</span>, lunedì è una di quelle occasioni in cui ho bisogno di parlarvi direttamente.<br><br>Cliccando sull’allenamento comparirà un pop-up che vi avviserà dello speech. Se vorrete, potrete anche leggere in anticipo ciò di cui parleremo."]
+  ]
+},
+en:{
+  eyebrow:"TRAINING PLAN",heading:"MONDAY — TRAINING ORGANIZATION",
+  intro:"A quick reminder so you arrive at the gym already knowing how the afternoon will be organized.",
+  date:"Monday, October 5",
+  closing:"I hope everything is clear.<br><strong>See you in the gym.</strong>",
+  items:[
+    ["4:00 PM","METABOLIC WORK","#04 HENNO & #16 SEMENIUK","Metabolic work with Carotti."],
+    ["4:00 PM","LIBEROS","Liberos","Specific work for the liberos."],
+    ["4:00 PM","WARM-UP","Warm-up","Warm-up with Carotti."],
+    ["4:15 PM","BLOCKING","#08 LOSER & #11 SOLÉ","Specific blocking work."],
+    ["4:20 PM","TECHNIQUE","Technique","Everyone except <span class='names'>#04 HENNO & #16 SEMENIUK</span>.<br>To see what we will do in the technical part, you can check the program directly in the <span class='names'>SIR PROGRAMMA</span> app."],
+    ["6:00 PM","SPEECH","Speech","As you will see when you open Monday’s training session in <span class='names'>SIR PROGRAMMA</span>, Monday is one of those occasions when I need to speak to you directly.<br><br>When you tap on the training session, a pop-up will let you know about the speech. If you want, you can also read in advance what I will talk about."]
+  ]
+},
+fa:{
+  eyebrow:"برنامه تمرین",heading:"دوشنبه — برنامه تمرین",
+  intro:"یک یادآوری کوتاه تا وقتی وارد سالن می‌شوید، از قبل بدانید برنامه بعدازظهر چگونه خواهد بود.",
+  date:"دوشنبه ۵ اکتبر",
+  closing:"امیدوارم همه‌چیز روشن باشد.<br><strong>در سالن می‌بینمتان.</strong>",
+  items:[
+    ["16:00","تمرین متابولیک","#04 HENNO و #16 SEMENIUK","تمرین متابولیک با Carotti."],
+    ["16:00","لیبروها","لیبروها","تمرین اختصاصی برای لیبروها."],
+    ["16:00","گرم‌کردن","گرم‌کردن","گرم‌کردن با Carotti."],
+    ["16:15","دفاع روی تور","#08 LOSER و #11 SOLÉ","کار اختصاصی روی دفاع روی تور."],
+    ["16:20","تکنیک","تکنیک","همه به‌جز <span class='names'>#04 HENNO و #16 SEMENIUK</span>.<br>برای دیدن اینکه در بخش تکنیکی چه کار خواهیم کرد، برنامه را مستقیماً در اپلیکیشن <span class='names'>SIR PROGRAMMA</span> ببینید."],
+    ["18:00","صحبت","Speech","همان‌طور که وقتی تمرین دوشنبه را در <span class='names'>SIR PROGRAMMA</span> باز کنید خواهید دید، دوشنبه یکی از آن موقعیت‌هایی است که لازم می‌دانم مستقیماً با شما صحبت کنم.<br><br>وقتی روی تمرین کلیک کنید، یک پنجره پاپ‌آپ شما را از این صحبت مطلع می‌کند. اگر بخواهید، می‌توانید از قبل هم بخوانید که درباره چه چیزی صحبت خواهم کرد."]
+  ]
+},
+fr:{
+  eyebrow:"PLAN D’ENTRAÎNEMENT",heading:"LUNDI — ORGANISATION DE L’ENTRAÎNEMENT",
+  intro:"Un rappel pour arriver à la salle en sachant déjà comment l’après-midi sera organisé.",
+  date:"Lundi 5 octobre",
+  closing:"J’espère que tout est clair.<br><strong>On se voit à la salle.</strong>",
+  items:[
+    ["16:00","TRAVAIL MÉTABOLIQUE","#04 HENNO & #16 SEMENIUK","Travail métabolique avec Carotti."],
+    ["16:00","LIBÉROS","Libéros","Travail spécifique pour les libéros."],
+    ["16:00","ÉCHAUFFEMENT","Échauffement","Échauffement avec Carotti."],
+    ["16:15","BLOC","#08 LOSER & #11 SOLÉ","Travail spécifique au bloc."],
+    ["16:20","TECHNIQUE","Technique","Tous, sauf <span class='names'>#04 HENNO & #16 SEMENIUK</span>.<br>Pour savoir ce que nous ferons dans la partie technique, vous pourrez consulter le programme directement dans l’application <span class='names'>SIR PROGRAMMA</span>."],
+    ["18:00","SPEECH","Speech","Comme vous le verrez lorsque vous ouvrirez l’entraînement de lundi dans <span class='names'>SIR PROGRAMMA</span>, lundi est l’une de ces occasions où j’ai besoin de vous parler directement.<br><br>En cliquant sur l’entraînement, une fenêtre pop-up vous avertira du speech. Si vous le souhaitez, vous pourrez aussi lire à l’avance ce dont je vous parlerai."]
+  ]
+},
+cs:{
+  eyebrow:"PLÁN TRÉNINKU",heading:"PONDĚLÍ — ORGANIZACE TRÉNINKU",
+  intro:"Krátké připomenutí, abyste už při příchodu do haly věděli, jak bude odpoledne organizované.",
+  date:"Pondělí 5. října",
+  closing:"Doufám, že je vše jasné.<br><strong>Uvidíme se v hale.</strong>",
+  items:[
+    ["16:00","METABOLICKÝ TRÉNINK","#04 HENNO & #16 SEMENIUK","Metabolický trénink s Carottim."],
+    ["16:00","LIBERA","Libera","Specifická práce pro libera."],
+    ["16:00","ROZCVIČENÍ","Rozcvičení","Rozcvičení s Carottim."],
+    ["16:15","BLOK","#08 LOSER & #11 SOLÉ","Specifická práce na bloku."],
+    ["16:20","TECHNIKA","Technika","Všichni kromě <span class='names'>#04 HENNO & #16 SEMENIUK</span>.<br>Co budeme dělat v technické části, si můžete přečíst přímo v aplikaci <span class='names'>SIR PROGRAMMA</span>."],
+    ["18:00","SPEECH","Speech","Jak uvidíte, když otevřete pondělní trénink v aplikaci <span class='names'>SIR PROGRAMMA</span>, pondělí je jedna z těch situací, kdy k vám potřebuji promluvit přímo.<br><br>Po kliknutí na trénink se objeví pop-up, který vás na speech upozorní. Pokud budete chtít, můžete si také předem přečíst, o čem budu mluvit."]
+  ]
+}
+};
+
+function escClass(i){return i===5?"card speech":"card"}
+function render(lang){
+  const d=T[lang]||T.it;
+  document.documentElement.lang=lang;
+  document.documentElement.dir=lang==="fa"?"rtl":"ltr";
+  document.getElementById("eyebrow").textContent=d.eyebrow;
+  document.getElementById("heading").textContent=d.heading;
+  document.getElementById("intro").textContent=d.intro;
+  document.getElementById("date").textContent=d.date;
+  document.getElementById("closing").innerHTML=d.closing;
+  document.getElementById("schedule").innerHTML=d.items.map((x,i)=>`
+    <article class="${escClass(i)}">
+      <div class="time">${x[0]}</div>
+      <div>
+        <div class="tag">${x[1]}</div>
+        <h2 class="title">${x[2]}</h2>
+        <p class="text">${x[3]}</p>
+      </div>
+    </article>`).join("");
+  document.querySelectorAll(".lang").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.lang===lang)));
+  try{localStorage.setItem("sir-lang",lang)}catch(e){}
+}
+document.querySelectorAll(".lang").forEach(b=>b.addEventListener("click",()=>render(b.dataset.lang)));
+let initial="it"; try{initial=localStorage.getItem("sir-lang")||"it"}catch(e){}
+render(T[initial]?initial:"it");
+</script>
+</body>
+</html>
