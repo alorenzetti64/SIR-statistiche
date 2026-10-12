@@ -1,4 +1,4 @@
-name: Publish team speech to GitHub Pages
+name: Publish SIR suite to GitHub Pages
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -24,16 +24,35 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-source
+
+      - name: Checkout PREMATCH
+        uses: actions/checkout@v4
+        with:
+          ref: SIR-Match-Story
+          path: prematch-source
+
+      - name: Assemble suite
+        run: |
+          mkdir -p _site
+          cp -R main-source/speech-allenamento-2026-10-08/. _site/
+          cp -R prematch-source/match-story _site/match-story
+          cp -R prematch-source/assets _site/assets
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
-      - name: Upload speech site
+
+      - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: speech-allenamento-2026-10-08
+          path: _site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
