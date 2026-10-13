@@ -8,12 +8,22 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Test portrait from CEV and image endpoint
+      - name: Inspect official SIR player page HTML for actual photos
         run: |
-          for link in            "https://webmedia.cev.eu/WebMediaCache/GetImage/02b6991706b0c50f67ac87067008ba76"            "https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api?action=perugia-photo&player=oleh-plotnytskyi"            "https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api?action=perugia-roster"
-          do
-            echo "Checking: $link"
-            curl --location --silent --show-error --max-time 28 --output /tmp/oleh-check --write-out "RESULT: %{http_code} %{content_type} %{size_download} bytes\n" "$link" || true
-            file /tmp/oleh-check || true
-            if [ "$(stat -c%s /tmp/oleh-check)" -lt 1000 ]; then head -c 500 /tmp/oleh-check; echo; fi
-          done
+          python3 - <<'PY'
+          import re,requests
+          from bs4 import BeautifulSoup
+          for page in ['https://www.sirsafetyperugia.it/player/oleh-plotnytskyi','https://www.sirsafetyperugia.it/players/']:
+              try:
+                  r=requests.get(page,timeout=20)
+                  print('\nPAGE',page,'STATUS',r.status_code,'CONTENT_LENGTH',len(r.content))
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  for img in soup.select('img'):
+                      info=' | '.join(str(img.get(x,'')) for x in ['src','data-src','alt'])
+                      if 'plot' in info.lower() or 'oleh' in info.lower() or '17' in info.lower() or '/players/' in info.lower():
+                          print('IMG',info[:330])
+                  files=list(dict.fromkeys(re.findall(r'(?:(?:https?://)?www\\.sirsafetyperugia\\.it)?/assets/img/players/[^"\\'<>\\s)]+',r.text,flags=re.I)))
+                  print('PLAYER IMAGE PATHS',len(files))
+                  print('\n'.join(files[:75]))
+              except Exception as e: print('ERROR',type(e).__name__,str(e)[:200])
+          PY
