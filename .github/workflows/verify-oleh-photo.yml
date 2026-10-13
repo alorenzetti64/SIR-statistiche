@@ -12,14 +12,12 @@ jobs:
         run: |
           python3 - <<'PY'
           import re,requests
-          from bs4 import BeautifulSoup
           for page in ['https://www.sirsafetyperugia.it/player/oleh-plotnytskyi','https://www.sirsafetyperugia.it/players/']:
               try:
                   r=requests.get(page,timeout=20)
                   print('\nPAGE',page,'STATUS',r.status_code,'CONTENT_LENGTH',len(r.content))
-                  soup=BeautifulSoup(r.text,'html.parser')
-                  for img in soup.select('img'):
-                      info=' | '.join(str(img.get(x,'')) for x in ['src','data-src','alt'])
+                  for m in re.finditer(r'<img\\b[^>]*>',r.text,flags=re.I):
+                      info=m.group(0)
                       if 'plot' in info.lower() or 'oleh' in info.lower() or '17' in info.lower() or '/players/' in info.lower():
                           print('IMG',info[:330])
                   files=list(dict.fromkeys(re.findall(r'/assets/img/players/[a-zA-Z0-9_@.,%+-]+',r.text,flags=re.I)))
