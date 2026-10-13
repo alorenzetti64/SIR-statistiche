@@ -8,12 +8,20 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify official 17 photo and image proxy
+      - name: Verify real photo is served correctly to the app
         run: |
-          for link in            "https://www.sirsafetyperugia.it/assets/img/players/17_app%400%2C5x.png"            "https://www.sirsafetyperugia.it/assets/img/players/plotnytskyi_no_sfondo.png"            "https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api?action=perugia-photo&player=oleh-plotnytskyi"
-          do
-            echo "Checking: $link"
-            curl -L -sS --max-time 28 -o /tmp/oleh-check -w "RESULT: %{http_code} %{content_type} %{size_download} bytes\n" "$link" || true
-            file /tmp/oleh-check || true
-            if [ "$(stat -c%s /tmp/oleh-check)" -lt 1000 ]; then head -c 500 /tmp/oleh-check; echo; fi
-          done
+          python3 - <<'PY'
+          import requests
+          base="https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api"
+          url=base+"?action=perugia-photo&player=oleh-plotnytskyi"
+          r=requests.get(url,timeout=30)
+          print("PORTRAIT",r.status_code,r.headers.get("Content-Type"),len(r.content))
+          assert r.status_code==200 and r.headers.get("Content-Type","").startswith("image/png") and len(r.content)>10000,"Image proxy did not return portrait"
+          roster=requests.get(base+"?action=perugia-roster",timeout=50)
+          print("ROSTER",roster.status_code,len(roster.content))
+          assert roster.status_code==200,"Roster not available"
+          match=[p for p in roster.json().get("players",[]) if "Plotnytskyi" in p.get("name","")]
+          print("OLEH",match)
+          assert len(match)==1 and "17_app%400%2C5x.png" in match[0]["image"],"Oleh is missing from roster"
+          print("CHECK SUCCESS")
+          PY
