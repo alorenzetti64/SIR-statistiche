@@ -1,0 +1,79 @@
+name: Verify Match Story card-label persistence
+on:
+  push:
+    branches: [SIR-Match-Story]
+    paths:
+      - ".github/workflows/verify-card-labels.yml"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current Match Story
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependency
+        run: |
+          npm install --no-save playwright-core@1.58.1
+          which google-chrome || true
+          google-chrome --version || true
+      - name: Run browser save and reopen regression
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/test-server.log 2>&1 &
+          node --input-type=module <<'JS'
+          import {chromium} from 'playwright-core';
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+          const page=await browser.newPage();
+          let current='<section class="tabbed-card-group"><div class="tabbed-card-nav"><button type="button" data-tab-index="0" aria-selected="true">Nome salvato nella linguetta</button><button type="button" data-tab-index="1" aria-selected="false">Card 2</button></div><div class="tabbed-card-panels"><div class="tabbed-card-panel" data-tab-panel="0"><section class="editor-content-card"><h3><br></h3><p>Primo contenuto</p></section></div><div class="tabbed-card-panel" data-tab-panel="1" hidden><section class="editor-content-card"><h3><br></h3><p>Secondo contenuto</p></section></div></div></section>';
+          const report={id:'match-test',title:'Test Card Labels',competition:'SuperLega',match_date:'2026-10-13',report_category:'SuperLega',venue:'Casa'};
+          const errors=[];
+          page.on('pageerror',error=>errors.push(error.message));
+          await page.route('**/functions/v1/match-story-api**',async route=>{
+            const req=route.request(),url=new URL(req.url()),action=url.searchParams.get('action');
+            let result={ok:true};
+            if(action==='status')result={configured:true};
+            if(action==='list'||action==='public-archive')result={reports:[report]};
+            if(action==='sections')result={sections:[{owner:'Angelo',section_id:'unit-card-1',title:'Capitolo per test',content:current,position:0}]};
+            if(action==='draft')result={report:{draft:{}}};
+            if(action==='section-save'){const posted=JSON.parse(req.postData()||'{}');current=posted.content;result={ok:true,section_id:posted.section_id};}
+            await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+          });
+          try{
+            await page.goto('http://127.0.0.1:8765/match-story/index.html',{waitUntil:'domcontentloaded'});
+            await page.locator('[data-report="match-test"]').first().click({timeout:20000});
+            await page.locator('[data-native-edit="unit-card-1"]').first().click();
+            const nav=page.locator('#nativeBody .tabbed-card-nav button');
+            await nav.first().waitFor();
+            assert.equal(await nav.nth(0).innerText(),'Nome salvato nella linguetta','existing custom tab must survive initial open');
+            await nav.first().click();
+            page.once('dialog',d=>d.accept('Nome definitivo'));
+            await page.locator('#nativeRenameCard').click();
+            assert.equal(await nav.nth(0).innerText(),'Nome definitivo','rename should update tab');
+            await page.locator('#nativeSave').click();
+            await page.locator('#nativeStatus').getByText('Capitolo salvato online').waitFor();
+            assert.ok(current.includes('data-sir-card-name="Nome definitivo"'),'explicit name attribute must be in saved HTML');
+            await page.locator('[data-native-edit="unit-card-1"]').first().click();
+            assert.equal(await nav.nth(0).innerText(),'Nome definitivo','renamed tab must survive reopening');
+            await nav.nth(1).click();
+            page.once('dialog',d=>d.accept('Seconda card scelta'));
+            await page.locator('#nativeRenameCard').click();
+            assert.equal(await nav.nth(1).innerText(),'Seconda card scelta');
+            await page.locator('#nativeMoveTabLeft').click();
+            assert.equal(await nav.nth(0).innerText(),'Seconda card scelta');
+            await page.locator('#nativeSave').click();
+            await page.locator('#nativeStatus').getByText('Capitolo salvato online').waitFor();
+            await page.locator('[data-native-edit="unit-card-1"]').first().click();
+            assert.deepEqual(await nav.allInnerTexts(),['Seconda card scelta','Nome definitivo'],'names and order must survive reopening');
+            assert.equal(errors.length,0,'No page runtime errors: '+errors.join('; '));
+            console.log('PASSED: custom label migration, rename, database save mock, reopening, second rename and reorder');
+          }catch(e){
+            console.log('TEST FAILURE',String(e), 'PAGE ERRORS',errors);
+            await page.screenshot({path:'/tmp/sir-test-failed.png',fullPage:true}).catch(()=>{});
+            console.log('PAGE STATE', (await page.locator('body').innerText()).slice(-2500));
+            throw e;
+          }finally{await browser.close();}
+          JS
