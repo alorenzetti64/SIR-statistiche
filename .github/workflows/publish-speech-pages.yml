@@ -1,60 +1,25 @@
-name: Publish SIR suite to GitHub Pages
+name: Request GitHub Pages update for Match Story
 
 on:
   push:
-    branches: [main, SIR-Match-Story]
+    branches: [SIR-Match-Story]
     paths:
-      - "speech-allenamento-2026-10-08/**"
       - "match-story/**"
       - "assets/**"
       - ".github/workflows/publish-speech-pages.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  actions: write
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  request-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: main-source
-
-      - name: Checkout PREMATCH
-        uses: actions/checkout@v4
-        with:
-          ref: SIR-Match-Story
-          path: prematch-source
-
-      - name: Assemble suite
+      - name: Trigger website deployment from main
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p _site
-          cp -R main-source/speech-allenamento-2026-10-08/. _site/
-          cp -R prematch-source/match-story _site/match-story
-          cp -R prematch-source/assets _site/assets
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          gh api "repos/${{ github.repository }}/actions/workflows/publish-speech-pages.yml/dispatches" \
+            --method POST \
+            -f ref=main
