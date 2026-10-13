@@ -1,0 +1,19 @@
+name: Verify Oleh photo image service
+on:
+  push:
+    branches: [SIR-Match-Story]
+    paths:
+      - .github/workflows/verify-oleh-photo.yml
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test portrait from CEV and image endpoint
+        run: |
+          for link in            "https://webmedia.cev.eu/WebMediaCache/GetImage/02b6991706b0c50f67ac87067008ba76"            "https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api?action=perugia-photo&player=oleh-plotnytskyi"            "https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api?action=perugia-roster"
+          do
+            echo "Checking: $link"
+            curl --location --silent --show-error --max-time 28 --output /tmp/oleh-check --write-out "RESULT: %{http_code} %{content_type} %{size_download} bytes\n" "$link" || true
+            file /tmp/oleh-check || true
+            if [ "$(stat -c%s /tmp/oleh-check)" -lt 1000 ]; then head -c 500 /tmp/oleh-check; echo; fi
+          done
