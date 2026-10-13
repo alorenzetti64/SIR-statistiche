@@ -8,20 +8,12 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect official SIR player page HTML for actual photos
+      - name: Verify official 17 photo and image proxy
         run: |
-          python3 - <<'PY'
-          import re,requests
-          for page in ['https://www.sirsafetyperugia.it/player/oleh-plotnytskyi','https://www.sirsafetyperugia.it/players/']:
-              try:
-                  r=requests.get(page,timeout=20)
-                  print('\nPAGE',page,'STATUS',r.status_code,'CONTENT_LENGTH',len(r.content))
-                  for m in re.finditer(r'<img\\b[^>]*>',r.text,flags=re.I):
-                      info=m.group(0)
-                      if 'plot' in info.lower() or 'oleh' in info.lower() or '17' in info.lower() or '/players/' in info.lower():
-                          print('IMG',info[:330])
-                  files=list(dict.fromkeys(re.findall(r'/assets/img/players/[a-zA-Z0-9_@.,%+-]+',r.text,flags=re.I)))
-                  print('PLAYER IMAGE PATHS',len(files))
-                  print('\n'.join(files[:75]))
-              except Exception as e: print('ERROR',type(e).__name__,str(e)[:200])
-          PY
+          for link in            "https://www.sirsafetyperugia.it/assets/img/players/17_app%400%2C5x.png"            "https://www.sirsafetyperugia.it/assets/img/players/plotnytskyi_no_sfondo.png"            "https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api?action=perugia-photo&player=oleh-plotnytskyi"
+          do
+            echo "Checking: $link"
+            curl -L -sS --max-time 28 -o /tmp/oleh-check -w "RESULT: %{http_code} %{content_type} %{size_download} bytes\n" "$link" || true
+            file /tmp/oleh-check || true
+            if [ "$(stat -c%s /tmp/oleh-check)" -lt 1000 ]; then head -c 500 /tmp/oleh-check; echo; fi
+          done
