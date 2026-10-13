@@ -22,7 +22,7 @@ jobs:
                       info=' | '.join(str(img.get(x,'')) for x in ['src','data-src','alt'])
                       if 'plot' in info.lower() or 'oleh' in info.lower() or '17' in info.lower() or '/players/' in info.lower():
                           print('IMG',info[:330])
-                  files=list(dict.fromkeys(re.findall(r'(?:(?:https?://)?www\\.sirsafetyperugia\\.it)?/assets/img/players/[^"\\'<>\\s)]+',r.text,flags=re.I)))
+                  files=list(dict.fromkeys(re.findall(r'/assets/img/players/[a-zA-Z0-9_@.,%+-]+',r.text,flags=re.I)))
                   print('PLAYER IMAGE PATHS',len(files))
                   print('\n'.join(files[:75]))
               except Exception as e: print('ERROR',type(e).__name__,str(e)[:200])
