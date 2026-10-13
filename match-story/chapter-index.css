@@ -25,4 +25,4 @@
 .sir-presentation .sir-index-list button[aria-current=location]{background:#e7eef7;border-left:4px solid #e93471;color:#0d2b46;font-weight:800}
 .sir-presentation .sir-index-list button:hover,.sir-presentation .sir-index-list button:focus-visible{background:#eef3f9}
 .sir-presentation .sir-index-list button:disabled{opacity:.45}
-@media(max-width:700px){.sir-presentation-bar{gap:6px;padding:8px}.sir-presentation-bar strong{font-size:12px;min-width:0}.sir-presentation .sir-index-trigger{padding:8px 10px;font-size:12px!important}.sir-presentation .sir-index-panel{right:-84px;width:min(330px,calc(100vw - 18px))}.sir-presentation-bar>[data-presentation-fullscreen]{display:none}}
+@media(max-width:700px){.sir-presentation-bar{gap:6px;padding:8px}.sir-presentation-bar strong{font-size:12px;min-width:0}.sir-presentation .sir-index-trigger{padding:8px 10px;font-size:12px!important}.sir-presentation .sir-index-panel{right:-84px;width:min(330px,calc(100vw - 18px))}.sir-presentation-bar{flex-wrap:wrap}}
