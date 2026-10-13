@@ -68,9 +68,9 @@ $('nativeRenameCard').onclick=()=>{
  const current=nativeCardTitle(card,0);
  const value=prompt('Nuovo nome della card e della sua linguetta:',current);
  if(value===null)return;
- const title=value.trim().replace(/\\s+/g,' ').slice(0,110);
+ const title=value.trim().replace(/\s+/g,' ').slice(0,110);
  if(!title){alert('Inserisci un nome per la card.');return}
- let heading=card.querySelector(':scope > [data-card-title], :scope > h3, :scope > h2');
+ let heading=card.querySelector(':scope > h3, :scope > h2, :scope > [data-card-title]');
  if(!heading){heading=document.createElement('h3');card.prepend(heading)}
  heading.textContent=title;
  const group=card.closest('.tabbed-card-group');
