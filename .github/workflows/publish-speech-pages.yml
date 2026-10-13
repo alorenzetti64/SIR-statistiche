@@ -2,9 +2,11 @@ name: Publish SIR suite to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, SIR-Match-Story]
     paths:
       - "speech-allenamento-2026-10-08/**"
+      - "match-story/**"
+      - "assets/**"
       - ".github/workflows/publish-speech-pages.yml"
   workflow_dispatch:
 
