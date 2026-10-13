@@ -199,7 +199,7 @@ async function showSirPresentation(report, chapters, editMode=false) {
   }
   function render() {
     pages.forEach((page, index) => page.hidden = index !== pageIndex);
-    if(indexMenu){let active=0;chapterPageTargets().forEach((start,i)=>{if(start>=0&&start<=pageIndex)active=i});indexMenu.setActive(active)}
+    if(indexMenu){const visible=chapterPageTargets().map((start,i)=>({start,i})).filter(x=>x.start>=0&&x.start<=pageIndex).sort((a,b)=>b.start-a.start);indexMenu.setActive(visible[0]?.i??0)}
     status.textContent = (pageIndex + 1) + ' / ' + pages.length;
     previous.disabled = pageIndex === 0;
     next.disabled = pageIndex === pages.length - 1;
