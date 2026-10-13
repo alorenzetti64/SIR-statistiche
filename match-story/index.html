@@ -30,6 +30,19 @@
 .sir-presentation-block a{color:#a31f3b!important;text-decoration:underline}
 .sir-presentation-block .editor-content-card,.sir-presentation-block .editor-highlight,.sir-presentation-block blockquote{background:#fff!important;border:1px solid #ced9e6;border-left:5px solid #c4324d;border-radius:12px;padding:20px;margin:0}
 .sir-presentation-block .editor-video-link{display:block;background:#e1eaf4!important;padding:12px;border-radius:9px;font-size:21px}
+/* Presenta: una card per schermata 16:9, senza testo introduttivo sulla stessa slide */
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-content{display:block;padding-top:19px}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-column{width:100%;height:482px;display:flex;flex-direction:column;justify-content:center;gap:0;overflow:hidden}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-column:nth-child(2){display:none}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block{width:100%;font-size:27px;line-height:1.3;transform-origin:left top}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block>.editor-content-card{width:100%;padding:21px 30px;border-left-width:7px;border-radius:16px;box-shadow:0 10px 35px #1d34501c}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block>.editor-content-card p{text-align:justify;text-justify:inter-word}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block>.editor-content-card.sir-card-columns{column-count:2;column-gap:34px;column-rule:1px solid #e6edf3}
+.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block>.editor-content-card.sir-card-columns>h1:first-child,.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block>.editor-content-card.sir-card-columns>h2:first-child,.sir-presentation-slide.sir-presentation-card-page .sir-presentation-block>.editor-content-card.sir-card-columns>h3:first-child{column-span:all}
+.sir-presentation-slide.sir-presentation-card-page .sir-card-columns>p,.sir-presentation-slide.sir-presentation-card-page .sir-card-columns>div,.sir-presentation-slide.sir-presentation-card-page .sir-card-columns>img,.sir-presentation-slide.sir-presentation-card-page .sir-card-columns>ul,.sir-presentation-slide.sir-presentation-card-page .sir-card-columns>ol{break-inside:avoid}
+.sir-presentation-slide.sir-presentation-text-page.sir-presentation-text-single .sir-presentation-content{display:block}
+.sir-presentation-slide.sir-presentation-text-page.sir-presentation-text-single .sir-presentation-column:first-child{width:100%;height:482px;display:flex;flex-direction:column;justify-content:center}
+.sir-presentation-slide.sir-presentation-text-page.sir-presentation-text-single .sir-presentation-column:nth-child(2){display:none}
 .sir-presentation-footer{position:absolute;bottom:0;left:48px;right:48px;height:54px;border-top:1px solid #ccd6e3;display:flex;align-items:center;gap:20px;font:700 16px Arial,sans-serif;color:#65758b}
 .sir-presentation-footer span:first-child{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .sir-presentation-controls{display:flex;justify-content:center;align-items:center;gap:15px;padding:10px 20px;min-height:58px;background:#111e31}
@@ -239,68 +252,169 @@ async function showSirPresentation(report, chapters) {
       return piece;
     });
   }
+  // Le card (comprese quelle contenute nelle multicard) diventano pagine dedicate.
+  // Il testo che viene prima o dopo una card non si mescola mai con quella card.
+  async function waitForSlideImages(slide) {
+    await Promise.all([...slide.querySelectorAll('img')].map(image => image.complete ? Promise.resolve() : new Promise(resolve => {
+      let finished = false;
+      const done = () => { if (finished) return; finished = true; clearTimeout(timer); image.removeEventListener('load', done); image.removeEventListener('error', done); resolve(); };
+      const timer = setTimeout(() => {
+        if (!image.complete) {
+          const link = document.createElement('a');
+          link.textContent = image.alt || 'Apri immagine';
+          link.href = image.src;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          image.replaceWith(link);
+        }
+        done();
+      }, 5000);
+      image.addEventListener('load', done);
+      image.addEventListener('error', done);
+    })));
+  }
+  function fitSingleCard(slide) {
+    const column = slide.querySelector('.sir-presentation-column');
+    const block = column.querySelector('.sir-presentation-block');
+    const card = block?.querySelector('.editor-content-card');
+    if (!block || !card) return;
+    const availableHeight = column.clientHeight;
+    const headings = [...card.querySelectorAll('h1,h2,h3,h4')];
+    const images = [...card.querySelectorAll('img')];
+    const applyFont = size => {
+      block.style.fontSize = size + 'px';
+      block.style.lineHeight = '1.28';
+      headings.forEach(heading => { heading.style.fontSize = Math.max(17, size + 3) + 'px'; heading.style.lineHeight = '1.13'; });
+      images.forEach(image => image.style.setProperty('max-height', Math.max(170, Math.min(355, size * 12)) + 'px', 'important'));
+    };
+    applyFont(27);
+    if (block.getBoundingClientRect().height > availableHeight - 4) {
+      // Due colonne dentro la stessa card aiutano a conservare caratteri leggibili.
+      if (card.querySelectorAll('p,li,div').length >= 4 && !card.querySelector('table')) card.classList.add('sir-card-columns');
+    }
+    for (const size of [27,26,25,24,23,22,21,20,19,18,17,16]) {
+      applyFont(size);
+      if (block.getBoundingClientRect().height <= availableHeight - 6 && block.scrollWidth <= column.clientWidth + 3) break;
+    }
+    // Ultima risorsa per contenuti eccezionalmente lunghi: una riduzione uniforme
+    // che non taglia né il testo né le immagini (sempre una card per slide).
+    let naturalHeight = block.getBoundingClientRect().height;
+    if (naturalHeight > availableHeight - 5 || block.scrollWidth > column.clientWidth + 3) {
+      const ratio = Math.max(0.1, Math.min(1, (availableHeight - 9) / Math.max(naturalHeight, 1), (column.clientWidth - 4) / Math.max(block.scrollWidth, 1)));
+      block.style.transformOrigin = 'left top';
+      block.style.transform = 'scale(' + ratio + ')';
+      block.style.width = (100 / ratio) + '%';
+      // L'allargamento fa andare a capo meno parole. Rifinisce la scala
+      // evitando di lasciare spazio inutilizzato sotto alla card.
+      naturalHeight = block.getBoundingClientRect().height;
+      if (naturalHeight > availableHeight - 5) {
+        const finalRatio = ratio * (availableHeight - 9) / naturalHeight;
+        block.style.transform = 'scale(' + finalRatio + ')';
+        block.style.width = (100 / finalRatio) + '%';
+      }
+    }
+    // Quando il testo è distribuito su due colonne, controlla che l'impaginazione
+    // non aggiunga una colonna orizzontale oltre la card.
+    if (card.scrollWidth > card.clientWidth + 8 && card.classList.contains('sir-card-columns')) {
+      card.classList.remove('sir-card-columns');
+      const h = block.scrollHeight;
+      const scale = Math.min(1,(availableHeight - 8) / Math.max(1,h));
+      block.style.transform = 'scale(' + scale + ')';
+      block.style.width = (100 / scale) + '%';
+    }
+  }
+  async function createCardSlide(chapter, chapterIndex, indexInChapter, node) {
+    const slide = createPage(chapter, chapterIndex, indexInChapter);
+    slide.classList.add('sir-presentation-card-page');
+    slide.querySelector('.sir-presentation-column').append(wrap(node));
+    await waitForSlideImages(slide);
+    if (closed) return;
+    fitSingleCard(slide);
+    slide.hidden = true;
+  }
+  async function createTextSlides(chapter, chapterIndex, nextPage, sourceBlocks) {
+    // Impagina solo il testo consecutivo: non può mai finire sulla pagina di una card.
+    let slide = createPage(chapter, chapterIndex, nextPage());
+    slide.classList.add('sir-presentation-text-page');
+    let columns = [...slide.querySelectorAll('.sir-presentation-column')];
+    let columnIndex = 0;
+    const queue = [...sourceBlocks];
+    queue.forEach(node => columns[0].append(wrap(node)));
+    await waitForSlideImages(slide);
+    if (closed) return;
+    columns[0].replaceChildren();
+    let operations = 0;
+    while (queue.length) {
+      if (closed) return;
+      if (++operations > 6000) throw Error('Contenuto troppo complesso nel capitolo ' + chapter.title);
+      const node = queue.shift();
+      const block = wrap(node);
+      const column = columns[columnIndex];
+      column.append(block);
+      const height = [...column.children].reduce((sum,child) => sum + child.offsetHeight,0) + 16 * (column.childElementCount-1);
+      if (height <= 479 && column.scrollHeight <= column.clientHeight) continue;
+      block.remove();
+      if (column.childElementCount) {
+        queue.unshift(node);
+        if (columnIndex === 0) columnIndex = 1;
+        else {
+          slide.hidden = true;
+          slide = createPage(chapter, chapterIndex, nextPage());
+          slide.classList.add('sir-presentation-text-page');
+          columns = [...slide.querySelectorAll('.sir-presentation-column')];
+          columnIndex = 0;
+        }
+      } else {
+        const pieces = splitNode(node);
+        if (!pieces) {
+          // Un'immagine o elemento indivisibile viene ridimensionato senza eliminarlo.
+          column.append(block);
+          block.style.transformOrigin = 'left top';
+          const scale = Math.min(1,475 / Math.max(block.offsetHeight,1));
+          block.style.transform = 'scale(' + scale + ')';
+          block.style.width = (100 / scale) + '%';
+          continue;
+        }
+        queue.unshift(...pieces);
+      }
+    }
+    // Le slide con poca introduzione utilizzano tutta la larghezza e non una sola mezza colonna.
+    for (const page of pages.filter(el => el.classList.contains('sir-presentation-text-page') && !el.dataset.checkedTextLayout)) {
+      page.dataset.checkedTextLayout = 'true';
+      const cols = page.querySelectorAll('.sir-presentation-column');
+      if (cols[1].childElementCount === 0) page.classList.add('sir-presentation-text-single');
+      page.hidden = true;
+    }
+  }
   try {
     for (let chapterIndex = 0; chapterIndex < chapters.length; chapterIndex++) {
       if (closed) return;
       const chapter = chapters[chapterIndex];
-      let continuation = 1;
-      let slide = createPage(chapter, chapterIndex, continuation);
-      let columns = [...slide.querySelectorAll('.sir-presentation-column')];
-      let columnIndex = 0;
-      const queue = sirPresentationBlocks(chapter.content);
-      if (!queue.length) {
+      const sequence = sirPresentationBlocks(chapter.content);
+      if (!sequence.length) {
         const empty = document.createElement('p');
         empty.textContent = 'Questo capitolo non contiene ancora materiale.';
-        queue.push(empty);
+        sequence.push(empty);
       }
-      queue.forEach(node => columns[0].append(wrap(node)));
-      await Promise.all([...slide.querySelectorAll('img')].map(image => image.complete ? Promise.resolve() : new Promise(resolve => {
-        const timer = setTimeout(() => {
-          if (!image.complete) {
-            const link = document.createElement('a');
-            link.textContent = image.alt || 'Apri immagine';
-            link.href = image.src;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            image.replaceWith(link);
-          }
-          done();
-        }, 5000);
-        function done() { clearTimeout(timer); image.removeEventListener('load', done); image.removeEventListener('error', done); resolve(); }
-        image.addEventListener('load', done);
-        image.addEventListener('error', done);
-      })));
-      if (closed) return;
-      const heights = [...columns[0].children].map(block => block.offsetHeight);
-      const totalHeight = heights.reduce((total, height) => total + height, 0) + 16 * (heights.length - 1);
-      const firstColumnHeight = totalHeight <= 964 ? Math.min(482, Math.max(...heights, Math.ceil(totalHeight / 2))) : 482;
-      columns[0].replaceChildren();
-      while (queue.length) {
-        const node = queue.shift();
-        const block = wrap(node);
-        const column = columns[columnIndex];
-        column.append(block);
-        const usedHeight = [...column.children].reduce((total, child) => total + child.offsetHeight, 0) + 16 * (column.childElementCount - 1);
-        if (usedHeight <= (columnIndex === 0 ? firstColumnHeight : column.clientHeight) && column.scrollHeight <= column.clientHeight) continue;
-        block.remove();
-        if (column.childElementCount) {
-          queue.unshift(node);
-          if (columnIndex === 0) columnIndex = 1;
-          else {
-            slide.hidden = true;
-            slide = createPage(chapter, chapterIndex, ++continuation);
-            columns = [...slide.querySelectorAll('.sir-presentation-column')];
-            columnIndex = 0;
-          }
-        } else {
-          const pieces = splitNode(node);
-          if (!pieces) throw Error('Un contenuto del capitolo «' + chapter.title + '» non può essere impaginato.');
-          queue.unshift(...pieces);
-        }
+      let slideCount = 0;
+      const nextPage = () => ++slideCount;
+      let paragraphs = [];
+      const flushText = async () => {
+        if (!paragraphs.length) return;
+        const blocks = paragraphs;
+        paragraphs = [];
+        await createTextSlides(chapter, chapterIndex, nextPage, blocks);
+      };
+      for (const node of sequence) {
+        if (node.matches?.('.editor-content-card')) {
+          await flushText();
+          if (closed) return;
+          await createCardSlide(chapter, chapterIndex, nextPage(), node);
+        } else paragraphs.push(node);
       }
-      slide.hidden = true;
+      await flushText();
     }
-    pages.forEach((page, index) => page.querySelector('.sir-presentation-footer span:last-child').textContent = (index + 1) + ' / ' + pages.length);
+    pages.forEach((page,index) => page.querySelector('.sir-presentation-footer span:last-child').textContent = (index+1) + ' / ' + pages.length);
     ready = true;
     render();
   } catch (error) {
