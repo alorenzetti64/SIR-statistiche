@@ -63,7 +63,7 @@ const native={
   async function flush(){
    clearTimeout(timer);timer=null;
    if(!context||version===syncedVersion)return true;
-   if(working){await working;if(version!==syncedVersion)return flush();return true}
+   if(working){const success=await working;if(!success)return false;if(version!==syncedVersion)return flush();return true}
    const current=snapshot();
    if(!current.title.trim()){
     notify('Scrivi un titolo per salvare automaticamente il capitolo.');
