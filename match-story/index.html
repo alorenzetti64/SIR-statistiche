@@ -206,6 +206,8 @@ async function showSirPresentation(report, chapters, editMode=false) {
   const next = overlay.querySelector('[data-presentation-next]');
   const fullscreen = overlay.querySelector('[data-presentation-fullscreen]');
   let closed = false;
+  let closing = false;
+  let recoveredPresent = false;
   let ready = false;
   let pageIndex = 0;
   let manualEditor = null;
@@ -250,9 +252,13 @@ async function showSirPresentation(report, chapters, editMode=false) {
       status.textContent = 'Schermo intero non disponibile';
     }
   }
-  function close() {
-    if (closed) return;
-    if (editMode&&manualEditor?.isDirty()&&!confirm("Ci sono modifiche non salvate a Presenta. Uscire senza salvare?"))return;
+  async function close() {
+    if (closed||closing) return;
+    closing=true;
+    if(editMode&&manualEditor?.isDirty()){
+      const saved=await manualEditor.flush();
+      if(!saved&&!confirm('Non riesco a salvare online. La bozza locale è conservata se la memoria del dispositivo lo consente. Vuoi uscire comunque?')){closing=false;return}
+    }
     manualEditor?.cleanup();
     indexMenu?.destroy();
     closed = true;
@@ -499,6 +505,13 @@ async function showSirPresentation(report, chapters, editMode=false) {
     const presentRes=await fetch(API+'?action=presentation&id='+encodeURIComponent(report.id),{cache:'no-store'});
     if(!presentRes.ok)throw Error('Non riesco a leggere la presentazione salvata.');
     const savedPresent=await presentRes.json();
+    if(editMode&&window.SirMatchAutosave){
+      const local=await window.SirMatchAutosave.presentation.read(report.id);
+      if(Array.isArray(local?.pages)&&local.pages.length&&Date.parse(local.savedAt||0)>Date.parse(savedPresent.updated_at||0)){
+        savedPresent.pages=local.pages;
+        recoveredPresent=true;
+      }else if(local){window.SirMatchAutosave.presentation.clear(report.id).catch(()=>{})}
+    }
     if(Array.isArray(savedPresent.pages)&&savedPresent.pages.length){
       if(!window.SirPresentationEditor)throw Error('Editor della presentazione non caricato. Aggiorna la pagina.');
       window.SirPresentationEditor.restore(savedPresent.pages,canvas,pages);
@@ -539,13 +552,17 @@ async function showSirPresentation(report, chapters, editMode=false) {
         getIndex:()=>pageIndex,setIndex:i=>{pageIndex=i},
         reset:async()=>{
           try{
+            await manualEditor?.whenIdle();
+            manualEditor?.suspend();
             const res=await fetch(API+'?action=presentation-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:report.id})});
             const obj=await res.json();if(!res.ok)throw Error(obj.error||'Errore');
-            manualEditor?.cleanup();manualEditor=null;close();
+            await window.SirMatchAutosave?.presentation.clear(report.id);
+            manualEditor?.cleanup();manualEditor=null;await close();
             await showSirPresentation(report,chapters,true);
-          }catch(error){alert('Rigenerazione non riuscita: '+error.message)}
+          }catch(error){manualEditor?.resume();alert('Rigenerazione non riuscita: '+error.message)}
         }
       });
+      if(recoveredPresent)manualEditor.markRecovered();
     }
     indexMenu=sirMakeChapterIndex({doc:document,host:overlay.querySelector('.sir-presentation-bar'),chapters:chapters.map((chapter,i)=>({title:chapter.title,disabled:chapterPageTargets()[i]<0})),onChoose:i=>{
       const target=chapterPageTargets()[i];
