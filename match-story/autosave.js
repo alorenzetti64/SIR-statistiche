@@ -37,7 +37,7 @@ const native={
  },
  clear(reportId){try{localStorage.removeItem(NATIVE_PREFIX+reportId)}catch{}},
  create({getTitle,getHtml,setTitle,setHtml,status,save,onSaved}){
-  let context=null,version=0,syncedVersion=0,timer=null,retryTimer=null,working=null;
+  let context=null,version=0,syncedVersion=0,timer=null,preserveTimer=null,retryTimer=null,working=null;
   let observer=null,paused=false,localFailed=false;
   const notify=value=>{if(status)status.textContent=value};
   function snapshot(){
@@ -56,7 +56,7 @@ const native={
   function mark(){
    if(!context||paused)return;
    version++;
-   preserve();
+   clearTimeout(preserveTimer);preserveTimer=setTimeout(preserve,300);
    if(!localFailed)notify('Modifiche in attesa di salvataggio…');
    queue();
   }
@@ -96,7 +96,7 @@ const native={
    return promise;
   }
   function begin(data){
-   clearTimeout(timer);clearTimeout(retryTimer);
+   clearTimeout(timer);clearTimeout(retryTimer);clearTimeout(preserveTimer);
    context={reportId:data.reportId,owner:data.owner,sectionId:data.sectionId,position:data.position};
    version=syncedVersion=0;
    paused=true;
@@ -117,7 +117,7 @@ const native={
    else notify('Salvataggio automatico attivo');
    return restored;
   }
-  function end(){clearTimeout(timer);clearTimeout(retryTimer);observer?.disconnect();observer=null;context=null;version=syncedVersion=0}
+  function end(){clearTimeout(timer);clearTimeout(preserveTimer);clearTimeout(retryTimer);observer?.disconnect();observer=null;context=null;version=syncedVersion=0}
   function beforeUnload(e){
    if(!context)return;
    if(version!==syncedVersion){preserve();e.preventDefault();e.returnValue=''}
