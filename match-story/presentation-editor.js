@@ -39,6 +39,17 @@ function serialize(pages){
 function install(o){
  const {overlay,canvas,pages,report,api,render,getIndex,setIndex,reset}=o;
  let selected=null,dragMode=false,dragState=null,dirty=false,saving=false;
+ let revision=0,saveTimer=null,backupTimer=null,retryTimer=null,saveInFlight=null,paused=false;
+ const backup=window.SirMatchAutosave?.presentation;
+ function preserve(){if(dirty&&!paused)backup?.backup(report.id,serialize(pages))}
+ function schedule(delay=2800){clearTimeout(saveTimer);if(!paused)saveTimer=setTimeout(()=>{save(true).catch(()=>{})},delay)}
+ function onVisibility(){if(document.hidden&&dirty){preserve();save(true).catch(()=>{})}}
+ function onPageHide(){if(dirty)preserve()}
+ function onBeforeUnload(e){if(dirty||saving){preserve();e.preventDefault();e.returnValue=''}}
+ document.addEventListener('visibilitychange',onVisibility);
+ window.addEventListener('pagehide',onPageHide);
+ window.addEventListener('beforeunload',onBeforeUnload);
+
  const toolbar=document.createElement('section');toolbar.className='sir-editor-toolbar';
  toolbar.innerHTML="<div class=\"sir-ed-top\"><strong>MODIFICA PRESENTA</strong><button data-ed=\"save\">Salva modifiche</button><button data-ed=\"reset\">Rigenera dalle card</button><span data-ed-status>Modifiche solo a questa partita</span></div><div class=\"sir-ed-controls\"><span>Seleziona testo, card o immagine.</span><button data-ed=\"drag\">Sposta: OFF</button><button data-ed=\"text\">Modifica testo</button><button data-ed=\"font-down\">A−</button><button data-ed=\"font-up\">A+</button><button data-ed=\"left\">Sinistra</button><button data-ed=\"center\">Centro</button><button data-ed=\"right\">Destra</button><button data-ed=\"justify\">Giustifica</button><button data-ed=\"leading-down\">Interlinea −</button><button data-ed=\"leading-up\">Interlinea +</button><button data-ed=\"spacing-down\">Spazio −</button><button data-ed=\"spacing-up\">Spazio +</button><button data-ed=\"size-down\">− Dimensione</button><button data-ed=\"size-up\">+ Dimensione</button><button data-ed=\"make-text\">+ Testo</button><button data-ed=\"split\">Sposta in nuova pagina</button><button data-ed=\"remove\">Elimina elemento</button><button data-ed=\"previous\">Pagina ←</button><button data-ed=\"following\">Pagina →</button><button data-ed=\"add\">+ Pagina</button><button data-ed=\"delete\">Elimina pagina</button></div>";
  const style=document.createElement('style');style.textContent="\n.sir-presentation-editor-open .sir-editor-toolbar{display:flex;flex-direction:column;gap:6px;padding:9px 11px;max-height:188px;overflow:auto;background:#0b233a;border-bottom:1px solid #47607e;color:#fff;z-index:12}\n.sir-presentation .sir-ed-top,.sir-presentation .sir-ed-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap}\n.sir-presentation .sir-ed-top strong{color:#ff90ac;font-size:13px;letter-spacing:1px;margin-right:10px}\n.sir-presentation .sir-ed-top [data-ed-status]{font-size:12px;color:#c6d7ec;margin-left:8px}\n.sir-presentation .sir-editor-toolbar button{padding:6px 9px;font-size:12px;border-radius:6px}\n.sir-presentation .sir-editor-toolbar [data-ed=save]{background:#f72569;color:#fff;border-color:#f72569}\n.sir-presentation .sir-editor-toolbar [data-ed=drag][aria-pressed=true]{background:#eff6ff;color:#18334b}\n.sir-presentation-editor-open .sir-presentation-block,.sir-presentation-editor-open .sir-presentation-heading h2{cursor:pointer}\n.sir-presentation-editor-open .sir-ed-selected{outline:4px dashed #fa276d!important;outline-offset:4px;position:relative;z-index:6}\n.sir-presentation-editor-open [contenteditable=true]{outline:4px solid #1389cf!important;cursor:text!important}\n@media(max-width:700px){.sir-presentation-editor-open .sir-editor-toolbar{max-height:200px}.sir-presentation .sir-ed-controls>span{display:none}}\n";
@@ -46,7 +57,7 @@ function install(o){
  overlay.classList.add('sir-presentation-editor-open');
  const status=toolbar.querySelector('[data-ed-status]');
  function message(t){status.textContent=t}
- function mark(){dirty=true;message('Modifiche non salvate')}
+ function mark(){if(paused)return;dirty=true;revision++;message('Modifiche in attesa di salvataggio…');clearTimeout(backupTimer);backupTimer=setTimeout(preserve,350);schedule()}
  function page(){return pages[getIndex()]}
  function select(el){
   if(selected){selected.classList.remove('sir-ed-selected');selected.removeAttribute('contenteditable')}
@@ -90,20 +101,35 @@ function install(o){
   const y=Math.max(-500,Math.min(500,(Number(el.dataset.sirY)||0)+dy));
   el.dataset.sirX=x;el.dataset.sirY=y;el.style.translate=x+'px '+y+'px';
  }
- async function save(){
-  if(saving)return;saving=true;const btn=toolbar.querySelector('[data-ed=save]');btn.disabled=true;
-  selected?.classList.remove('sir-ed-selected');selected?.removeAttribute('contenteditable');
-  message('Salvataggio online…');
-  try{
-   const response=await fetch(api+'?action=presentation-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:report.id,pages:serialize(pages)})});
-   const result=await response.json();if(!response.ok)throw Error(result.error||'Errore di salvataggio');
-   dirty=false;message('Presentazione salvata online · '+result.pages+' pagine');
-  }catch(e){message('Salvataggio non riuscito');alert('Presentazione non salvata: '+e.message)}
-  finally{selected?.classList.add('sir-ed-selected');btn.disabled=false;saving=false}
+ async function save(automatic=false){
+  clearTimeout(saveTimer);saveTimer=null;
+  if(paused)return false;
+  if(saveInFlight){const result=await saveInFlight;if(!result)return false;if(dirty)return save(automatic);return true}
+  if(automatic&&!dirty)return true;
+  saving=true;const btn=toolbar.querySelector('[data-ed=save]');btn.disabled=true;
+  const version=revision,pagesToSave=serialize(pages);
+  message('Salvataggio automatico online…');
+  const operation=(async()=>{
+   try{
+    const response=await fetch(api+'?action=presentation-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:report.id,pages:pagesToSave})});
+    const result=await response.json();if(!response.ok)throw Error(result.error||'Errore di salvataggio');
+    if(revision===version){dirty=false;await backup?.clear(report.id);message('✓ Salvato online · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));}
+    else{dirty=true;preserve();schedule(900)}
+    clearTimeout(retryTimer);
+    return true;
+   }catch(e){
+    message('⚠ Salvataggio online non riuscito. Bozza locale mantenuta.');
+    preserve();
+    if(!automatic)alert('Presentazione non salvata: '+e.message);
+    clearTimeout(retryTimer);retryTimer=setTimeout(()=>save(true).catch(()=>{}),20000);
+    return false;
+   }finally{btn.disabled=false;saving=false;saveInFlight=null}
+  })();
+  saveInFlight=operation;return operation;
  }
  toolbar.addEventListener('click',event=>{
   const b=event.target.closest('[data-ed]');if(!b)return;const a=b.dataset.ed;
-  if(a==='save'){save();return}
+  if(a==='save'){save(false);return}
   if(a==='reset'){if(confirm('Rigenerare tutte le pagine dalle card? Perderai le modifiche manuali salvate.'))reset();return}
   if(a==='drag'){dragMode=!dragMode;b.textContent=dragMode?'Sposta: ON':'Sposta: OFF';b.setAttribute('aria-pressed',String(dragMode));return}
   if(a==='text'){if(!selected||selected.tagName==='IMG'){message('Seleziona prima un testo.');return}selected.contentEditable='true';selected.focus();message('Modifica il testo nella pagina e poi salva.');return}
@@ -171,7 +197,15 @@ function install(o){
  });
  function pointerStop(e){if(dragState?.id===e.pointerId){if(dragState.wasMoved)mark();dragState=null}}
  canvas.addEventListener('pointerup',pointerStop);canvas.addEventListener('pointercancel',pointerStop);
- return {isDirty:()=>dirty,cleanup:()=>{select(null);toolbar.remove();style.remove();overlay.classList.remove('sir-presentation-editor-open')}};
+ return {
+  isDirty:()=>dirty||saving,
+  flush:()=>save(true),
+  whenIdle:async()=>{if(saveInFlight)await saveInFlight},
+  suspend:()=>{paused=true;clearTimeout(saveTimer);clearTimeout(backupTimer);clearTimeout(retryTimer)},
+  resume:()=>{paused=false;if(dirty){preserve();schedule()}},
+  markRecovered:()=>{mark();message('Bozza recuperata dal dispositivo · salvataggio in corso…')},
+  cleanup:()=>{paused=true;clearTimeout(saveTimer);clearTimeout(backupTimer);clearTimeout(retryTimer);document.removeEventListener('visibilitychange',onVisibility);window.removeEventListener('pagehide',onPageHide);window.removeEventListener('beforeunload',onBeforeUnload);select(null);toolbar.remove();style.remove();overlay.classList.remove('sir-presentation-editor-open')}
+ };
 }
 window.SirPresentationEditor={clean,restore,serialize,install};
 })();
