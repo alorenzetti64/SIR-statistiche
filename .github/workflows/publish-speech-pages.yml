@@ -7,6 +7,7 @@ on:
       - "speech-allenamento-2026-10-08/**"
       - "match-story/**"
       - "due-sguardi/**"
+      - "due-sguardi-v2/**"
       - "assets/**"
       - ".github/workflows/publish-speech-pages.yml"
   workflow_dispatch:
@@ -46,6 +47,7 @@ jobs:
           cp -R prematch-source/match-story _site/match-story
           cp -R prematch-source/assets _site/assets
           cp -R main-source/due-sguardi _site/due-sguardi
+          cp -R main-source/due-sguardi-v2 _site/due-sguardi-v2
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
