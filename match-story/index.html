@@ -253,6 +253,7 @@ async function showSirPresentation(report, chapters, editMode=false) {
     status.textContent = (pageIndex + 1) + ' / ' + pages.length;
     previous.disabled = pageIndex === 0;
     next.disabled = pageIndex === pages.length - 1;
+    manualEditor?.refreshColors?.();
   }
   async function toggleFullscreen() {
     try {
@@ -335,6 +336,8 @@ async function showSirPresentation(report, chapters, editMode=false) {
     const slide = document.createElement('article');
     slide.className = 'sir-presentation-slide';
     slide.dataset.sirOwner=SirOwnerColors.owner(chapter.owner);
+    const chapterColor=SirOwnerColors.valid(String(chapter.content||'').match(/data-sir-chapter-color=["'](#[0-9a-f]{6})["']/i)?.[1]);
+    if(chapterColor){slide.dataset.sirPageColor=chapterColor;slide.style.setProperty('--sir-page-color',chapterColor)}
     slide.innerHTML = '<div class="sir-presentation-heading"><small></small><h2></h2></div><div class="sir-presentation-content"><div class="sir-presentation-column"></div><div class="sir-presentation-column"></div></div><div class="sir-presentation-footer"><span></span><span></span></div>';
     slide.querySelector('small').textContent = 'SIR MATCH STORY · ' + (chapter.owner || 'STAFF') + ' · CAPITOLO ' + (chapterIndex + 1);
     slide.querySelector('h2').textContent = chapter.title + (continuation > 1 ? ' · ' + continuation : '');
@@ -561,6 +564,7 @@ async function showSirPresentation(report, chapters, editMode=false) {
         const stamp=page.querySelector('.sir-presentation-heading small')?.textContent||'';
         page.dataset.sirOwner=/\bAngelo\b/i.test(stamp)?'Angelo':/\bMax\b/i.test(stamp)?'Max':(chapters.find(ch=>String(page.querySelector('.sir-presentation-heading h2')?.textContent||'').startsWith(String(ch.title)))?.owner||'Max');
       }
+      SirOwnerColors.apply(page,page.dataset.sirOwner);
     });
     pages.forEach((page,index) => {const counter=page.querySelector('.sir-presentation-footer span:last-child');if(counter)counter.textContent=(index+1)+' / '+pages.length});
     if(editMode){
