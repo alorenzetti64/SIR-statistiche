@@ -1,0 +1,48 @@
+
+/* Distinzione Angelo / Max: colori tenui, senza alterare il testo. */
+[data-sir-owner="Angelo"]{--sir-owner-page:#fffbe8;--sir-owner-card:#fff7d5}
+[data-sir-owner="Max"]{--sir-owner-page:#edf5ff;--sir-owner-card:#e2efff}
+#publishedStory .published-part[data-sir-owner],
+#sections article[data-sir-owner]{
+ background:var(--sir-page-color,var(--sir-owner-page))!important;
+ border:1px solid #d8e0e9;
+}
+#publishedStory .published-part[data-sir-owner] .editor-content-card,
+#publishedStory .published-part[data-sir-owner] .tabbed-card-panel,
+#sections article[data-sir-owner] .editor-content-card,
+#sections article[data-sir-owner] .tabbed-card-panel,
+#nativeBody[data-sir-owner] .editor-content-card,
+#nativeBody[data-sir-owner] .tabbed-card-panel{
+ background:var(--sir-card-color,var(--sir-owner-card))!important;
+ color:#14283e!important;
+}
+#nativeBody[data-sir-owner]{background:var(--sir-page-color,var(--sir-owner-page))!important;color:#17283d!important}
+#nativeBody[data-sir-owner] *{text-shadow:none}
+#nativeBody [data-sir-card-color],
+#publishedStory [data-sir-card-color],
+#sections [data-sir-card-color],
+.sir-presentation-slide [data-sir-card-color]{--sir-card-color:var(--sir-custom-card-color)}
+#nativeBody [data-sir-chapter-color],#publishedStory [data-sir-chapter-color],#sections [data-sir-chapter-color]{display:none!important}
+#nativeColorControls{background:#eef3fa;border:1px solid #cbd6e4;border-radius:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:12px;color:#203750}
+#nativeColorControls label{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+#nativeColorControls input[type=color]{width:37px;height:35px;cursor:pointer;padding:2px;border:1px solid #a3b4c6;border-radius:7px;background:#fff}
+#nativeColorControls button{padding:8px 11px;background:white;border:1px solid #a9b9cc;border-radius:8px;color:#1e3851;font-size:12px}
+.sir-presentation-slide[data-sir-owner]{
+ background:var(--sir-page-color,var(--sir-owner-page))!important;
+}
+.sir-presentation-slide[data-sir-owner] .sir-presentation-block .editor-content-card,
+.sir-presentation-slide[data-sir-owner] .sir-presentation-block .tabbed-card-panel{
+ background:var(--sir-card-color,var(--sir-owner-card))!important;
+}
+.sir-presentation-slide .sir-presentation-block[data-sir-card-color]:not(:has(.editor-content-card)),
+.sir-presentation-slide .sir-presentation-block[data-sir-card-color]>.editor-content-card{
+ background:var(--sir-card-color)!important;
+ border-radius:10px;
+}
+.sir-presentation-slide .sir-presentation-block[data-sir-card-color] .editor-content-card{
+ background:var(--sir-card-color)!important;
+}
+.sir-editor-colors{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:3px 0}
+.sir-editor-colors label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#f3f7fd}
+.sir-editor-colors input[type=color]{width:34px;height:30px;padding:1px;background:#fff;border:1px solid #7794b2;border-radius:6px;cursor:pointer}
+.sir-editor-colors button{padding:6px 9px!important;font-size:12px!important}
