@@ -3,7 +3,7 @@
 </style></head><body><header><div><h1>SIR · DUE SGUARDI</h1><div class="muted">High Ball · osservazioni, sintesi e preparazione match</div></div><div id="top"></div></header><main id="app" class="wrap"></main><script>
 const endpoint='https://vqrpkkrqynvlzjufiocn.supabase.co/functions/v1/sir-due-sguardi-v2';
 let role='',token='',matches=[],match=null,cards=[],card=null,assembled={},timer=null;
-const $=s=>document.querySelector(s), safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s), safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function notice(t,error=false){let e=$('#msg');if(e){e.textContent=t;e.className=error?'error':'muted'}}
 function html(t){$('#app').innerHTML=t+'<p id="msg"></p>'}
 function btn(t,a,alt=false){return '<button '+(alt?'class="alt" ':'')+'data-action="'+a+'">'+t+'</button>'}
