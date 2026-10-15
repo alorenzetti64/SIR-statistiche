@@ -236,6 +236,7 @@ function install(o){
  canvas.addEventListener('pointerup',pointerStop);canvas.addEventListener('pointercancel',pointerStop);
  refreshPalette();
  return {
+  refreshColors:refreshPalette,
   isDirty:()=>dirty||saving,
   flush:()=>save(true),
   whenIdle:async()=>{if(saveInFlight)await saveInFlight},
