@@ -9,7 +9,7 @@
   if(!root)return;
   const actual=owner(name);root.dataset.sirOwner=actual;
   const meta=root.querySelector('[data-sir-chapter-color]');
-  const page=valid(meta?.dataset.sirChapterColor);
+  const page=valid(root.dataset.sirPageColor)||valid(meta?.dataset.sirChapterColor);
   if(page)root.style.setProperty('--sir-page-color',page);
   else root.style.removeProperty('--sir-page-color');
   root.querySelectorAll('[data-sir-card-color]').forEach(card=>{
