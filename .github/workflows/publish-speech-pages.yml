@@ -6,6 +6,7 @@ on:
     paths:
       - "speech-allenamento-2026-10-08/**"
       - "match-story/**"
+      - "due-sguardi/**"
       - "assets/**"
       - ".github/workflows/publish-speech-pages.yml"
   workflow_dispatch:
@@ -44,6 +45,7 @@ jobs:
           cp -R main-source/speech-allenamento-2026-10-08/. _site/
           cp -R prematch-source/match-story _site/match-story
           cp -R prematch-source/assets _site/assets
+          cp -R main-source/due-sguardi _site/due-sguardi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
