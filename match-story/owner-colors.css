@@ -20,7 +20,8 @@
 #nativeBody[data-sir-owner] *{text-shadow:none}
 #nativeBody [data-sir-card-color],
 #publishedStory [data-sir-card-color],
-#sections [data-sir-card-color]{--sir-card-color:var(--sir-custom-card-color)}
+#sections [data-sir-card-color],
+.sir-presentation-slide [data-sir-card-color]{--sir-card-color:var(--sir-custom-card-color)}
 #nativeBody [data-sir-chapter-color],#publishedStory [data-sir-chapter-color],#sections [data-sir-chapter-color]{display:none!important}
 #nativeColorControls{background:#eef3fa;border:1px solid #cbd6e4;border-radius:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:12px;color:#203750}
 #nativeColorControls label{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
