@@ -11,11 +11,45 @@ on:
 
 permissions:
   actions: write
+  contents: write
 
 jobs:
   request-publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout for Pages sync
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Keep published main files in sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch --no-tags origin main SIR-Match-Story
+            git checkout -B pages-sync origin/main
+            git rm -r -q --ignore-unmatch match-story assets
+            git checkout origin/SIR-Match-Story -- match-story assets
+            git add -A -- match-story assets
+            if git diff --cached --quiet; then
+              echo "Match Story is already synchronized on main."
+              break
+            fi
+            git commit -m "Sync Match Story for GitHub Pages"
+            if git push origin HEAD:main; then
+              echo "Match Story copied to the published branch."
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Could not synchronize after three attempts."
+              exit 1
+            fi
+          done
+
       - name: Trigger website deployment from main
         env:
           GH_TOKEN: ${{ github.token }}
