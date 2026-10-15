@@ -25,6 +25,9 @@ function restore(saved,canvas,pages){
   slide.className=String(item.className).split(/\s+/).filter(c=>/^sir-presentation-[\w-]+$/.test(c)).join(' ');
   slide.innerHTML=clean(item.html);
   if(!slide.querySelector('.sir-presentation-heading')||!slide.querySelector('.sir-presentation-column')||!slide.querySelector('.sir-presentation-footer'))throw Error('Pagina salvata incompleta');
+  const owner=String(item.owner||'');if(owner==='Angelo'||owner==='Max')slide.dataset.sirOwner=owner;
+  const pageColor=window.SirOwnerColors?.valid(item.pageColor);
+  if(pageColor){slide.dataset.sirPageColor=pageColor;slide.style.setProperty('--sir-page-color',pageColor)}
   slide.hidden=true;canvas.append(slide);pages.push(slide);
  }
 }
@@ -33,7 +36,7 @@ function serialize(pages){
   const clone=slide.cloneNode(true);
   clone.querySelectorAll('.sir-ed-selected').forEach(e=>e.classList.remove('sir-ed-selected'));
   clone.querySelectorAll('[contenteditable]').forEach(e=>e.removeAttribute('contenteditable'));
-  return {className:[...slide.classList].filter(c=>c.startsWith('sir-presentation-')).join(' '),html:clean(clone.innerHTML)};
+  return {className:[...slide.classList].filter(c=>c.startsWith('sir-presentation-')).join(' '),html:clean(clone.innerHTML),owner:slide.dataset.sirOwner||null,pageColor:window.SirOwnerColors?.valid(slide.dataset.sirPageColor)||null};
  });
 }
 function install(o){
@@ -55,22 +58,56 @@ function install(o){
  const style=document.createElement('style');style.textContent="\n.sir-presentation-editor-open .sir-editor-toolbar{display:flex;flex-direction:column;gap:6px;padding:9px 11px;max-height:188px;overflow:auto;background:#0b233a;border-bottom:1px solid #47607e;color:#fff;z-index:12}\n.sir-presentation .sir-ed-top,.sir-presentation .sir-ed-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap}\n.sir-presentation .sir-ed-top strong{color:#ff90ac;font-size:13px;letter-spacing:1px;margin-right:10px}\n.sir-presentation .sir-ed-top [data-ed-status]{font-size:12px;color:#c6d7ec;margin-left:8px}\n.sir-presentation .sir-editor-toolbar button{padding:6px 9px;font-size:12px;border-radius:6px}\n.sir-presentation .sir-editor-toolbar [data-ed=save]{background:#f72569;color:#fff;border-color:#f72569}\n.sir-presentation .sir-editor-toolbar [data-ed=drag][aria-pressed=true]{background:#eff6ff;color:#18334b}\n.sir-presentation-editor-open .sir-presentation-block,.sir-presentation-editor-open .sir-presentation-heading h2{cursor:pointer}\n.sir-presentation-editor-open .sir-ed-selected{outline:4px dashed #fa276d!important;outline-offset:4px;position:relative;z-index:6}\n.sir-presentation-editor-open [contenteditable=true]{outline:4px solid #1389cf!important;cursor:text!important}\n@media(max-width:700px){.sir-presentation-editor-open .sir-editor-toolbar{max-height:200px}.sir-presentation .sir-ed-controls>span{display:none}}\n";
  overlay.prepend(style);overlay.querySelector('.sir-presentation-bar').after(toolbar);
  overlay.classList.add('sir-presentation-editor-open');
+ const palette=window.SirOwnerColors;
+ const colorBar=document.createElement('div');colorBar.className='sir-editor-colors';
+ colorBar.innerHTML='<label>Colore pagina <input type="color" data-sir-color-page aria-label="Scegli il colore della pagina"></label><button type="button" data-sir-color-reset-page>Ripristina pagina</button><label>Colore card selezionata <input type="color" data-sir-color-card aria-label="Scegli il colore della card"></label><button type="button" data-sir-color-reset-card>Ripristina card</button>';
+ toolbar.append(colorBar);
+ const pagePicker=colorBar.querySelector('[data-sir-color-page]'),cardPicker=colorBar.querySelector('[data-sir-color-card]');
+ const resetPage=colorBar.querySelector('[data-sir-color-reset-page]'),resetCard=colorBar.querySelector('[data-sir-color-reset-card]');
+ function selectedBlock(){return selected?.closest('.sir-presentation-block')||null}
+ function refreshPalette(){
+  const slide=page(),owner=palette?.owner(slide?.dataset.sirOwner);
+  const block=selectedBlock();
+  pagePicker.value=palette?.valid(slide?.dataset.sirPageColor)||palette?.initial(owner,'page')||'#ffffff';
+  cardPicker.value=palette?.valid(block?.dataset.sirCardColor)||palette?.initial(owner,'card')||'#ffffff';
+  cardPicker.disabled=resetCard.disabled=!block;
+ }
+ pagePicker.addEventListener('input',()=>{
+  const slide=page();if(!slide)return;
+  const color=palette?.valid(pagePicker.value);if(!color)return;
+  slide.dataset.sirPageColor=color;slide.style.setProperty('--sir-page-color',color);mark();
+ });
+ resetPage.onclick=()=>{
+  const slide=page();if(!slide)return;
+  delete slide.dataset.sirPageColor;slide.style.removeProperty('--sir-page-color');
+  refreshPalette();mark();
+ };
+ cardPicker.addEventListener('input',()=>{
+  const block=selectedBlock();if(!block)return;
+  palette?.setCard(block,cardPicker.value);mark();
+ });
+ resetCard.onclick=()=>{
+  const block=selectedBlock();if(!block)return;
+  palette?.setCard(block,null);refreshPalette();mark();
+ };
  const status=toolbar.querySelector('[data-ed-status]');
  function message(t){status.textContent=t}
  function mark(){if(paused)return;dirty=true;revision++;message('Modifiche in attesa di salvataggio…');clearTimeout(backupTimer);backupTimer=setTimeout(preserve,350);schedule()}
  function page(){return pages[getIndex()]}
  function select(el){
   if(selected){selected.classList.remove('sir-ed-selected');selected.removeAttribute('contenteditable')}
-  selected=el;if(el)el.classList.add('sir-ed-selected');
+  selected=el;if(el)el.classList.add('sir-ed-selected');refreshPalette();
  }
  function fitPages(){
   canvas.replaceChildren(...pages);
   pages.forEach((p,i)=>{const f=p.querySelector('.sir-presentation-footer span:last-child');if(f)f.textContent=(i+1)+' / '+pages.length});
-  render();
+  render();refreshPalette();
  }
  function blank(){
   const current=page(),slide=document.createElement('article');
   slide.className='sir-presentation-slide sir-presentation-text-page sir-presentation-text-single';
+  slide.dataset.sirOwner=current?.dataset.sirOwner||(/\bAngelo\b/i.test(current?.querySelector('.sir-presentation-heading small')?.textContent||'')?'Angelo':'Max');
+  if(current?.dataset.sirPageColor){slide.dataset.sirPageColor=current.dataset.sirPageColor;slide.style.setProperty('--sir-page-color',current.dataset.sirPageColor)}
   slide.innerHTML='<div class="sir-presentation-heading"><small></small><h2></h2></div><div class="sir-presentation-content"><div class="sir-presentation-column"></div><div class="sir-presentation-column"></div></div><div class="sir-presentation-footer"><span></span><span></span></div>';
   slide.querySelector('small').textContent=current?.querySelector('.sir-presentation-heading small')?.textContent||'SIR MATCH STORY';
   slide.querySelector('h2').textContent=current?.querySelector('.sir-presentation-heading h2')?.textContent||report.title;
@@ -197,6 +234,7 @@ function install(o){
  });
  function pointerStop(e){if(dragState?.id===e.pointerId){if(dragState.wasMoved)mark();dragState=null}}
  canvas.addEventListener('pointerup',pointerStop);canvas.addEventListener('pointercancel',pointerStop);
+ refreshPalette();
  return {
   isDirty:()=>dirty||saving,
   flush:()=>save(true),
