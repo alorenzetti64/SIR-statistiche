@@ -98,6 +98,12 @@ function story(ch,sourceData){
  for(const pic of assets.filter(x=>!used.has(x.id)).slice(0,12)){
    out.push(make(ch,pic.hint||ch.title,'', 'photo',pic.id,'extra-image-'+pic.id.split(':').pop()));
  }
+ if(sourceData.videos.length){
+  sourceData.videos.forEach((video,i)=>{
+    const scene=make(ch,video.title.length>3?video.title.toUpperCase():'VIDEO · '+(i+1),'Guarda il video e poi torniamo alla nostra lettura del gioco.','message',null,'video-'+i);
+    scene.videoUrl=video.url;out.push(scene);
+  });
+ }
  if(out.length===1&&introParts.length>1){
   introParts.slice(1,5).forEach((chunk,i)=>out.push(make(ch,shrink(chunk.split(/[.!?]\s/)[0],75)||ch.title,chunk,'message',null,'extra-'+i)));
  }
@@ -132,6 +138,7 @@ async function open({report,chapters,editMode=false}){
  const records=new Map(chapters.map(ch=>[String(ch.section_id||ch.title),ch]));
  const images=new Map;chapters.filter(included).forEach(ch=>source(ch).assets.forEach(asset=>images.set(asset.id,asset)));
  const srcSig=signature(chapters);
+ const chapterSources=new Map(chapters.filter(included).map(ch=>[String(ch.section_id||ch.title),source(ch)]));
  let pages=createDeck(chapters),at=0,beat=0,editing=false,dirty=false,timer=null,saveInFlight=null,queuedRevision=0,closing=false,stale=false;
  const backupKey='sir-match-story-director:'+report.id;
  let local=null;
@@ -185,7 +192,7 @@ async function open({report,chapters,editMode=false}){
    photoInput.replaceChildren();
    const empty=new Option('Senza immagine','');photoInput.append(empty);
    const origin=records.get(p.chapterId);if(origin){
-     source(origin).assets.forEach((asset,i)=>{photoInput.add(new Option((i+1)+'. '+shrink(asset.alt||asset.hint,60),asset.id))});
+     (chapterSources.get(p.chapterId)?.assets||[]).forEach((asset,i)=>{photoInput.add(new Option((i+1)+'. '+shrink(asset.alt||asset.hint,60),asset.id))});
    }
    photoInput.value=p.imageId||'';
    if(photoInput.selectedIndex<0)photoInput.value='';
@@ -196,7 +203,7 @@ async function open({report,chapters,editMode=false}){
    el.style.fontSize=v+'px';
    while(v>min&&(el.scrollHeight>allowedHeight||el.scrollWidth>el.clientWidth+4)){v-=3;el.style.fontSize=v+'px'}
  }
- function show(){
+ function show(syncForm=true){
    if(!pages.length)return;
    at=Math.min(Math.max(0,at),pages.length-1);
    const p=pages[at],asset=imageRef(p),hasDetail=!!(p.body?.trim()||asset),revealed=beat>0||!hasDetail;
@@ -221,7 +228,10 @@ async function open({report,chapters,editMode=false}){
      else{main.append(txt);if(media)main.append(media)}
    }else{const bar=document.createElement('span');bar.className='sd-underline';main.append(head,bar,desc)}
    scene.append(main);
-   const foot=document.createElement('div');foot.className='sd-foot';const left=document.createElement('small');left.textContent='LA LETTURA · IL MESSAGGIO · IL GIOCO';const right=document.createElement('small');right.textContent=String(at+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0');foot.append(left,right);scene.append(foot);
+   const foot=document.createElement('div');foot.className='sd-foot';const left=document.createElement('small');left.textContent='LA LETTURA · IL MESSAGGIO · IL GIOCO';const right=document.createElement('small');right.textContent=String(at+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0');
+   foot.append(left);
+   if(validVideo(p.videoUrl)){const link=document.createElement('button');link.type='button';link.className='sd-clip-link';link.textContent='▶ APRI VIDEO';link.onclick=()=>window.open(p.videoUrl,'_blank','noopener');foot.append(link)}
+   foot.append(right);scene.append(foot);
    surface.append(scene);
    // Fixed 1280x720 projection geometry: text is reduced only when it cannot fit its assigned column.
    requestAnimationFrame(()=>{
@@ -241,7 +251,7 @@ async function open({report,chapters,editMode=false}){
      b.title=String(i+1)+' · '+page.title;b.setAttribute('aria-label','Vai alla slide '+(i+1));
      b.onclick=()=>{at=i;beat=0;show()};progress.append(b)
    });
-   editForm();resize();
+   if(syncForm)editForm();resize();
  }
  function next(){const p=pages[at];if(!p)return;if(beat===0&&(p.body?.trim()||imageRef(p))){beat=1;show();return}if(at<pages.length-1){at++;beat=0;show()}}
  function prev(){if(beat===1){beat=0;show();return}if(at>0){at--;beat=1;show()}}
@@ -287,8 +297,8 @@ async function open({report,chapters,editMode=false}){
    if(action==='close')await close();
  };
  shell.addEventListener('click',delegated);
- titleInput.addEventListener('input',()=>{pages[at].title=titleInput.value;mark();show()});
- bodyInput.addEventListener('input',()=>{pages[at].body=bodyInput.value;mark();show()});
+ titleInput.addEventListener('input',()=>{pages[at].title=titleInput.value;mark();show(false)});
+ bodyInput.addEventListener('input',()=>{pages[at].body=bodyInput.value;mark();show(false)});
  layoutInput.addEventListener('change',()=>updateScene('layout',layoutInput.value));
  photoInput.addEventListener('change',()=>updateScene('imageId',photoInput.value||null));
  const keydown=e=>{
