@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#061321">
+<meta name="description" content="PRESENTA LAB — Prototipo narrativo SIR Match Story, Side Out Perugia vs Cuneo.">
+<title>PRESENTA LAB · Side Out Perugia vs Cuneo</title>
+<style>
+:root{color-scheme:dark;--night:#061321;--navy:#0b1f32;--ink:#152537;--pink:#f12b6c;--sand:#ffe4a4;--cream:#fff9e9;--ice:#eaf1f9;--muted:#a9b9cb;--edge:rgba(213,229,243,.15);--out:cubic-bezier(.16,1,.3,1)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--night);color:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+body{overflow:hidden}button,a{font:inherit}button{cursor:pointer}button:disabled{opacity:.3;cursor:default}button:focus-visible,a:focus-visible{outline:3px solid #ffb8cf;outline-offset:3px}
+[hidden]{display:none!important}.shell{height:100dvh;min-height:400px;display:flex;flex-direction:column;isolation:isolate;overflow:hidden}
+.top{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:65px;padding:12px clamp(17px,3.4vw,54px);background:#071725;border-bottom:1px solid var(--edge);z-index:20}
+.brand{display:flex;align-items:center;gap:14px;min-width:0;text-decoration:none;color:#fff}
+.brandmark{display:grid;place-items:center;width:35px;height:35px;border:1px solid #ff5e96;color:#ff6ca2;font-size:11px;font-weight:950;letter-spacing:-1px;border-radius:8px}
+.brandline{height:24px;width:1px;background:#435469}
+.brandtext{font-size:12px;letter-spacing:.18em;font-weight:850;white-space:nowrap}.brandtext em{font-style:normal;color:#ff779f}
+.top-right{display:flex;align-items:center;gap:12px}.overline{font-size:11px;font-weight:800;color:#aabfd3;letter-spacing:.12em;white-space:nowrap}
+.top-badge{font-size:10px;font-weight:900;letter-spacing:.12em;border:1px solid #596d83;border-radius:100px;color:#f3d19b;padding:6px 9px}
+.stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:0;flex:1;padding:12px clamp(10px,3.4vw,54px)}
+.slide-frame{position:relative;width:min(100%,calc((100dvh - 166px) * 1.77778));max-height:calc(100dvh - 166px);aspect-ratio:16/9;overflow:hidden;box-shadow:0 34px 120px #0009;border:1px solid #203648;background:#0d2338;border-radius:3px}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;padding:clamp(24px,4.2%,65px);background:#0d2338;color:#fff}
+.slide[hidden]{display:none!important}.slide.enter{animation:enter .45s var(--out) both}
+@keyframes enter{from{opacity:.45;filter:blur(5px);transform:scale(1.008)}to{opacity:1;filter:blur(0);transform:scale(1)}}
+.slide[aria-hidden=true]{display:none}
+.s-top{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:26px;flex:0 0 auto;z-index:2}
+.kicker{font-size:clamp(10px,1.02vw,17px);letter-spacing:.19em;font-weight:850;text-transform:uppercase;color:#ffadba}
+.s-topic{font-size:clamp(9px,.94vw,15px);letter-spacing:.06em;color:#c8d5e6;font-weight:650;text-align:right}
+.scene-number{display:inline-block;margin-right:10px;color:#f6dcb2;opacity:.9}
+.s-content{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;z-index:2;min-height:0}
+.s-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:0 0 auto;min-height:22px;z-index:2}
+.s-foot small{font-size:clamp(9px,.85vw,14px);letter-spacing:.06em;font-weight:650;opacity:.7}
+.keyline{display:flex;gap:7px;align-items:center}
+.keyline:before{content:'';width:26px;height:2px;background:var(--pink)}
+.h-giant{font-size:clamp(52px,7.2vw,132px);line-height:.88;font-weight:900;letter-spacing:-.074em;margin:0;max-width:100%}
+.h-xl{font-size:clamp(39px,5.8vw,102px);font-weight:900;line-height:.95;letter-spacing:-.07em;margin:0}
+.h-lg{font-size:clamp(35px,4.35vw,78px);font-weight:900;line-height:1.03;letter-spacing:-.062em;margin:0}
+.h-mid{font-size:clamp(28px,3vw,58px);font-weight:850;line-height:1.1;letter-spacing:-.055em;margin:0}
+.sub{font-size:clamp(17px,1.5vw,27px);line-height:1.5;color:#d5e0e9;max-width:850px}
+.accent{color:#ff6a9f}.gold{color:#ffe2a1}.dark-ink{color:var(--ink)}
+.reveal{opacity:0;transform:translateY(18px);filter:blur(5px);transition:opacity .4s ease,transform .55s var(--out),filter .5s ease;pointer-events:none}
+.reveal.is-on{opacity:1;transform:none;filter:none;pointer-events:auto}
+.dotline{height:2px;background:linear-gradient(90deg,var(--pink),transparent);width:160px;margin:26px 0 15px}
+.owner-chip{display:inline-flex;align-items:center;gap:8px;color:#9ec1de;font-weight:750;letter-spacing:.09em;font-size:clamp(10px,.95vw,16px);text-transform:uppercase}
+.owner-chip:before{content:'';background:var(--sand);width:8px;height:8px;border-radius:100%}
+.decor-court{position:absolute;right:-4%;top:-18%;width:55%;height:145%;opacity:.28;transform:rotate(-16deg);pointer-events:none}
+.decor-court path,.decor-court rect,.decor-court line{fill:none;stroke:#91acc7;stroke-width:3}
+.cover{background:radial-gradient(ellipse at 82% 49%,#1c3b56 0,transparent 53%),linear-gradient(133deg,#071624 10%,#122b42 100%)}
+.cover .s-content{justify-content:center}.cover .mini{font-size:clamp(12px,1.4vw,22px);font-weight:850;letter-spacing:.32em;color:#ffb4b6;margin-bottom:clamp(16px,2vw,35px)}
+.cover .title-main{font-size:clamp(64px,9.2vw,165px);line-height:.8;font-weight:950;letter-spacing:-.09em;margin:0}
+.cover .title-sub{font-size:clamp(35px,4.2vw,78px);font-weight:900;letter-spacing:-.065em;color:#ffcf89;margin:15px 0 0}
+.cover .summary{margin-top:clamp(22px,3.2vw,55px);border-left:3px solid var(--pink);padding-left:20px;font-size:clamp(17px,1.9vw,32px);font-weight:550;max-width:650px;color:#e5edf5;line-height:1.27}
+.cover .serial{position:absolute;right:4%;bottom:3%;font-size:clamp(88px,15vw,280px);font-weight:950;letter-spacing:-.11em;color:#ffffff08}
+.context{background:linear-gradient(130deg,#0c1d30,#132d43)}
+.context .cards{display:grid;grid-template-columns:1fr 1fr;gap:2.2%;margin-top:5%;align-items:stretch}
+.context .reason{min-height:165px;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(17px,2vw,38px);border:1px solid #486079;background:#dceeff0d;border-radius:5px}
+.reason .n{font-size:clamp(14px,1.3vw,23px);color:#ffcf89;font-weight:850;letter-spacing:.1em}
+.reason strong{font-size:clamp(24px,2.65vw,49px);font-weight:850;line-height:1.16;letter-spacing:-.045em}
+.reason small{font-size:clamp(13px,1.22vw,21px);color:#d1dfe9;line-height:1.36}
+.focus{background:radial-gradient(ellipse at 90% 50%,#321c37 0,transparent 50%),#090f1c}
+.focus .flag{font-size:clamp(15px,1.4vw,25px);color:#f4d39e;letter-spacing:.21em;font-weight:850;text-transform:uppercase;margin-bottom:3%}
+.focus .primary{font-size:clamp(44px,6.1vw,110px);font-weight:950;line-height:.91;letter-spacing:-.07em}
+.focus .main-card{align-self:flex-start;background:#fff8e5;padding:clamp(14px,2vw,36px) clamp(22px,3vw,55px);border-left:7px solid var(--pink);margin-top:4%;color:#172a3e;box-shadow:0 20px 50px #0004}
+.focus .main-card strong{font-size:clamp(21px,2.5vw,44px);letter-spacing:-.05em}
+.high{background:#fff9e7;color:#183046}
+.high .kicker{color:#a02a55}.high .s-topic{color:#546476}.high .s-foot{color:#476178}
+.high .h-xl{font-size:clamp(56px,7.6vw,135px)}
+.high .visual-rule{display:flex;align-items:center;gap:16px;margin-top:2%}
+.high .visual-rule span{height:3px;background:#f12b6c;width:80px}
+.high .decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.2%;margin-top:4%}
+.high .decision{position:relative;border:1px solid #d7cdb6;background:white;padding:clamp(15px,2.1vw,38px);border-radius:5px;min-height:150px;box-shadow:0 6px 22px #61562a0e}
+.decision label{display:block;color:#a44a61;font-size:clamp(12px,1.13vw,20px);letter-spacing:.14em;font-weight:850;text-transform:uppercase;margin-bottom:10px}
+.decision strong{display:block;font-size:clamp(23px,2.8vw,52px);letter-spacing:-.055em;line-height:1.13}
+.decision small{display:block;margin-top:12px;color:#445a6b;font-size:clamp(12px,1.08vw,18px);line-height:1.3}
+.serve{background:radial-gradient(ellipse at 80% 20%,#233f53 0,transparent 55%),#0c2132}
+.serve .big-label{font-size:clamp(46px,6.5vw,112px);line-height:.95;letter-spacing:-.077em;font-weight:900;margin:0}
+.serve .serve-rows{display:flex;flex-wrap:wrap;gap:2.4%;margin-top:5%}
+.serve .serve-pill{flex:1;min-width:190px;background:#fff9e9;color:#19334a;display:flex;align-items:center;justify-content:center;min-height:110px;border-top:7px solid var(--pink);padding:18px;text-align:center;font-size:clamp(20px,2.3vw,39px);font-weight:900;letter-spacing:-.045em}
+.serve .qualifier{margin-top:4%;font-size:clamp(20px,2.3vw,42px);line-height:1.18;color:#f3d9ab;font-weight:800}
+.principle{background:#fff9e7;color:#0d2338}
+.principle .kicker{color:#a22e53}.principle .s-topic{color:#506476}.principle .s-foot{color:#5d6b75}
+.principle .rule{border-bottom:7px solid #ee2b6c;width:clamp(65px,9vw,180px);margin:3% 0}
+.principle .megaword{font-size:clamp(42px,6.8vw,121px);line-height:.92;font-weight:950;letter-spacing:-.084em}
+.principle .rationale{border-left:4px solid #f12b6c;padding:0 0 0 23px;font-size:clamp(17px,1.55vw,29px);line-height:1.45;color:#425369;font-weight:600;max-width:930px;margin:5% 0 0}
+.communicate{background:linear-gradient(120deg,#091b2d,#142f4b)}
+.communicate .col-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.6%;margin-top:4%;min-height:0}
+.communicate .col{border:1px solid #4d6680;padding:clamp(16px,2.5vw,43px);background:#ffffff08;min-height:185px;position:relative}
+.communicate .col:before{content:'';position:absolute;top:0;left:0;height:5px;width:38%;background:var(--pink)}
+.communicate .col .role{font-size:clamp(16px,1.3vw,23px);font-weight:850;letter-spacing:.13em;color:#ffe3b2}
+.communicate .col strong{display:block;font-size:clamp(30px,4vw,70px);font-weight:950;letter-spacing:-.065em;margin-top:7%}
+.communicate .col p{font-size:clamp(14px,1.5vw,27px);line-height:1.4;color:#d4e3ee;margin:3% 0 0}
+.communicate .question{font-size:clamp(18px,1.8vw,34px);border-left:4px solid var(--pink);padding-left:20px;font-weight:700;color:#ffe2a4;margin-top:3.5%}
+.end{background:radial-gradient(ellipse at 60% 80%,#1b3854 0,transparent 55%),#071523}
+.end .finish-title{font-weight:950;font-size:clamp(50px,7vw,132px);letter-spacing:-.072em;line-height:.88;margin:0 0 5%}
+.end .three{display:grid;grid-template-columns:repeat(3,1fr);gap:2%;margin:0}
+.end .three div{border-top:3px solid var(--pink);padding:14px 8px 12px 0;min-width:0}
+.end .three strong{display:block;font-size:clamp(20px,2.2vw,39px);font-weight:900;letter-spacing:-.05em}
+.end .three small{display:block;margin-top:9px;font-size:clamp(12px,1vw,17px);line-height:1.35;color:#cbd9e6}
+.controls{min-height:88px;display:flex;align-items:center;gap:clamp(12px,2vw,34px);padding:10px clamp(16px,3.4vw,54px);border-top:1px solid var(--edge);background:#071725;z-index:21}
+.nav-set{display:flex;align-items:center;gap:9px}.nav-btn{min-width:48px;min-height:44px;border:1px solid #52687c;border-radius:7px;background:#10293c;color:white;font-size:25px;font-weight:500}.nav-btn.primary{background:#f12b6c;border-color:#f12b6c}
+.sequence{flex:1;min-width:0;display:flex;align-items:center;gap:5px;justify-content:center}
+.progress-stop{width:clamp(10px,1.25vw,23px);height:5px;border:0;border-radius:4px;background:#395167;padding:0;transition:background .3s,width .3s}
+.progress-stop.past{background:#977d81}.progress-stop.now{width:clamp(28px,3.2vw,57px);background:#f12b6c}
+.step-count{white-space:nowrap;font-size:14px;font-variant-numeric:tabular-nums;font-weight:850;letter-spacing:.12em;color:#f6d7a7;min-width:64px}
+.action-set{display:flex;align-items:center;gap:8px}
+.tool{border:1px solid #435970;color:#dde9f2;background:transparent;border-radius:7px;padding:11px 14px;min-height:42px;font-size:12px;font-weight:750;letter-spacing:.05em}
+.tool:hover,.nav-btn:hover:not(:disabled){border-color:#ff7da2;background:#274056}
+.tool.hot{border-color:#ef5c91;color:#ffd9e6}
+.story-label{font-size:12px;color:#a6b8c9;white-space:nowrap}
+.index-overlay,.help-overlay{position:fixed;inset:0;z-index:100;background:#020912dc;display:grid;place-items:center;padding:20px;backdrop-filter:blur(16px)}
+.overlay-box{max-width:960px;width:100%;max-height:min(90dvh,850px);background:#0b2034;border:1px solid #4e667f;border-radius:12px;box-shadow:0 30px 100px #000a;overflow:hidden;display:flex;flex-direction:column}
+.overlay-header{padding:22px 28px 17px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid #384e65}
+.overlay-header h2{font-size:clamp(24px,3vw,40px);margin:4px 0 0;letter-spacing:-.05em}
+.overlay-header small{font-size:12px;letter-spacing:.16em;color:#f0baca;font-weight:800}
+.overlay-close{border:1px solid #52677c;color:white;background:transparent;border-radius:8px;width:42px;height:42px;font-size:26px}
+.index-grid{display:grid;grid-template-columns:repeat(2,1fr);padding:19px;overflow-y:auto;gap:10px}
+.index-card{background:#ffffff08;border:1px solid #445d77;border-radius:7px;padding:17px;display:flex;align-items:center;gap:15px;color:#fff;text-align:left;min-height:79px}
+.index-card.current{background:#361f37;border-color:#f12b6c}
+.index-n{font-size:24px;color:#ffadbd;font-weight:900;min-width:35px}.index-card strong{font-size:17px;letter-spacing:-.03em}
+.overlay-content{padding:22px 28px 28px;overflow-y:auto}
+.help-list{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;color:#d6e2f0;font-size:15px;line-height:1.5}.help-list div{display:flex;gap:15px}.help-list kbd{flex:none;background:#162e45;border:1px solid #61788c;border-radius:5px;min-width:38px;padding:5px;text-align:center;color:white;font:700 13px inherit}
+.note-panel{position:fixed;z-index:40;bottom:100px;right:28px;width:min(430px,calc(100vw - 36px));background:#fffbea;color:#1a2d42;border-radius:10px;box-shadow:0 16px 80px #0009;padding:23px;max-height:50dvh;overflow-y:auto;border:2px solid #f3d18d}
+.note-panel strong{font-size:13px;letter-spacing:.12em;color:#9d3e63}.note-panel p{font-size:17px;line-height:1.5;margin:13px 0 0}
+.note-panel button{float:right;border:0;color:#263c52;background:transparent;font-size:21px}
+.hint-mobile{display:none}
+@media(max-width:860px){.top{min-height:54px;padding:8px 14px}.brandtext{font-size:10px}.top-badge,.top-right .overline{display:none}.stage{padding:6px}.slide-frame{width:100%;max-height:calc(100dvh - 132px)}.slide{padding:4.3%}.s-top{min-height:14px}.kicker{font-size:clamp(8px,1.45vw,14px)}.s-topic{font-size:clamp(8px,1.25vw,12px)}.s-foot small{font-size:clamp(7px,1vw,11px)}.controls{min-height:77px;padding:8px 12px}.nav-btn{min-width:39px;min-height:40px}.tool{min-height:40px;padding:8px 10px}.story-label,.tool.desktop{display:none}.note-panel{bottom:85px}.h-giant{font-size:clamp(38px,8.3vw,85px)}.h-xl{font-size:clamp(35px,7vw,80px)}.h-lg{font-size:clamp(27px,5.4vw,66px)}.cover .title-main{font-size:clamp(53px,12vw,125px)}.cover .title-sub{font-size:clamp(30px,6vw,60px)}.cover .summary{font-size:clamp(13px,2.5vw,24px)}.context .reason{min-height:100px}.reason strong{font-size:clamp(15px,3.1vw,33px)}.reason small{font-size:clamp(9px,1.6vw,16px)}.reason .n{font-size:clamp(10px,1.7vw,18px)}.high .decision{min-height:100px}.decision strong{font-size:clamp(14px,3vw,32px)}.decision small{font-size:clamp(9px,1.45vw,16px)}.serve .serve-pill{min-width:75px;min-height:63px;font-size:clamp(13px,3vw,30px)}.communicate .col{min-height:95px}.communicate .col strong{font-size:clamp(19px,4vw,45px)}.communicate .col p{font-size:clamp(10px,1.75vw,21px)}.communicate .question{font-size:clamp(13px,2.35vw,26px)}.principle .rationale{font-size:clamp(11px,2vw,22px)}.end .three strong{font-size:clamp(13px,2.6vw,26px)}.end .three small{font-size:clamp(9px,1.5vw,16px)}}
+@media(max-width:550px) and (orientation:portrait){.shell{min-height:0}.stage{align-items:center}.slide-frame{max-height:none;width:100%}.s-topic{display:none}.controls{min-height:72px;gap:7px}.action-set{gap:4px}.tool{font-size:10px;padding:8px 9px}.sequence{gap:3px}.progress-stop{width:7px}.progress-stop.now{width:16px}.step-count{font-size:11px;min-width:42px}.nav-btn{min-width:35px}.index-grid,.help-list{grid-template-columns:1fr}.hint-mobile{display:block;text-align:center;color:#89a2b6;font-size:10px;margin:0 0 8px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top">
+  <a class="brand" href="../" aria-label="Torna a SIR Match Story"><span class="brandmark">SIR</span><span class="brandline"></span><span class="brandtext">MATCH STORY <em>/ PRESENTA LAB</em></span></a>
+  <div class="top-right"><span class="overline">PERUGIA — ACQUA S. ANNA CUNEO</span><span class="top-badge">PROTOTIPO · SIDE OUT</span></div>
+</header>
+<main class="stage" aria-label="Schermate di presentazione">
+<div class="slide-frame" id="slideFrame">
+<section class="slide cover" data-title="Apertura" data-note="Apri il tema: il SIDE OUT è il nostro focus principale. Non serve anticipare tutti i dettagli: introduci l'idea che oggi ragioniamo sulle scelte per tenere viva la palla." aria-label="Schermata di apertura">
+ <svg class="decor-court" viewBox="0 0 520 760" aria-hidden="true"><rect x="40" y="60" width="430" height="640"/><line x1="40" y1="380" x2="470" y2="380"/><line x1="40" y1="260" x2="470" y2="260"/><line x1="40" y1="500" x2="470" y2="500"/><line x1="255" y1="60" x2="255" y2="700"/></svg>
+ <div class="s-top"><span class="kicker"><span class="scene-number">01 /</span> LA LETTURA</span><span class="s-topic">CUNEO · VIDEO MEETING</span></div>
+ <div class="s-content"><div class="mini">SIR MATCH STORY</div><h1 class="title-main">SIDE<br><span class="accent">OUT.</span></h1><div class="reveal" data-beat="1"><h2 class="title-sub">IL NOSTRO FOCUS.</h2><p class="summary">Non soltanto fare punto.<br><strong>Mettere la palla nelle condizioni di restare viva.</strong></p></div></div>
+ <span class="serial" aria-hidden="true">01</span>
+ <div class="s-foot"><small>ANGELO · SIDE OUT PERUGIA</small><small>PROTOTIPO DI RACCONTO · NON È IL REPORT COMPLETO</small></div>
+</section>
+<section class="slide context" data-title="La loro fase break" data-note="La fonte individua due ragioni dei numeri discreti del break avversario: battuta con pochi errori e molte variazioni; centrali e posti 2 efficaci a muro. Non sono percentuali: sono elementi tattici qualitativi.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">02 /</span> IL PROBLEMA</span><span class="s-topic">PERCHÉ IL LORO BREAK FUNZIONA</span></div>
+ <div class="s-content"><h2 class="h-lg">NON CI FANNO<br>REGALI <span class="accent">FACILI.</span></h2><div class="dotline"></div><p class="sub">La loro fase break presenta numeri discreti per due motivi.</p><div class="cards"><div class="reason reveal" data-beat="1"><div class="n">01 / BATTUTA</div><strong>Pochi errori.</strong><small>Gestione attenta e numerose variazioni.</small></div><div class="reason reveal" data-beat="2"><div class="n">02 / MURO</div><strong>Altezza e qualità.</strong><small>Centrali e posti 2 efficaci a muro.</small></div></div></div>
+ <div class="s-foot"><small>SIDE OUT PERUGIA</small><small>PRIMA OSSERVIAMO · POI SCEGLIAMO</small></div>
+</section>
+<section class="slide focus" data-title="Ghigliottina su Feral" data-note="Priorità riportata nel capitolo: ghigliottina immediata su Feral. Da subito allenare il concetto di tenere viva la palla. Usa l'ultima comparsa come messaggio dominante.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">03 /</span> LA PRIORITÀ</span><span class="s-topic">PRIMA DI OGNI ALTRO DETTAGLIO</span></div>
+ <div class="s-content"><div class="flag">SUBITO, DAL PRIMO SCAMBIO</div><h2 class="primary">GHIGLIOTTINA<br><span class="accent">SU FERAL.</span></h2><div class="reveal main-card" data-beat="1"><strong>TENERE VIVA LA PALLA.</strong></div></div>
+ <div class="s-foot"><small>ANGELO · UNA INTENZIONE CONDIVISA</small><small>IL CONCETTO CHE VOGLIAMO ALLENARE</small></div>
+</section>
+<section class="slide high" data-title="High Ball corte" data-note="Le HIGH BALL devono essere giocate corte. Questo permette di lavorare con decisione sul terzo uomo di muro, descritto come il meno imponente dei tre, o di affrontare il muro alto di M2 e M3 usando Tik-tok o mani out.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">04 /</span> LA SOLUZIONE</span><span class="s-topic">HIGH BALL</span></div>
+ <div class="s-content"><h2 class="h-xl">HIGH BALL<br><span style="color:#ce245f">CORTE.</span></h2><div class="visual-rule"><span></span><span style="background:#183046;height:1px;flex:1;max-width:270px"></span></div><div class="decision-grid"><div class="decision reveal" data-beat="1"><label>Opportunità 01</label><strong>IL TERZO<br>UOMO.</strong><small>Attaccare con decisione il meno imponente dei tre.</small></div><div class="decision reveal" data-beat="2"><label>Opportunità 02</label><strong>TIK-TOK<br>MANI OUT.</strong><small>Contro il muro alto di M2 e M3.</small></div></div></div>
+ <div class="s-foot"><small>UNA PALLA CORTA · DUE LETTURE POSSIBILI</small><small>ANGELO</small></div>
+</section>
+<section class="slide serve" data-title="Variazioni di battuta" data-note="Dal capitolo: vogliamo giocare bene le variazioni corte in spin e le float corte, soprattutto sui centrali. Si tratta delle variazioni che dovremo saper riconoscere nella fase di ricezione.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">05 /</span> IL CONTESTO</span><span class="s-topic">IN RICEZIONE</span></div>
+ <div class="s-content"><h2 class="big-label">LE BATTUTE<br><span class="accent">CORTE.</span></h2><div class="serve-rows"><div class="serve-pill reveal" data-beat="1">SPIN CORTA</div><div class="serve-pill reveal" data-beat="2">FLOAT CORTA</div></div><p class="qualifier reveal" data-beat="3">SOPRATTUTTO SUI CENTRALI.</p></div>
+ <div class="s-foot"><small>LE VARIAZIONI DA GESTIRE BENE</small><small>ANGELO</small></div>
+</section>
+<section class="slide principle" data-title="Altezza mezzo side out" data-note="Il testo originale dice: 'ALTEZZA MEZZO SIDE OUT! Sempre!!'. Accettiamo di essere esclusi dall'attacco per mettere il nostro alzatore e gli altri tre attaccanti nelle condizioni migliori per fare side out.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">06 /</span> IL PRINCIPIO</span><span class="s-topic">SEMPRE</span></div>
+ <div class="s-content"><h2 class="megaword">ALTEZZA<br>MEZZO<br><span style="color:#d72d67">SIDE OUT!</span></h2><div class="rule"></div><p class="rationale reveal" data-beat="1">Accettiamo anche di essere esclusi dall’attacco, per mettere <strong>l’alzatore e gli altri tre attaccanti</strong> nelle condizioni migliori.</p></div>
+ <div class="s-foot"><small>NON UNA RINUNCIA · UNA SCELTA PER LA SQUADRA</small><small>ANGELO</small></div>
+</section>
+<section class="slide communicate" data-title="Comunicare" data-note="Il materiale distingue due comunicazioni: verbale dal Libero; gestuale dalla prima linea, per aiutare la seconda linea a capire chi deve intervenire sulla battuta corta.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">07 /</span> LA COORDINAZIONE</span><span class="s-topic">DUE LINGUAGGI, UNA SOLA LETTURA</span></div>
+ <div class="s-content"><h2 class="h-lg">COMUNICARE <span class="accent">PRIMA.</span></h2><div class="col-grid"><div class="col reveal" data-beat="1"><span class="role">LIBERO</span><strong>VERBALE.</strong><p>La voce che guida.</p></div><div class="col reveal" data-beat="2"><span class="role">PRIMA LINEA</span><strong>GESTUALE.</strong><p>Il gesto che aiuta la seconda linea.</p></div></div><div class="reveal question" data-beat="3">Chi interviene sulla battuta corta?</div></div>
+ <div class="s-foot"><small>UNA DECISIONE CONDIVISA</small><small>ANGELO</small></div>
+</section>
+<section class="slide end" data-title="Il filo del racconto" data-note="Chiusura proposta per la presentazione: non è una nuova istruzione tecnica. Ricapitola i tre riferimenti già presenti nella fonte: ghigliottina / tenere viva la palla, altezza mezzo side out, comunicazione.">
+ <div class="s-top"><span class="kicker"><span class="scene-number">08 /</span> LA SINTESI</span><span class="s-topic">COSA PORTIAMO IN CAMPO</span></div>
+ <div class="s-content"><h2 class="finish-title">LA NOSTRA<br><span class="accent">LETTURA.</span></h2><div class="three"><div class="reveal" data-beat="1"><strong>GHIGLIOTTINA.</strong><small>Tenere viva la palla.</small></div><div class="reveal" data-beat="2"><strong>ALTEZZA.</strong><small>Mettere gli altri nelle condizioni migliori.</small></div><div class="reveal" data-beat="3"><strong>COMUNICARE.</strong><small>Libero e prima linea, insieme.</small></div></div></div>
+ <div class="s-foot"><small>IL REPORT RESTA RICCO. IL RACCONTO SCEGLIE IL FOCUS.</small><small>FINE PROTOTIPO</small></div>
+</section>
+</div>
+</main>
+<p class="hint-mobile">Per una video meeting, apri il prototipo su PC in orizzontale.</p>
+<footer class="controls">
+ <div class="nav-set"><button type="button" id="prev" class="nav-btn" aria-label="Indietro">←</button><button type="button" id="next" class="nav-btn primary" aria-label="Prossimo dettaglio o schermata">→</button></div>
+ <div class="step-count" id="counter">01 / 08</div>
+ <div class="sequence" id="progress" role="navigation" aria-label="Navigazione delle schermate"></div>
+ <div class="action-set"><span id="beatPrompt" class="story-label">→ rivela il prossimo dettaglio</span><button type="button" class="tool" id="indexBtn">INDICE</button><button type="button" class="tool desktop" id="noteBtn">NOTE</button><button type="button" class="tool desktop" id="fullscreenBtn">SCHERMO INTERO</button><button type="button" class="tool" id="helpBtn" aria-label="Guida ai comandi">?</button></div>
+</footer>
+</div>
+<div class="index-overlay" id="indexOverlay" role="dialog" aria-modal="true" aria-label="Indice del racconto" hidden>
+ <div class="overlay-box"><div class="overlay-header"><div><small>INDICE INTERATTIVO</small><h2>La sequenza del racconto</h2></div><button type="button" class="overlay-close" data-close-overlay aria-label="Chiudi indice">×</button></div><div class="index-grid" id="indexGrid"></div></div>
+</div>
+<div class="help-overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-label="Guida ai tasti" hidden>
+ <div class="overlay-box" style="max-width:730px"><div class="overlay-header"><div><small>COMANDI</small><h2>Tu guidi il ritmo</h2></div><button type="button" class="overlay-close" data-close-overlay aria-label="Chiudi guida">×</button></div><div class="overlay-content"><div class="help-list"><div><kbd>→</kbd> Rivela il prossimo dettaglio, poi passa alla slide seguente</div><div><kbd>←</kbd> Torna al dettaglio o alla slide precedente</div><div><kbd>Spazio</kbd> Avanza un passo alla volta</div><div><kbd>F</kbd> Entra o esci dallo schermo intero</div><div><kbd>I</kbd> Apri l'indice delle schermate</div><div><kbd>N</kbd> Apri le note di chi presenta</div><div><kbd>Home</kbd> Torna all'inizio</div><div><kbd>Esc</kbd> Chiudi note, indice o schermo intero</div></div></div></div>
+</div>
+<aside class="note-panel" id="notePanel" aria-label="Note del presentatore" hidden><button type="button" id="noteClose" aria-label="Chiudi note">×</button><strong>NOTE PER CHI PRESENTA</strong><p id="noteText"></p></aside>
+<script>
+(function(){
+ 'use strict';
+ const slides=[...document.querySelectorAll('.slide')];
+ const total=slides.length;
+ const progress=document.getElementById('progress');
+ const grid=document.getElementById('indexGrid');
+ const prev=document.getElementById('prev');
+ const next=document.getElementById('next');
+ const counter=document.getElementById('counter');
+ const prompt=document.getElementById('beatPrompt');
+ const frame=document.getElementById('slideFrame');
+ const index=document.getElementById('indexOverlay');
+ const help=document.getElementById('helpOverlay');
+ const notes=document.getElementById('notePanel');
+ let scene=0,beat=0,lastFocus=null,touchX=null;
+ const maxBeat=n=>slides[n].querySelectorAll('[data-beat]').length?Math.max(...[...slides[n].querySelectorAll('[data-beat]')].map(e=>Number(e.dataset.beat)||0)):0;
+ const savePosition=()=>{try{sessionStorage.setItem('sir-presenta-lab-position',String(scene))}catch(e){}};
+ function show(n,b=0,animate=true){
+   scene=Math.min(Math.max(n,0),total-1);
+   beat=Math.min(Math.max(b,0),maxBeat(scene));
+   slides.forEach((el,i)=>{
+     const isCurrent=i===scene;
+     el.hidden=!isCurrent;el.setAttribute('aria-hidden',String(!isCurrent));
+     el.querySelectorAll('[data-beat]').forEach(item=>item.classList.toggle('is-on',isCurrent&&Number(item.dataset.beat)<=beat));
+     el.classList.remove('enter');
+   });
+   if(animate){void slides[scene].offsetWidth;slides[scene].classList.add('enter')}
+   counter.textContent=String(scene+1).padStart(2,'0')+' / '+String(total).padStart(2,'0');
+   prompt.textContent=beat<maxBeat(scene)?'→ rivela il prossimo dettaglio':'→ prossima schermata';
+   prev.disabled=scene===0&&beat===0;next.disabled=scene===total-1&&beat===maxBeat(scene);
+   [...progress.children].forEach((el,i)=>{
+     el.className='progress-stop'+(i===scene?' now':i<scene?' past':'');
+     el.setAttribute('aria-current',String(i===scene));
+   });
+   [...grid.children].forEach((el,i)=>el.classList.toggle('current',i===scene));
+   document.getElementById('noteText').textContent=slides[scene].dataset.note||'';
+   savePosition();
+ }
+ function forward(){
+   if(beat<maxBeat(scene))show(scene,beat+1,false);
+   else if(scene<total-1)show(scene+1);
+ }
+ function back(){
+   if(beat>0)show(scene,beat-1,false);
+   else if(scene>0)show(scene-1,maxBeat(scene-1));
+ }
+ for(let i=0;i<total;i++){
+   const button=document.createElement('button');button.type='button';button.className='progress-stop';
+   button.title=String(i+1)+'. '+slides[i].dataset.title;
+   button.setAttribute('aria-label','Apri schermata '+(i+1)+': '+slides[i].dataset.title);
+   button.onclick=()=>show(i);
+   progress.append(button);
+   const nav=document.createElement('button');nav.type='button';nav.className='index-card';
+   const n=document.createElement('span');n.className='index-n';n.textContent=String(i+1).padStart(2,'0');
+   const title=document.createElement('strong');title.textContent=slides[i].dataset.title;
+   nav.append(n,title);nav.onclick=()=>{closeOverlays();show(i)};
+   grid.append(nav);
+ }
+ function closeOverlays(){
+   const wasOpen=!index.hidden||!help.hidden;
+   index.hidden=true;help.hidden=true;
+   if(wasOpen)lastFocus?.focus();
+ }
+ function openOverlay(el){
+   lastFocus=document.activeElement;
+   closeOverlays();
+   el.hidden=false;el.querySelector('button')?.focus();
+ }
+ function toggleNotes(){notes.hidden=!notes.hidden}
+ async function fullscreen(){
+   try{
+     if(document.fullscreenElement)await document.exitFullscreen();
+     else await document.documentElement.requestFullscreen();
+   }catch(e){alert('Schermo intero non disponibile su questo browser. Puoi usare F11.')}
+ }
+ prev.onclick=back;next.onclick=forward;
+ document.getElementById('indexBtn').onclick=()=>openOverlay(index);
+ document.getElementById('helpBtn').onclick=()=>openOverlay(help);
+ document.getElementById('noteBtn').onclick=toggleNotes;
+ document.getElementById('noteClose').onclick=()=>notes.hidden=true;
+ document.getElementById('fullscreenBtn').onclick=fullscreen;
+ document.querySelectorAll('[data-close-overlay]').forEach(b=>b.onclick=closeOverlays);
+ [index,help].forEach(el=>el.addEventListener('click',e=>{if(e.target===el)closeOverlays()}));
+ document.addEventListener('keydown',e=>{
+   if(e.target.matches('input,textarea,[contenteditable=true]'))return;
+   if(e.key==='Escape'){
+     if(!index.hidden||!help.hidden){e.preventDefault();closeOverlays();return}
+     if(!notes.hidden){notes.hidden=true;return}
+     return;
+   }
+   if(!index.hidden||!help.hidden)return;
+   if(e.metaKey||e.ctrlKey||e.altKey)return;
+   if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();forward()}
+   else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();back()}
+   else if(e.key==='Home'){e.preventDefault();show(0)}
+   else if(e.key==='End'){e.preventDefault();show(total-1,maxBeat(total-1))}
+   else if(e.key.toLowerCase()==='f'){e.preventDefault();fullscreen()}
+   else if(e.key.toLowerCase()==='i'){e.preventDefault();openOverlay(index)}
+   else if(e.key.toLowerCase()==='n'){e.preventDefault();toggleNotes()}
+   else if(e.key==='?'){e.preventDefault();openOverlay(help)}
+ });
+ frame.addEventListener('touchstart',e=>{if(e.changedTouches.length)touchX=e.changedTouches[0].screenX},{passive:true});
+ frame.addEventListener('touchend',e=>{
+   if(touchX===null||!e.changedTouches.length)return;
+   const dx=e.changedTouches[0].screenX-touchX;touchX=null;
+   if(Math.abs(dx)>55){if(dx<0)forward();else back()}
+ },{passive:true});
+ show(0,0,false);
+})();
+</script>
+</body>
+</html>
