@@ -431,6 +431,40 @@ async function open({report,chapters,editMode=false}){
 
  layoutInput.addEventListener('change',()=>updateScene('layout',layoutInput.value));
  photoInput.addEventListener('change',()=>{const p=pages[at],value=photoInput.value;if(value==='__uploaded__')return;p.customImageUrl=null;p.customImageName=null;p.imageId=value||null;mark();show()});
+
+ let uploadBusy=false;
+ uploadInput.addEventListener('change',async()=>{
+   const file=uploadInput.files?.[0];
+   uploadInput.value='';
+   if(!file||uploadBusy)return;
+   const originalSlide=pages[at];
+   if(!originalSlide)return;
+   uploadBusy=true;
+   const button=$(shell,'[data-sd="upload-image"]');
+   button.disabled=true;
+   try{
+     if(!window.SirPresentaPhotos)throw Error('Caricamento immagini non disponibile. Aggiorna la pagina.');
+     const asset=await window.SirPresentaPhotos.upload(report.id,file,message=>{uploadState.textContent=message});
+     if(!pages.includes(originalSlide))throw Error('La slide è stata eliminata durante il caricamento.');
+     originalSlide.customImageUrl=asset.src;
+     originalSlide.customImageName=asset.name;
+     originalSlide.imageId=null;
+     // A slide needs a media-capable layout to display the uploaded photo.
+     if(!['split','photo'].includes(originalSlide.layout))originalSlide.layout='split';
+     mark();
+     if(originalSlide===pages[at])show();
+     const ok=await save(false);
+     uploadState.textContent=ok?'✓ Immagine aggiunta e salvata nella slide.':'⚠ Immagine caricata ma la slide non è stata salvata online. Premi Salva adesso.';
+     if(ok)showToast('Immagine inserita nella slide');
+   }catch(e){
+     uploadState.textContent='⚠ '+(e.message||'Caricamento non riuscito.');
+     showToast('Non è stato possibile inserire la foto');
+   }finally{
+     uploadBusy=false;
+     button.disabled=false;
+   }
+ });
+
  titleSizeInput.addEventListener('input',()=>{
    pages[at].titleSize=Number(titleSizeInput.value);$(shell,'#sdTitleSizeValue').textContent=titleSizeInput.value+' px';mark();show(false);
  });
