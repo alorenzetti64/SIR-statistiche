@@ -166,7 +166,7 @@ async function open({report,chapters,editMode=false}){
  // REGIA lives directly under the full-screen root, never inside the flex slide area.
  // This avoids iPad Safari clipping / off-screen fixed descendants.
  shell.appendChild(editor);
- editor.style.cssText='position:fixed!important;inset:0!important;z-index:2147480010!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:100dvh!important;min-width:0!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding:0 0 110px!important;background:#f7f8f9!important;color:#172a3b!important;box-sizing:border-box!important;display:block!important';
+ editor.style.cssText='position:fixed!important;inset:0!important;z-index:2147480010!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:100dvh!important;min-width:0!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding:0 0 110px!important;background:#f7f8f9!important;color:#172a3b!important;box-sizing:border-box!important';
  const navigator=$(shell,'#sdNavigator'),progress=$(shell,'#sdProgress'),chaptersEl=$(shell,'#sdChapters'),extraEl=$(shell,'#sdExtras');
  const titleInput=$(shell,'#sdEditTitle'),bodyInput=$(shell,'#sdEditBody'),layoutInput=$(shell,'#sdEditLayout'),photoInput=$(shell,'#sdEditPhoto');
  const titleSizeInput=$(shell,'#sdTitleSize'),bodySizeInput=$(shell,'#sdBodySize');
