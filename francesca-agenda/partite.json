@@ -8,7 +8,7 @@
       "time": "16:30",
       "title": "Amichevole Fano - inizio riscaldamento ore 16:30",
       "kind": "Amichevole",
-      "id": "",
+      "id": "gcqba7p7bbunv7ea3mr6o1s38o",
       "uncertain": false
     },
     {
@@ -16,7 +16,7 @@
       "time": "18:00",
       "title": "AMICHEVOLE: GROTTAZZOLINA vs PERUGIA inizio riscaldamento ore 17:15",
       "kind": "Amichevole",
-      "id": "",
+      "id": "49s4ss74iknhmhpp7jtmokohvc",
       "uncertain": false
     },
     {
@@ -24,7 +24,7 @@
       "time": "18:00",
       "title": "Amichevole Terni 18:00",
       "kind": "Amichevole",
-      "id": "",
+      "id": "6lim6d9j6phjeb9ncoqj4b9k6pgj8b9p74rm2b9mcgo30p34c4sj2c9pc4",
       "uncertain": false
     },
     {
@@ -32,7 +32,7 @@
       "time": "17:00",
       "title": "Amichevole Macerata - inizio riscaldamento ore 17:00",
       "kind": "Amichevole",
-      "id": "",
+      "id": "rimc85kva5rduu5cu3f943pm4s",
       "uncertain": false
     },
     {
@@ -40,7 +40,7 @@
       "time": "16:30",
       "title": "Amichevole Grottazzolina - inizio riscaldamento ore 16:30",
       "kind": "Amichevole",
-      "id": "",
+      "id": "5mn179mpjigc35sn1c9nnbk7vk",
       "uncertain": false
     },
     {
@@ -48,7 +48,7 @@
       "time": "20:30",
       "title": "Perugia - Santory ore 20:30",
       "kind": "Amichevole",
-      "id": "",
+      "id": "4mickglsfctemq3jkrd78847a4",
       "uncertain": false
     },
     {
@@ -56,7 +56,7 @@
       "time": "20:30",
       "title": "Perugia - Santory",
       "kind": "Amichevole",
-      "id": "",
+      "id": "3sqltfqdau470ha91atupeicbv",
       "uncertain": false
     },
     {
@@ -64,7 +64,7 @@
       "time": "18:00",
       "title": "1 Giornata Andata: Cuneo - Perugia ore 18:00",
       "kind": "SuperLega",
-      "id": "",
+      "id": "hc9m13r9rq90jaoso9dlaa0ni4",
       "uncertain": false
     },
     {
@@ -135,7 +135,7 @@
       "date": "2026-11-25",
       "time": "20:30",
       "title": "Recupero \"x\" giornata WCCM",
-      "kind": "SuperLega",
+      "kind": "Mondiale per Club",
       "id": "3869jp0694ur389fcrtuoushq2",
       "uncertain": true
     },
@@ -241,7 +241,7 @@
       "title": "Q. ti Coppa Italia ore 20:30",
       "kind": "Coppa Italia",
       "id": "7f9f9sr1ust5ht4qkf81vpt3i2",
-      "uncertain": true
+      "uncertain": false
     },
     {
       "date": "2027-01-03",
