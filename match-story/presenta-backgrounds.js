@@ -33,8 +33,8 @@ overlay.style.opacity=String(clamp(p.bgOverlayAlpha,0,85,40)/100);
 }
 }
 scene.style.background=bg;scene.classList.toggle('sd-light',light);
-if(image)scene.prepend(image);
 if(overlay)scene.prepend(overlay);
+if(image)scene.prepend(image);
 }
 function build(editor,cfg){
 const anchor=editor.querySelector('#sdEditLayout')?.closest('.sd-field');
