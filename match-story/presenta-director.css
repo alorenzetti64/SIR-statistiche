@@ -106,3 +106,35 @@
 .sir-dir .sd-sidebar:not([hidden]) textarea{min-height:112px!important}
 .sir-dir .sd-main:has(.sd-sidebar:not([hidden])){display:flex!important;flex-direction:row!important}
 @media(min-width:850px){.sir-dir .sd-sidebar:not([hidden]) .sd-field,.sir-dir .sd-sidebar:not([hidden]) .sd-editor-actions,.sir-dir .sd-sidebar:not([hidden]) .sd-assets-preview,.sir-dir .sd-sidebar:not([hidden]) .sd-save-state{max-width:950px;margin-left:auto!important;margin-right:auto!important}}
+
+/* REGIA text composer: iPad-friendly selection and inline per-word formatting. */
+.sir-dir .sd-rich-toolbar{position:relative;z-index:6;width:calc(100% - 40px);max-width:950px;margin:16px auto 6px;padding:17px 18px;background:#e6eef6;border:1px solid #b7cbdc;border-left:5px solid #d83169;border-radius:10px;box-shadow:0 5px 17px #16344a10}
+.sir-dir .sd-rich-toolbar strong{display:block;font-size:14px;color:#1c344b;letter-spacing:.045em}
+.sir-dir .sd-rich-toolbar>small{display:block;font-size:13px;line-height:1.45;color:#435a6c;margin:5px 0 13px}
+.sir-dir .sd-rich-line{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.sir-dir .sd-rich-line>label{font-size:13px;font-weight:790;color:#26445c}
+.sir-dir .sd-rich-line input[type=number]{width:88px!important;max-width:88px;padding:9px 6px;border:1px solid #9db1bf;border-radius:7px;background:white;color:#132940;font-size:17px!important}
+.sir-dir .sd-rich-line input[type=color]{width:52px!important;min-width:52px;height:41px;border:1px solid #9db1bf;border-radius:7px;background:#fff;padding:3px;cursor:pointer}
+.sir-dir .sd-rich-line select{width:auto!important;max-width:230px;min-height:41px;background:white;padding:7px;border:1px solid #9db1bf;border-radius:7px;color:#213b52}
+.sir-dir .sd-rbutton{border:1px solid #a3b4c4;color:#253c52;background:#fff;border-radius:7px;padding:10px 12px;font-size:14px;font-weight:780;min-height:40px;white-space:nowrap;cursor:pointer}
+.sir-dir .sd-rbutton.sd-apply{background:#173a55;color:white;border-color:#173a55}
+.sir-dir .sd-rbutton:active{background:#f2c4d5}
+.sir-dir .sd-rich-spacer{flex:1}
+.sir-dir .sd-rich-input{background:#fff;color:#182d41;display:block;min-height:116px;border:2px solid #a9becb;border-radius:10px;padding:17px 19px!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-size:22px!important;line-height:1.46;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;overflow:auto;touch-action:auto!important;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;cursor:text}
+.sir-dir .sd-rich-input:focus{border-color:#e33c75;outline:3px solid #f3b4c8;outline-offset:1px}
+.sir-dir .sd-rich-input:empty:before{content:attr(data-placeholder);color:#8395a2}
+.sir-dir .sd-rich-title{font-weight:860;min-height:92px;font-size:26px!important}
+.sir-dir .sd-rich-body{min-height:200px}
+.sir-dir .sd-rich-input p{margin:0 0 .45em}
+.sir-dir .sd-rich-input div{margin:0}
+.sir-dir .sd-rich-input span[style]{line-height:1.3}
+.sir-dir .sd-rich-input ul,.sir-dir .sd-rich-input ol{padding-left:1.4em}
+.sir-dir .sd-font-help{max-width:950px;margin:12px auto 4px;padding:0 22px;font-size:12px;line-height:1.5;color:#5a6a7b}
+@media(max-width:650px){
+ .sir-dir .sd-rich-toolbar{margin:10px auto 4px;padding:12px 11px;width:calc(100% - 23px)}
+ .sir-dir .sd-rbutton{padding:10px}
+ .sir-dir .sd-rich-input{font-size:19px!important;padding:13px!important;min-height:140px}
+ .sir-dir .sd-rich-body{min-height:190px}
+ .sir-dir .sd-rich-title{font-size:23px!important}
+ .sir-dir .sd-rich-line input[type=number]{width:68px!important;max-width:68px}
+}
