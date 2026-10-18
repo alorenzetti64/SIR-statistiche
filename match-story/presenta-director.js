@@ -3,6 +3,9 @@
 'use strict';
 const DB_API='https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-director';
 const layouts=['cover','message','split','photo','summary'];
+const rich=window.SirPresentaRichText;
+if(!rich)throw Error('Editor testo non caricato: aggiorna la pagina.');
+
 const $=(root,selector)=>root.querySelector(selector);
 const all=(root,selector)=>[...root.querySelectorAll(selector)];
 const safe=s=>String(s??'').replace(/[\u0000-\u001f]/g,' ').replace(/\s+/g,' ').trim();
@@ -158,7 +161,7 @@ async function open({report,chapters,editMode=false}){
  let local=null;
  try{local=JSON.parse(localStorage.getItem(backupKey)||'null')}catch(e){}
  const shell=document.createElement('section');shell.className='sir-dir';shell.setAttribute('role','dialog');shell.setAttribute('aria-modal','true');shell.setAttribute('aria-label','PRESENTA · Regia tecnica');
- shell.innerHTML='<header class="sd-top"><strong class="sd-brand">SIR MATCH STORY <span>/ PRESENTA</span></strong><span class="sd-match"></span><div class="sd-tools"><button class="sd-tool sd-primary" data-sd="report">RAPPORTINO COMPLETO ↗</button><button class="sd-tool" data-sd="edit">MODIFICA</button><button class="sd-tool" data-sd="full">SCHERMO INTERO</button><button class="sd-tool" data-sd="close">CHIUDI</button></div></header><main class="sd-main"><div class="sd-stage"><div class="sd-surface" id="sdSurface"></div></div><aside class="sd-sidebar" id="sdEditor" hidden><div class="sd-side-top"><button type="button" class="sd-editbtn" data-sd="close-editor" style="float:right;background:#17344f;color:white;border-color:#17344f;padding:12px 18px;font-weight:900">← TORNA ALLA SLIDE</button><strong>REGIA · MODIFICA SLIDE · iPAD 2</strong><p>Il report e le card originali rimangono invariati. Qui modifichi soltanto il racconto proiettato.</p></div><div class="sd-field"><label for="sdEditTitle">Titolo</label><textarea id="sdEditTitle" maxlength="170" rows="2"></textarea></div><div class="sd-field"><label for="sdEditBody">Messaggio / spiegazione</label><textarea id="sdEditBody" rows="5" maxlength="1200"></textarea><small>Se il testo è molto lungo, puoi dividerlo in più slide.</small></div><div class="sd-field"><label for="sdTitleSize">Dimensione titolo <output id="sdTitleSizeValue">Auto</output></label><input id="sdTitleSize" type="range" min="30" max="135" step="1" value="89"><small>Regola le dimensioni direttamente mentre guardi la slide.</small></div><div class="sd-field"><label for="sdBodySize">Dimensione testo <output id="sdBodySizeValue">Auto</output></label><input id="sdBodySize" type="range" min="18" max="52" step="1" value="34"></div><div class="sd-field"><label for="sdTitleFont">Font del titolo</label><select id="sdTitleFont"><option value="inter">Moderno · Inter / sistema</option><option value="arial">Arial · essenziale</option><option value="georgia">Georgia · editoriale</option><option value="verdana">Verdana · leggibile</option><option value="trebuchet">Trebuchet · dinamico</option><option value="times">Times · classico</option></select></div><div class="sd-field"><label for="sdBodyFont">Font del testo</label><select id="sdBodyFont"><option value="inter">Moderno · Inter / sistema</option><option value="arial">Arial · essenziale</option><option value="georgia">Georgia · editoriale</option><option value="verdana">Verdana · leggibile</option><option value="trebuchet">Trebuchet · dinamico</option><option value="times">Times · classico</option></select></div><p class="sd-font-help">Le dimensioni sono applicate alla slide. Se il testo non entra, verrà ridotto soltanto quanto necessario, senza tagliarlo.</p><div class="sd-field"><label for="sdEditLayout">Tipo di schermata</label><select id="sdEditLayout"><option value="cover">Apertura capitolo</option><option value="message">Messaggio forte</option><option value="split">Immagine + testo</option><option value="photo">Immagine protagonista</option><option value="summary">Sintesi</option></select></div><div class="sd-field"><label for="sdEditPhoto">Immagine dal capitolo originale</label><select id="sdEditPhoto"></select></div><div class="sd-assets-preview" id="sdImagePreview">Nessuna immagine selezionata</div><div class="sd-editor-actions"><button class="sd-editbtn" data-sd="up">↑ Sposta</button><button class="sd-editbtn" data-sd="down">↓ Sposta</button><button class="sd-editbtn" data-sd="add">+ Slide</button><button class="sd-editbtn sd-danger" data-sd="delete">Elimina slide</button></div><div class="sd-side-divider"></div><div class="sd-editor-actions"><button class="sd-editbtn sd-save" data-sd="save">Salva adesso</button><button class="sd-editbtn" data-sd="reset">Rigenera dalle card</button></div><div class="sd-save-state" id="sdSaveState">Le modifiche si salvano automaticamente.</div></aside><div class="sd-nav-shade" id="sdNavigator" hidden><div class="sd-nav-panel"><header class="sd-nav-h"><div><small>INDICE DELLA PRESENTAZIONE</small><strong>I capitoli del racconto</strong></div><button class="sd-tool" data-sd="index-close">CHIUDI</button></header><div class="sd-nav-section">PRESENTA · ANGELO (ESCLUSA LA BUSSOLA) E HIGH BALLS</div><div class="sd-nav-grid" id="sdChapters"></div><div class="sd-nav-other"><div class="sd-nav-section">ALTRI CAPITOLI · ANTEPRIMA ORIGINALE</div><p class="sd-nav-msg">Gli altri capitoli, compresa LA BUSSOLA, restano consultabili dal rapportino completo e in Anteprima.</p><div class="sd-nav-grid" id="sdExtras"></div></div></div></div><div class="sd-toast" id="sdToast" hidden></div></main><footer class="sd-footer-bar"><button class="sd-arrow" data-sd="previous" aria-label="Indietro">←</button><button class="sd-arrow sd-forward" data-sd="next" aria-label="Avanti">→</button><span class="sd-count" id="sdCount">01 / 01</span><div class="sd-progress" id="sdProgress"></div><span class="sd-btm-label" id="sdDetailHint">→ mostrerà il dettaglio successivo</span></footer>';
+ shell.innerHTML='<header class="sd-top"><strong class="sd-brand">SIR MATCH STORY <span>/ PRESENTA</span></strong><span class="sd-match"></span><div class="sd-tools"><button class="sd-tool sd-primary" data-sd="report">RAPPORTINO COMPLETO ↗</button><button class="sd-tool" data-sd="edit">MODIFICA</button><button class="sd-tool" data-sd="full">SCHERMO INTERO</button><button class="sd-tool" data-sd="close">CHIUDI</button></div></header><main class="sd-main"><div class="sd-stage"><div class="sd-surface" id="sdSurface"></div></div><aside class="sd-sidebar" id="sdEditor" hidden><div class="sd-side-top"><button type="button" class="sd-editbtn" data-sd="close-editor" style="float:right;background:#17344f;color:white;border-color:#17344f;padding:12px 18px;font-weight:900">← TORNA ALLA SLIDE</button><strong>REGIA · MODIFICA SLIDE · iPAD 2</strong><p>Il report e le card originali rimangono invariati. Qui modifichi soltanto il racconto proiettato.</p></div><div class="sd-rich-toolbar" id="sdRichToolbar" role="toolbar" aria-label="Formattazione selettiva del testo"><strong>FORMATTARE PAROLE E FRASI</strong><small id="sdRichHint">Tocca il testo e seleziona una parola o frase, poi applica il formato.</small><div class="sd-rich-line"><button type="button" data-sd-rich="bold" class="sd-rbutton" title="Grassetto"><b>G</b></button><button type="button" data-sd-rich="italic" class="sd-rbutton" title="Corsivo"><i>C</i></button><button type="button" data-sd-rich="underline" class="sd-rbutton" title="Sottolineato"><u>S</u></button><button type="button" data-sd-rich="list" class="sd-rbutton">• Elenco</button><button type="button" data-sd-rich="clear" class="sd-rbutton">Cancella formato</button></div><div class="sd-rich-line"><label for="sdWordSize">Dimensione parola</label><input type="number" id="sdWordSize" min="12" max="140" step="1" value="40" inputmode="numeric" aria-label="Dimensione in pixel della selezione"><button type="button" data-sd-rich="size" class="sd-rbutton sd-apply">APPLICA px</button><label for="sdWordColor">Colore</label><input type="color" id="sdWordColor" value="#d82c63" aria-label="Colore selezione"><button type="button" data-sd-rich="color" class="sd-rbutton sd-apply">APPLICA</button></div><div class="sd-rich-line"><label for="sdWordFont">Font parola</label><select id="sdWordFont"><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Verdana">Verdana</option><option value="Trebuchet MS">Trebuchet</option><option value="Times New Roman">Times New Roman</option><option value="Inter">Inter</option></select><button type="button" data-sd-rich="word-font" class="sd-rbutton sd-apply">APPLICA</button><span class="sd-rich-spacer"></span><button type="button" data-sd-rich="align-left" class="sd-rbutton" title="Allinea a sinistra">≡</button><button type="button" data-sd-rich="align-center" class="sd-rbutton" title="Centra">☷</button><button type="button" data-sd-rich="align-right" class="sd-rbutton" title="Allinea a destra">≣</button></div></div><div class="sd-field"><label for="sdEditTitle">TITOLO · puoi andare a capo e formattare parole</label><div id="sdEditTitle" class="sd-rich-input sd-rich-title" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="Scrivi il titolo della slide…"></div></div><div class="sd-field"><label for="sdEditBody">TESTO · scrivi liberamente, premi Invio per andare a capo</label><div id="sdEditBody" class="sd-rich-input sd-rich-body" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="Scrivi il testo. Seleziona una parola per ingrandirla…"></div><small>Puoi usare più righe, grassetto, corsivo e dimensioni diverse anche nella stessa frase. Se serve spazio, dividi il contenuto in due slide.</small></div><div class="sd-field"><label for="sdTitleSize">Dimensione titolo <output id="sdTitleSizeValue">Auto</output></label><input id="sdTitleSize" type="range" min="30" max="135" step="1" value="89"><small>Regola le dimensioni direttamente mentre guardi la slide.</small></div><div class="sd-field"><label for="sdBodySize">Dimensione testo <output id="sdBodySizeValue">Auto</output></label><input id="sdBodySize" type="range" min="18" max="52" step="1" value="34"></div><div class="sd-field"><label for="sdTitleFont">Font del titolo</label><select id="sdTitleFont"><option value="inter">Moderno · Inter / sistema</option><option value="arial">Arial · essenziale</option><option value="georgia">Georgia · editoriale</option><option value="verdana">Verdana · leggibile</option><option value="trebuchet">Trebuchet · dinamico</option><option value="times">Times · classico</option></select></div><div class="sd-field"><label for="sdBodyFont">Font del testo</label><select id="sdBodyFont"><option value="inter">Moderno · Inter / sistema</option><option value="arial">Arial · essenziale</option><option value="georgia">Georgia · editoriale</option><option value="verdana">Verdana · leggibile</option><option value="trebuchet">Trebuchet · dinamico</option><option value="times">Times · classico</option></select></div><p class="sd-font-help">Le dimensioni sono applicate alla slide. Se il testo non entra, verrà ridotto soltanto quanto necessario, senza tagliarlo.</p><div class="sd-field"><label for="sdEditLayout">Tipo di schermata</label><select id="sdEditLayout"><option value="cover">Apertura capitolo</option><option value="message">Messaggio forte</option><option value="split">Immagine + testo</option><option value="photo">Immagine protagonista</option><option value="summary">Sintesi</option></select></div><div class="sd-field"><label for="sdEditPhoto">Immagine dal capitolo originale</label><select id="sdEditPhoto"></select></div><div class="sd-assets-preview" id="sdImagePreview">Nessuna immagine selezionata</div><div class="sd-editor-actions"><button class="sd-editbtn" data-sd="up">↑ Sposta</button><button class="sd-editbtn" data-sd="down">↓ Sposta</button><button class="sd-editbtn" data-sd="add">+ Slide</button><button class="sd-editbtn sd-danger" data-sd="delete">Elimina slide</button></div><div class="sd-side-divider"></div><div class="sd-editor-actions"><button class="sd-editbtn sd-save" data-sd="save">Salva adesso</button><button class="sd-editbtn" data-sd="reset">Rigenera dalle card</button></div><div class="sd-save-state" id="sdSaveState">Le modifiche si salvano automaticamente.</div></aside><div class="sd-nav-shade" id="sdNavigator" hidden><div class="sd-nav-panel"><header class="sd-nav-h"><div><small>INDICE DELLA PRESENTAZIONE</small><strong>I capitoli del racconto</strong></div><button class="sd-tool" data-sd="index-close">CHIUDI</button></header><div class="sd-nav-section">PRESENTA · ANGELO (ESCLUSA LA BUSSOLA) E HIGH BALLS</div><div class="sd-nav-grid" id="sdChapters"></div><div class="sd-nav-other"><div class="sd-nav-section">ALTRI CAPITOLI · ANTEPRIMA ORIGINALE</div><p class="sd-nav-msg">Gli altri capitoli, compresa LA BUSSOLA, restano consultabili dal rapportino completo e in Anteprima.</p><div class="sd-nav-grid" id="sdExtras"></div></div></div></div><div class="sd-toast" id="sdToast" hidden></div></main><footer class="sd-footer-bar"><button class="sd-arrow" data-sd="previous" aria-label="Indietro">←</button><button class="sd-arrow sd-forward" data-sd="next" aria-label="Avanti">→</button><span class="sd-count" id="sdCount">01 / 01</span><div class="sd-progress" id="sdProgress"></div><span class="sd-btm-label" id="sdDetailHint">→ mostrerà il dettaglio successivo</span></footer>';
  document.body.append(shell);
  const previousFocus=document.activeElement,oldOverflow=document.body.style.overflow;
  document.body.style.overflow='hidden';
@@ -170,6 +173,7 @@ async function open({report,chapters,editMode=false}){
  const navigator=$(shell,'#sdNavigator'),progress=$(shell,'#sdProgress'),chaptersEl=$(shell,'#sdChapters'),extraEl=$(shell,'#sdExtras');
  const titleInput=$(shell,'#sdEditTitle'),bodyInput=$(shell,'#sdEditBody'),layoutInput=$(shell,'#sdEditLayout'),photoInput=$(shell,'#sdEditPhoto');
  const titleSizeInput=$(shell,'#sdTitleSize'),bodySizeInput=$(shell,'#sdBodySize'),titleFontInput=$(shell,'#sdTitleFont'),bodyFontInput=$(shell,'#sdBodyFont');
+ const wordSizeInput=$(shell,'#sdWordSize'),wordColorInput=$(shell,'#sdWordColor'),wordFontInput=$(shell,'#sdWordFont'),richHint=$(shell,'#sdRichHint');
  const previewEl=$(shell,'#sdImagePreview'),status=$(shell,'#sdSaveState'),toaster=$(shell,'#sdToast');
  $(shell,'.sd-match').textContent=report.title||'MATCH REPORT';
  let ro=null;
@@ -207,7 +211,10 @@ async function open({report,chapters,editMode=false}){
  function editForm(){
    if(!editing)return;
    const p=pages[at];if(!p)return;
-   titleInput.value=p.title;bodyInput.value=p.body;layoutInput.value=p.layout;
+   titleInput.innerHTML=rich.sanitize(p.titleHtml||rich.fromPlain(p.title));
+   bodyInput.innerHTML=rich.sanitize(p.bodyHtml||rich.fromPlain(p.body));
+   titleInput.style.textAlign=p.titleAlign||'left';bodyInput.style.textAlign=p.bodyAlign||'left';
+   layoutInput.value=p.layout;
    photoInput.replaceChildren();
    const empty=new Option('Senza immagine','');photoInput.append(empty);
    const origin=records.get(p.chapterId);if(origin){
@@ -237,8 +244,17 @@ async function open({report,chapters,editMode=false}){
    const by=document.createElement('span');by.className='sd-owner';by.textContent=p.owner==='Max'?'MAX':'ANGELO';
    header.append(tag,by);scene.append(header);
    const main=document.createElement('div');main.className='sd-body';
-   const head=document.createElement('h2');head.className='sd-h';head.textContent=p.title||p.chapterTitle||'';head.style.fontFamily=fontFamilies[p.titleFont]||fontFamilies.inter;
-   const desc=document.createElement('div');desc.className='sd-content';desc.textContent=p.body||'';desc.hidden=!revealed||(!p.body&&!editing);desc.style.fontFamily=fontFamilies[p.bodyFont]||fontFamilies.inter;
+   const head=document.createElement('h2');head.className='sd-h';
+   if(p.titleHtml)head.innerHTML=rich.sanitize(p.titleHtml);
+   else head.textContent=p.title||p.chapterTitle||'';
+   head.style.fontFamily=fontFamilies[p.titleFont]||fontFamilies.inter;
+   head.style.textAlign=p.titleAlign||'left';
+   const desc=document.createElement('div');desc.className='sd-content';
+   if(p.bodyHtml)desc.innerHTML=rich.sanitize(p.bodyHtml);
+   else desc.textContent=p.body||'';
+   desc.hidden=!revealed||(!p.body&&!p.bodyHtml&&!editing);
+   desc.style.fontFamily=fontFamilies[p.bodyFont]||fontFamilies.inter;
+   desc.style.textAlign=p.bodyAlign||'left';
    let media=null;
    if(asset&&p.layout!=='message'&&p.layout!=='summary'&&p.layout!=='cover'){
      media=document.createElement('div');media.className='sd-media';media.hidden=!revealed;
@@ -261,12 +277,12 @@ async function open({report,chapters,editMode=false}){
        el.contentEditable='true';el.spellcheck=true;el.setAttribute('role','textbox');el.setAttribute('aria-label',field==='title'?'Modifica titolo della slide':'Modifica testo della slide');
        el.dataset.sdEditable=field;el.dataset.placeholder=field==='title'?'Scrivi il titolo…':'Clicca e scrivi il testo…';
        el.addEventListener('input',()=>{
-         const value=el.innerText.slice(0,limit);
-         if(value!==el.innerText)el.innerText=value;
-         pages[at][field]=value;mark();
-         if(field==='title')titleInput.value=value;else bodyInput.value=value;
+         const value=rich.plainFromEditor(el).slice(0,limit);
+         pages[at][field]=value;
+         pages[at][field+'Html']=rich.sanitize(el.innerHTML);
+         mark();
        });
-       el.addEventListener('blur',()=>{ if(!editing)return; const value=el.innerText.slice(0,limit); if(pages[at][field]!==value){pages[at][field]=value;mark()} });
+       el.addEventListener('blur',()=>{if(editing){const value=rich.plainFromEditor(el).slice(0,limit);if(pages[at][field]!==value){pages[at][field]=value;pages[at][field+'Html']=rich.sanitize(el.innerHTML);mark()}}});
        el.addEventListener('keydown',e=>e.stopPropagation());
      }
    }
@@ -340,8 +356,76 @@ async function open({report,chapters,editMode=false}){
    if(action==='close')await close();
  };
  shell.addEventListener('click',delegated);
- titleInput.addEventListener('input',()=>{pages[at].title=titleInput.value;mark();show(false)});
- bodyInput.addEventListener('input',()=>{pages[at].body=bodyInput.value;mark();show(false)});
+
+ let currentRich=bodyInput,lastRichRange=null;
+ const richEditors=[titleInput,bodyInput];
+ function captureRichRange(){
+   const sel=window.getSelection();
+   if(!sel||!sel.rangeCount)return;
+   const range=sel.getRangeAt(0);
+   const found=richEditors.find(ed=>ed.contains(range.commonAncestorContainer));
+   if(found){currentRich=found;lastRichRange=range.cloneRange();richHint.textContent=range.collapsed?'Scrivi normalmente. Per formattare una sola parola, prima selezionala.':'Selezione pronta: scegli un formato qui sopra.'}
+ }
+ document.addEventListener('selectionchange',captureRichRange);
+ const updateRich=ed=>{
+   const isTitle=ed===titleInput,field=isTitle?'title':'body',limit=isTitle?170:1200;
+   const text=rich.plainFromEditor(ed);
+   if(text.length>limit){
+     richHint.textContent='Testo troppo lungo: limite '+limit+' caratteri. Riduci oppure crea un’altra slide.';
+     return;
+   }
+   pages[at][field]=text;
+   pages[at][field+'Html']=rich.sanitize(ed.innerHTML);
+   mark();show(false);
+ };
+ richEditors.forEach(ed=>{
+   ed.addEventListener('focus',()=>{currentRich=ed;captureRichRange()});
+   ed.addEventListener('keyup',captureRichRange);
+   ed.addEventListener('mouseup',captureRichRange);
+   ed.addEventListener('touchend',()=>setTimeout(captureRichRange,60),{passive:true});
+   ed.addEventListener('input',()=>updateRich(ed));
+   ed.addEventListener('paste',ev=>{
+     ev.preventDefault();
+     const str=ev.clipboardData?.getData('text/plain')||'';
+     document.execCommand('insertText',false,str.slice(0,2500));
+   });
+ });
+ function applyRich(action){
+   const ed=currentRich||bodyInput,field=ed===titleInput?'title':'body';
+   if(action.startsWith('align-')){
+     const alignment=action.slice(6);
+     pages[at][field+'Align']=alignment;
+     ed.style.textAlign=alignment;
+     mark();show(false);return;
+   }
+   if(!lastRichRange||lastRichRange.collapsed||!ed.contains(lastRichRange.commonAncestorContainer)){
+     richHint.textContent='Prima seleziona una parola o una frase nel titolo o nel testo.';
+     return;
+   }
+   let ok=false;
+   if(action==='size'){
+     const size=Math.max(12,Math.min(140,Number(wordSizeInput.value)||36));
+     ok=rich.applySpan(ed,lastRichRange,'fontSize',size+'px');
+   }else if(action==='color'){
+     ok=rich.applySpan(ed,lastRichRange,'color',wordColorInput.value);
+   }else if(action==='word-font'){
+     ok=rich.applySpan(ed,lastRichRange,'fontFamily',wordFontInput.value);
+   }else{
+     const command={bold:'bold',italic:'italic',underline:'underline',list:'insertUnorderedList',clear:'removeFormat'}[action];
+     if(command)ok=rich.formatCommand(ed,lastRichRange,command);
+   }
+   if(ok){
+     richHint.textContent='Formato applicato. Puoi selezionare altre parole.';
+     const sel=window.getSelection();lastRichRange=sel?.rangeCount?sel.getRangeAt(0).cloneRange():null;
+   }else richHint.textContent='Seleziona una sola parola o una frase e riprova.';
+ }
+ shell.addEventListener('click',ev=>{
+   const button=ev.target.closest('[data-sd-rich]');
+   if(!button)return;
+   ev.preventDefault();
+   applyRich(button.dataset.sdRich);
+ });
+
  layoutInput.addEventListener('change',()=>updateScene('layout',layoutInput.value));
  photoInput.addEventListener('change',()=>updateScene('imageId',photoInput.value||null));
  titleSizeInput.addEventListener('input',()=>{
@@ -372,6 +456,7 @@ async function open({report,chapters,editMode=false}){
    if(closing)return;closing=true;
    if(dirty){const okay=await save(true);if(!okay&&!confirm('Non riesco a salvare online. La copia locale resta in questo browser. Vuoi chiudere?')){closing=false;return}}
    if(ro)ro.disconnect();
+   document.removeEventListener('selectionchange',captureRichRange);
    document.removeEventListener('keydown',keydown,true);
    if(document.fullscreenElement===shell)await document.exitFullscreen().catch(()=>{});
    shell.remove();document.body.style.overflow=oldOverflow;
