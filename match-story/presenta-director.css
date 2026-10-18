@@ -67,3 +67,22 @@
 .sir-dir .sd-slide.sd-light [data-sd-editable]:empty:before{color:#243c4d80}
 .sir-dir .sd-sidebar input[type=range]{padding:5px 0;accent-color:#d72e65;cursor:ew-resize}
 .sir-dir .sd-field output{float:right;font-variant-numeric:tabular-nums;color:#b82b5f;font-weight:800}
+
+/* Tablet/iPad landscape: editing becomes an accessible panel below the projected slide. */
+@media (min-width:601px) and (max-width:1400px){
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])){flex-direction:column;overflow:hidden}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-stage{flex:0 1 55%;min-height:220px;width:100%;padding:7px}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-sidebar{position:relative;top:auto;right:auto;bottom:auto;left:auto;flex:1 1 45%;width:100%;min-width:0;max-width:none;min-height:150px;display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:0 8px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;border-left:0;border-top:2px solid #d82e68;box-shadow:0 -4px 28px #0003;-webkit-overflow-scrolling:touch}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-side-top{grid-column:1/-1;padding:10px 16px}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-side-top p{margin-top:3px}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-field{padding:9px 14px 0;min-width:0}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-editor-actions,.sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-side-divider,.sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-save-state{grid-column:1/-1}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-assets-preview{margin:8px 14px}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-sidebar textarea{min-height:70px}
+}
+@media (max-width:600px){
+ .sir-dir .sd-sidebar:not([hidden]){left:0;right:0;width:100%;max-width:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ .sir-dir .sd-main:has(.sd-sidebar:not([hidden])) .sd-stage{visibility:hidden}
+}
+.sir-dir .sd-slide.sd-split .sd-textcol,.sir-dir .sd-slide.sd-photo .sd-textcol{overflow:auto;scrollbar-width:thin;scrollbar-color:#c46d8a transparent}
+.sir-dir .sd-slide [data-sd-editable]{overflow-wrap:anywhere}
