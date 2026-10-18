@@ -143,3 +143,11 @@
 .sir-dir .sd-sidebar:not([hidden]) .sd-rich-toolbar{position:sticky!important;top:88px!important;z-index:5!important;box-shadow:0 7px 24px #182f4b22}
 .sir-dir .sd-slide .sd-h{hyphens:manual;word-break:normal;overflow-wrap:break-word}
 @media(max-width:650px){.sir-dir .sd-sidebar:not([hidden]) .sd-rich-toolbar{top:105px!important}}
+
+/* Direct image import in REGIA */
+.sir-dir .sd-upload-area{position:relative;max-width:950px;margin:16px auto 5px;padding:18px 22px;background:#e9f3f6;border:1px solid #a3c4ce;border-radius:11px}
+.sir-dir .sd-upload-btn{display:block;width:100%;min-height:54px;background:#173a52;color:#fff;border:1px solid #173a52;border-radius:8px;font-size:16px;font-weight:850;letter-spacing:.02em;cursor:pointer;touch-action:manipulation}
+.sir-dir .sd-upload-btn:disabled{opacity:.55;cursor:wait}
+.sir-dir .sd-upload-area p{margin:10px 2px 0;font-size:13px;line-height:1.45;color:#334f61}
+.sir-dir .sd-upload-area p:not(:empty){overflow-wrap:anywhere}
+@media(max-width:650px){.sir-dir .sd-upload-area{margin:12px 14px;padding:13px}.sir-dir .sd-upload-btn{font-size:14px;white-space:normal}}
