@@ -2,518 +2,131 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#204c40">
-<meta name="description" content="Agenda di Francesca: partite e appuntamenti in un unico posto.">
-<title>Francesca · La mia agenda</title>
-<style>
-:root{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#274338;background:#f7f8f3;--ink:#1c4438;--muted:#788b7c;--edge:#e3e9df;--orange:#d88257;--green:#386b56}
-*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button{cursor:pointer}a{color:inherit}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #e3a67e;outline-offset:2px}
-.layout{min-height:100vh;display:grid;grid-template-columns:245px 1fr}.side{background:var(--ink);padding:36px 21px;color:#f5fbf6;display:flex;flex-direction:column;gap:37px}.logo{display:flex;align-items:center;gap:12px}.logo-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#e8b88c;color:#215043;font-size:25px}.logo b{display:block;font-size:19px;letter-spacing:.01em}.logo small{display:block;color:#bbd1c3;margin-top:3px;font-size:12px}
-.nav{display:grid;gap:7px}.nav button{background:none;color:#bfd6c8;border:0;border-radius:12px;text-align:left;font-weight:650;padding:13px 14px}.nav button.active,.nav button:hover{background:#355e4c;color:white}.nav .ico{display:inline-block;width:30px;text-align:center;font-size:17px}.sidebottom{margin-top:auto;color:#b3cbbd;font-size:12px;line-height:1.65}.sidebottom em{display:block;font-family:Georgia,serif;font-size:17px;margin-bottom:12px;color:#e0eadf}
-main{min-width:0;width:100%;max-width:1270px;padding:35px 43px 110px;margin:0 auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:25px}.top h1{font-size:32px;letter-spacing:-.045em;margin:4px 0 0}.kicker{text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:var(--muted);font-weight:850}
-.btn{border:0;background:var(--ink);color:white;border-radius:12px;font-weight:750;padding:12px 17px;display:inline-flex;gap:8px;align-items:center;text-decoration:none;justify-content:center}.btn:hover{filter:brightness(1.09)}.btn.ghost{background:#fff;border:1px solid var(--edge);color:#345a48}.btn.soft{background:#e6eee7;color:#345746}.btn.small{font-size:12px;padding:9px 11px}
-.hero{background:#244e3d;color:white;padding:29px;border-radius:23px;margin-bottom:20px;display:grid;grid-template-columns:1fr 290px;gap:25px;align-items:center;position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:260px;height:260px;border:1px solid #ffffff23;border-radius:50%;right:-110px;top:-110px;box-shadow:0 0 0 37px #ffffff08,0 0 0 74px #ffffff08;pointer-events:none}.hero .kicker{color:#b7d2c0}.hero h2{font-size:clamp(26px,3vw,39px);letter-spacing:-.048em;line-height:1.13;margin:10px 0 14px;max-width:550px}.hero p{color:#d4e5d9;font-size:14px;line-height:1.6;max-width:480px}.hero-card{background:#ffffff17;border:1px solid #ffffff30;border-radius:16px;padding:18px;position:relative;z-index:1}.hero-card h3{font-size:17px;line-height:1.4;margin:8px 0}.hero-card p{margin:0;font-size:12px}
-.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:29px}.stat{background:white;border:1px solid var(--edge);border-radius:17px;padding:18px}.stat b{display:block;font-size:30px;letter-spacing:-.03em;margin-top:9px}.stat span{color:#768a7c;font-size:12px}.cols{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.9fr);gap:20px}.panel{border:1px solid var(--edge);background:white;border-radius:19px;box-shadow:0 8px 28px #1f493307}.padded{padding:8px 19px}.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}.section-title h2{font-size:18px;letter-spacing:-.026em;margin:0}.textlink{border:0;background:none;color:#267053;font-size:12px;font-weight:800;white-space:nowrap;text-decoration:none}
-.entry{display:flex;gap:13px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--edge)}.entry:last-child{border-bottom:0}.datebox{background:#eef3ed;border-radius:12px;min-width:52px;text-align:center;padding:10px 4px}.datebox small{font-size:10px;font-weight:800;text-transform:uppercase;color:#749180;display:block}.datebox b{display:block;font-size:21px}.details{min-width:0;flex:1}.entry h3{margin:3px 0 5px;font-size:14px;line-height:1.45}.sub{color:#819285;font-size:12px;line-height:1.65}.pill{display:inline-block;background:#f0f3eb;border-radius:40px;padding:5px 9px;color:#697c63;font-size:10px;font-weight:800;margin-right:5px}.pill.game{background:#f9e7d8;color:#a9623f}.pill.work{background:#e5edf9;color:#4d6d9f}.pill.personal{background:#f7e9ef;color:#a65975}.pill.casa{background:#e4f1e4;color:#548053}.pill.varie{background:#f9efd8;color:#8b763b}.actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.mini-btn{background:#eff4ef;border:0;border-radius:8px;color:#4b6d59;font-size:12px;font-weight:700;padding:7px 9px}.mini-btn.danger{color:#ae6459;background:#faeeeb}.note{margin-top:7px;font-size:12px;color:#73877a;white-space:pre-wrap;overflow-wrap:anywhere}.empty{text-align:center;padding:37px 18px;font-size:14px;color:#839789;line-height:1.6}
-.lead{font-size:14px;line-height:1.65;color:#708779;margin:0 0 18px}.filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:17px}.chip{border:1px solid var(--edge);background:white;color:#5d7766;border-radius:30px;padding:9px 13px;font-size:12px;font-weight:700}.chip.active{background:#24503e;color:white;border-color:#24503e}.footnote{font-size:12px;line-height:1.65;color:#7a8e7f;margin:17px 0}.footnote a{color:#26684d}.controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin-bottom:15px}.search{border:1px solid var(--edge);border-radius:11px;background:white;padding:11px 13px;min-width:230px;max-width:340px;flex:1}
-.calendar{padding:18px}.monthline{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:17px}.monthline h2{font-size:21px;margin:0;text-transform:capitalize}.arrow{width:37px;height:37px;border:0;border-radius:10px;background:#edf3ed;color:#2e644a;font-size:24px}.weekday,.monthgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.weekday div{text-align:center;font-size:11px;color:#879f90;font-weight:800;padding:8px 0}.day{min-height:77px;background:#f7faf6;border:1px solid transparent;border-radius:11px;text-align:left;padding:9px 8px;color:#526c5b;display:flex;flex-direction:column;gap:9px}.day:hover{border-color:#91bea1}.day.out{opacity:.3}.day.picked{background:#dfede3;border-color:#abd0b8}.day.is-today .n{color:#c5774d}.n{font-weight:800;font-size:13px}.dots{display:flex;flex-wrap:wrap;gap:4px}.dot{display:inline-block;width:7px;height:7px;background:#d8875e;border-radius:50%}.dot.e{background:#538e6b}.daycard{margin-top:17px;padding:18px}.daycard h3{font-size:16px;margin:0}.dayentry{padding:12px 0;display:flex;align-items:flex-start;gap:11px;border-bottom:1px solid var(--edge)}.dayentry:last-child{border-bottom:0}.bar{width:4px;align-self:stretch;border-radius:2px;background:var(--orange)}.bar.e{background:#5f9a72}.dayentry b{font-size:13px}.backup{background:#eef4ed;color:#587260;border-radius:14px;padding:14px 16px;font-size:12px;line-height:1.65;margin-top:20px}
-.modal-wrap{display:none;position:fixed;inset:0;background:#102d24b5;align-items:center;justify-content:center;z-index:20;padding:15px}.modal-wrap.show{display:flex}.modal{max-height:94vh;overflow:auto;width:min(580px,100%);border-radius:23px;background:white;padding:23px;box-shadow:0 30px 80px #0004}.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modalhead h2{margin:0;font-size:22px}.close{width:36px;height:36px;border:0;border-radius:10px;background:#eef2ec;color:#416b51;font-size:24px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.fieldgroup{display:grid;gap:7px}.fieldgroup.wide{grid-column:1/-1}.fieldgroup label{font-size:12px;font-weight:800;color:#6a806d}.field{width:100%;border:1px solid #dfe7dc;border-radius:11px;padding:11px 12px;color:#274335;background:white}.field:focus{border-color:#5a9a6d;outline:2px solid #d0e8d5}.formactions{display:flex;justify-content:flex-end;gap:9px;margin-top:21px}.bottomnav{display:none}.hide{display:none!important}
-@media(max-width:1050px){.layout{grid-template-columns:205px 1fr}main{padding:28px 25px 110px}.side{padding:27px 15px}.cols{grid-template-columns:1fr}}
-@media(max-width:700px){.layout{display:block}.side{display:none}main{padding:22px 16px 110px}.top h1{font-size:26px}.top .btn{font-size:12px;padding:10px 12px}.hero{display:block;padding:23px}.hero-card{margin-top:22px}.stats{gap:8px}.stat{padding:14px}.stat b{font-size:22px}.stat span{font-size:11px}.padded{padding:5px 15px}.entry{gap:10px}.datebox{min-width:47px}.calendar{padding:10px}.day{min-height:66px;padding:6px 4px;border-radius:8px}.weekday,.monthgrid{gap:3px}.formgrid{grid-template-columns:1fr}.fieldgroup.wide{grid-column:auto}.bottomnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e1eae0;padding:7px 5px calc(7px + env(safe-area-inset-bottom));box-shadow:0 -9px 28px #183a2b16;z-index:10}.bottomnav button{background:none;border:0;display:grid;place-items:center;gap:5px;font-size:10px;font-weight:750;color:#7f9283;padding:7px 2px}.bottomnav button b{font-size:21px;line-height:1}.bottomnav button.active{color:#2e7251}.actions{justify-content:flex-end}.sub{font-size:11px}.controls .search{max-width:none}.modal{padding:18px}}
-</style>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#163e34">
+<meta name="description" content="Il calendario delle partite di Perugia 2026/27: prossima gara, programma completo e calendario interattivo.">
+<title>MATCHDAY · Le partite di Perugia</title>
+<link rel="icon" type="image/svg+xml" href="./matchday-icon.svg">
+<link rel="stylesheet" href="./matchday.css?v=2">
 </head>
 <body>
-<div class="layout">
-<aside class="side">
-<div class="logo"><div class="logo-icon">✦</div><div><b>Francesca</b><small>La mia agenda</small></div></div>
-<div class="nav"><button data-nav="home" class="active"><span class="ico">⌂</span> Panoramica</button><button data-nav="games"><span class="ico">◈</span> Partite</button><button data-nav="calendar"><span class="ico">▦</span> Agenda</button><button data-nav="events"><span class="ico">✎</span> Eventi</button></div>
-<div class="sidebottom"><em>Un posto per gli impegni. Più spazio per ciò che conta.</em>Le partite arrivano dal calendario Superlega. I tuoi eventi restano separati.</div>
-</aside>
-<main><header class="top"><div><div class="kicker" id="date-heading"></div><h1 id="heading">La tua settimana</h1></div><button class="btn" id="open-add">＋ Nuovo evento</button></header><div id="screen"></div></main>
+<div class="site" id="top">
+<header class="site-header">
+  <a class="brand" href="#top" aria-label="Perugia Matchday, torna all'inizio">
+    <span class="brand-icon"><span>PG</span></span>
+    <span class="brand-meta"><b>Perugia / Matchday</b><small>Le partite • Stagione 2026—27</small></span>
+  </a>
+  <div class="header-right">
+    <span class="edition">IL PROGRAMMA <strong>26 / 27</strong></span>
+    <span class="header-pill"><i aria-hidden="true"></i><span id="matchCount">45 PARTITE</span></span>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="mainHero" aria-label="La prossima partita di Perugia">
+ <div class="hero-text" id="heroText">
+  <div class="kicker hero-type"><span class="kicker-line"></span> PROSSIMA PARTITA</div>
+  <h1>IL PROSSIMO<br><span class="vs">APPUNTAMENTO.</span></h1>
+ </div>
+ <div class="hero-stage">
+  <svg class="court-art" viewBox="0 0 620 600" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+   <g stroke="#D9F4CC" stroke-width="2">
+    <path d="M80 107H543L602 484H12L80 107Z"/>
+    <path d="M163 107L134 484M459 107L481 484M92 310H568"/>
+    <path d="M80 107L602 484M543 107L12 484" opacity=".5"/>
+    <path d="M50 225H568M64 170H551M34 401H587" opacity=".4"/>
+    <path d="M310 107V484" opacity=".6"/>
+    <path d="M306 107V484" opacity=".6"/>
+    <circle cx="310" cy="300" r="61" opacity=".45"/>
+   </g>
+   <g stroke="#E3F8D9" opacity=".20">
+    <path d="M0 32H620M0 65H620M0 550H620"/>
+    <path d="M48 0V600M590 0V600"/>
+   </g>
+  </svg>
+  <svg class="ball-art" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+   <circle cx="160" cy="160" r="142" stroke="#E7F7CE" stroke-width="2.8"/>
+   <path d="M160 18C124 65 112 116 124 156S170 250 211 287" stroke="#E7F7CE" stroke-width="2.8"/>
+   <path d="M30 102C101 108 136 95 170 69S219 29 238 44" stroke="#E7F7CE" stroke-width="2.8"/>
+   <path d="M22 175C71 148 108 140 151 158S222 230 282 202" stroke="#E7F7CE" stroke-width="2.8"/>
+   <path d="M90 42C83 119 115 193 168 222S264 243 282 208" stroke="#E7F7CE" stroke-width="2.8"/>
+   <path d="M59 254C112 236 144 239 177 260S207 292 215 292" stroke="#E7F7CE" stroke-width="2.8"/>
+  </svg>
+  <div class="big-date" id="heroDate"><span class="day">25</span><div class="month">OTT</div></div>
+ </div>
+</section>
+
+<div class="section-intro">
+ <div><h2>LA STAGIONE, IN NUMERI.</h2><p>Uno sguardo veloce agli appuntamenti che contano.</p></div>
+ <span class="section-number">01 / OVERVIEW</span>
 </div>
-<nav class="bottomnav"><button data-nav="home" class="active"><b>⌂</b>Inizio</button><button data-nav="games"><b>◈</b>Partite</button><button data-nav="calendar"><b>▦</b>Agenda</button><button data-nav="events"><b>✎</b>Eventi</button></nav>
-<div class="modal-wrap" id="modal-wrap"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-<div class="modalhead"><h2 id="dialog-title">Nuovo evento</h2><button class="close" id="x-close" aria-label="Chiudi">×</button></div>
-<form id="event-form"><input type="hidden" id="f-id"><div class="formgrid">
-<div class="fieldgroup wide"><label for="f-title">Nome dell'evento *</label><input id="f-title" class="field" maxlength="160" placeholder="Es. Riunione, appuntamento, manutenzione…" required></div>
-<div class="fieldgroup"><label for="f-category">Categoria</label><select id="f-category" class="field"><option value="lavoro">Lavoro</option><option value="personali">Personali</option><option value="casa">Casa</option><option value="varie">Varie</option></select></div>
-<div class="fieldgroup"><label for="f-date">Data *</label><input type="date" id="f-date" class="field" required></div>
-<div class="fieldgroup"><label for="f-start">Ora di inizio (facoltativa)</label><input type="time" id="f-start" class="field"></div>
-<div class="fieldgroup"><label for="f-end">Ora di fine (facoltativa)</label><input type="time" id="f-end" class="field"></div>
-<div class="fieldgroup wide"><label for="f-location">Luogo</label><input id="f-location" class="field" maxlength="220" placeholder="Indirizzo o città"></div>
-<div class="fieldgroup wide"><label for="f-notes">Note</label><textarea id="f-notes" class="field" rows="3" maxlength="2500" placeholder="Dettagli utili…"></textarea></div>
-</div><div class="formactions"><button type="button" class="btn ghost" id="cancel">Annulla</button><button class="btn" type="submit">Salva evento</button></div></form></div></div>
-<input type="file" id="import-file" accept=".json,application/json" style="display:none">
-<script>
-'use strict';
-const GAMES=[
-  {
-    "date": "2026-09-16",
-    "time": "16:30",
-    "title": "Amichevole Fano - inizio riscaldamento ore 16:30",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-09-23",
-    "time": "18:00",
-    "title": "AMICHEVOLE: GROTTAZZOLINA vs PERUGIA inizio riscaldamento ore 17:15",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-09-25",
-    "time": "18:00",
-    "title": "Amichevole Terni 18:00",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-09-30",
-    "time": "17:00",
-    "title": "Amichevole Macerata - inizio riscaldamento ore 17:00",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-02",
-    "time": "16:30",
-    "title": "Amichevole Grottazzolina - inizio riscaldamento ore 16:30",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-07",
-    "time": "20:30",
-    "title": "Perugia - Santory ore 20:30",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-08",
-    "time": "20:30",
-    "title": "Perugia - Santory",
-    "kind": "Amichevole",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-18",
-    "time": "18:00",
-    "title": "1 Giornata Andata: Cuneo - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-25",
-    "time": "18:00",
-    "title": "2 Giornata Andata: Perugia - Prata ore 18:00",
-    "kind": "SuperLega",
-    "id": "hebec0vl6nlbha8mojbj3astlg",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-28",
-    "time": "20:30",
-    "title": "Recupero: Perugia - Padova ore 20:30",
-    "kind": "SuperLega",
-    "id": "759ge6h4jh51ht6hkfaci4qn9k",
-    "uncertain": false
-  },
-  {
-    "date": "2026-10-31",
-    "time": "18:00",
-    "title": "3 Giornata Andata: Monza - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "0e03jrj834ce9a9epmrvg15ipo",
-    "uncertain": false
-  },
-  {
-    "date": "2026-11-04",
-    "time": "20:30",
-    "title": "4 Giornata Andata: Perugia - Latina ore 20:30",
-    "kind": "SuperLega",
-    "id": "7ep8e1dg7ba87lgt08u4c8rp9p",
-    "uncertain": false
-  },
-  {
-    "date": "2026-11-08",
-    "time": "18:00",
-    "title": "5 Giornata Andata: Trento - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "6mujjjo1secaf5jem4mpjbje3c",
-    "uncertain": false
-  },
-  {
-    "date": "2026-11-14",
-    "time": "15:00",
-    "title": "Supercoppa",
-    "kind": "Supercoppa",
-    "id": "2dhpidknqv8bovkdrl2oqo94c7",
-    "uncertain": true
-  },
-  {
-    "date": "2026-11-15",
-    "time": "15:00",
-    "title": "Supercoppa",
-    "kind": "Supercoppa",
-    "id": "6t988ueq42144t366eqjiiil36",
-    "uncertain": true
-  },
-  {
-    "date": "2026-11-22",
-    "time": "18:00",
-    "title": "6 Giornata Andata: Piacenza - Perugia",
-    "kind": "SuperLega",
-    "id": "32cg52ch1aapecdbh70k8esvps",
-    "uncertain": false
-  },
-  {
-    "date": "2026-11-25",
-    "time": "20:30",
-    "title": "Recupero \"x\" giornata WCCM",
-    "kind": "SuperLega",
-    "id": "3869jp0694ur389fcrtuoushq2",
-    "uncertain": true
-  },
-  {
-    "date": "2026-11-29",
-    "time": "18:00",
-    "title": "7 Giornata Andata: Perugia - Modena ore 18:00",
-    "kind": "SuperLega",
-    "id": "787q0jjgvoluchaifhpidhld0c",
-    "uncertain": false
-  },
-  {
-    "date": "2026-12-02",
-    "time": "20:30",
-    "title": "8 Giornata Andata: Milano - Perugia ore 20:30",
-    "kind": "SuperLega",
-    "id": "39ekol7iq15fsju5umdbvbbe2b",
-    "uncertain": false
-  },
-  {
-    "date": "2026-12-06",
-    "time": "18:00",
-    "title": "9 Giornata Andata: Perugia - Verona ore 18:00",
-    "kind": "SuperLega",
-    "id": "58epm0g89kanb75u201a4vrjvp",
-    "uncertain": false
-  },
-  {
-    "date": "2026-12-09",
-    "time": "20:30",
-    "title": "Champions League: Perugia - Bucarest ore 20:30",
-    "kind": "Champions League",
-    "id": "4lnqq9h2k6qd4djsrjjsglilor",
-    "uncertain": false
-  },
-  {
-    "date": "2026-12-14",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261214T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-15",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261215T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-16",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261216T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-17",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261217T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-18",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261218T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-19",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261219T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-20",
-    "time": "15:00",
-    "title": "WCC Polonia",
-    "kind": "Mondiale per Club",
-    "id": "0sp3cnogrc0gtlc3mlmqnf9jqg_20261220T140000Z",
-    "uncertain": true
-  },
-  {
-    "date": "2026-12-26",
-    "time": "18:00",
-    "title": "1 Giornata Ritorno: Latina - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "6uchae1hjp2vt7lrv665o5a4co",
-    "uncertain": false
-  },
-  {
-    "date": "2026-12-30",
-    "time": "20:30",
-    "title": "Q. ti Coppa Italia ore 20:30",
-    "kind": "Coppa Italia",
-    "id": "7f9f9sr1ust5ht4qkf81vpt3i2",
-    "uncertain": true
-  },
-  {
-    "date": "2027-01-03",
-    "time": "18:00",
-    "title": "2 Giornata Ritorno: Perugia - Milano ore 18:00",
-    "kind": "SuperLega",
-    "id": "2t4vtaa05th5mulhct99eom28a",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-06",
-    "time": "20:30",
-    "title": "Champions League: Montpellier - Perugia ore 20:30",
-    "kind": "Champions League",
-    "id": "4tsnlgj18631ofdkpp7ltohl7m",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-10",
-    "time": "18:00",
-    "title": "3 Giornata Ritorno: Prata - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "59cuf7c7fi16qj88p77o884e15",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-13",
-    "time": "20:30",
-    "title": "4 Giornata Ritorno: Perugia - Piacenza ore 20:30",
-    "kind": "SuperLega",
-    "id": "0kec41usplb2lui83tgoohut7a",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-17",
-    "time": "18:00",
-    "title": "5 Giornata Ritorno: Padova - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "041r7ilt8pja2j0p3h0197pmcc",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-20",
-    "time": "19:00",
-    "title": "Champions League: Ziraat - Perugia ore 19:00",
-    "kind": "Champions League",
-    "id": "7boruaah3i8m4m2irudi1b2hge",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-24",
-    "time": "18:00",
-    "title": "6 Giornata Ritorno: Perugia - Trento ore 18:00",
-    "kind": "SuperLega",
-    "id": "7kvlunhalagsfn9s3f7g4bbhp5",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-27",
-    "time": "20:30",
-    "title": "Champions League: Perugia - Montpellier ore 20:30",
-    "kind": "Champions League",
-    "id": "7k76o2jnbe867iapq35tg7rjg6",
-    "uncertain": false
-  },
-  {
-    "date": "2027-01-31",
-    "time": "18:00",
-    "title": "7 Giornata Ritorno: Verona - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "253vsj15gol9g0b96t811qs83f",
-    "uncertain": false
-  },
-  {
-    "date": "2027-02-10",
-    "time": "20:30",
-    "title": "Champions League: Bucarest - Perugia ore 20:30",
-    "kind": "Champions League",
-    "id": "4eqbp2mdhtvivqb7nsg006ecjm",
-    "uncertain": false
-  },
-  {
-    "date": "2027-02-14",
-    "time": "18:00",
-    "title": "8 Giornata Ritorno: Perugia - Cuneo ore 18:00",
-    "kind": "SuperLega",
-    "id": "5v73rsjdc58ict7dhfsuuini73",
-    "uncertain": false
-  },
-  {
-    "date": "2027-02-17",
-    "time": "20:30",
-    "title": "Champions League: Perugia - Ziraat ore 20:30",
-    "kind": "Champions League",
-    "id": "7mrje379gv7u9bm2n77efg3v0d",
-    "uncertain": false
-  },
-  {
-    "date": "2027-02-21",
-    "time": "18:00",
-    "title": "9 Giornata Ritorno: Modena - Perugia ore 18:00",
-    "kind": "SuperLega",
-    "id": "7m3q3g77rvud8eu19vm9kiv525",
-    "uncertain": false
-  },
-  {
-    "date": "2027-02-24",
-    "time": "20:30",
-    "title": "10 Giornata Ritorno: Lube - Perugia ore 20:30",
-    "kind": "SuperLega",
-    "id": "43q1graddq0o0jfj1ilgbgjf5m",
-    "uncertain": false
-  },
-  {
-    "date": "2027-02-28",
-    "time": "18:00",
-    "title": "11 Giornata Ritorno: Perugia - Monza ore 18:00",
-    "kind": "SuperLega",
-    "id": "7g0k52d1uv16n81ukv3vebrqog",
-    "uncertain": false
-  }
-];
-const GCID='p2au0socbhks3n0sp29i9iumvg@group.calendar.google.com';
-const KEY='francesca-agenda-events-v1';
-const CATEGORIES={lavoro:'Lavoro',personali:'Personali',casa:'Casa',varie:'Varie'};
-const CLASSMAP={lavoro:'work',personali:'personal',casa:'casa',varie:'varie'};
-const $=id=>document.getElementById(id);
-let events=readEvents(),screen='home',gameFilter='future',categoryFilter='all',textFilter='',cursor=new Date(),selected=localDate(new Date());
-function readEvents(){try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v:[]}catch{return []}}
-function store(){try{localStorage.setItem(KEY,JSON.stringify(events))}catch{alert('Impossibile salvare sul dispositivo. Esporta un backup.') }}
-function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function localDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function today(){return localDate(new Date())}
-function parseDate(s){return new Date(s+'T12:00:00')}
-function formatDate(s,opts){return new Intl.DateTimeFormat('it-IT',opts||{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(typeof s==='string'?parseDate(s):s)}
-function monthShort(s){return formatDate(s,{month:'short'}).replace('.','')}
-function gameFuture(g){return g.date>=today()}
-function upcomingGames(){return GAMES.filter(gameFuture)}
-function upcomingEvents(){return events.filter(e=>e.date>=today()).sort(compareEvents)}
-function compareEvents(a,b){return (a.date+' '+(a.start||'00:00')).localeCompare(b.date+' '+(b.start||'00:00'))}
-function gameLink(g){if(!g.id){return 'https://calendar.google.com/calendar/u/0/r/day/'+g.date.replaceAll('-','/')}const s=btoa(g.id+' '+GCID).replaceAll('=','');return 'https://www.google.com/calendar/event?eid='+encodeURIComponent(s)+'&ctz=Europe/Rome'}
-function displayGame(g){return '<div class="entry"><div class="datebox"><small>'+safe(monthShort(g.date))+'</small><b>'+Number(g.date.slice(8))+'</b></div><div class="details"><span class="pill game">'+safe(g.kind)+'</span>'+(g.uncertain?'<span class="pill">Da confermare</span>':'')+'<h3>'+safe(g.title)+'</h3><div class="sub">'+safe(formatDate(g.date))+' · ore '+safe(g.time)+'</div></div><a class="textlink" target="_blank" rel="noopener noreferrer" href="'+safe(gameLink(g))+'">Google ↗</a></div>'}
-function displayEvent(e){return '<div class="entry"><div class="datebox"><small>'+safe(monthShort(e.date))+'</small><b>'+Number(e.date.slice(8))+'</b></div><div class="details"><span class="pill '+CLASSMAP[e.category]+'">'+CATEGORIES[e.category]+'</span><h3>'+safe(e.title)+'</h3><div class="sub">'+safe(formatDate(e.date))+' · '+(e.start?safe(e.start)+(e.end?' – '+safe(e.end):''):'Giornata intera')+(e.location?' · '+safe(e.location):'')+'</div>'+(e.notes?'<div class="note">'+safe(e.notes)+'</div>':'')+'</div><div class="actions"><button class="mini-btn" data-edit="'+safe(e.id)+'">Modifica</button><button class="mini-btn danger" data-remove="'+safe(e.id)+'">×</button></div></div>'}
-function sourceNote(){return '<p class="footnote">Partite dal tuo Google Calendar <b>Superlega</b>: dati letti il 19 ottobre 2026. Questa prima versione è una copia delle partite, non una sincronizzazione automatica. Per gli aggiornamenti consulta <a target="_blank" rel="noopener noreferrer" href="https://calendar.google.com/calendar/u/0/r">Google Calendar ↗</a>.</p>'}
-function homeView(){const next=upcomingGames(),up=upcomingEvents(),twoWeeks=new Date();twoWeeks.setDate(twoWeeks.getDate()+14);const limit=localDate(twoWeeks);return '<div class="hero"><div><div class="kicker">La tua agenda, con semplicità</div><h2>Ogni cosa al suo posto.</h2><p>Le partite da seguire, gli appuntamenti da ricordare e uno sguardo al tuo tempo.</p></div><div class="hero-card"><div class="kicker">Prossima partita</div>'+(next.length?'<h3>'+safe(next[0].title)+'</h3><p>'+safe(formatDate(next[0].date))+' · ore '+safe(next[0].time)+'</p>':'<h3>Nessuna partita programmata</h3>')+'</div></div><div class="stats"><div class="stat"><span>Partite in programma</span><b>'+next.length+'</b></div><div class="stat"><span>Eventi nei prossimi 14 giorni</span><b>'+up.filter(e=>e.date<=limit).length+'</b></div><div class="stat"><span>Eventi salvati</span><b>'+events.length+'</b></div></div><div class="cols"><section><div class="section-title"><h2>Le prossime partite</h2><button data-goto="games" class="textlink">Vedi tutte →</button></div><div class="panel padded">'+(next.length?next.slice(0,4).map(displayGame).join(''):'<div class="empty">Non ci sono partite future inserite.</div>')+'</div></section><section><div class="section-title"><h2>I tuoi impegni</h2><button data-goto="events" class="textlink">Vedi tutti →</button></div><div class="panel padded">'+(up.length?up.slice(0,4).map(displayEvent).join(''):'<div class="empty">Nessun impegno ancora. Puoi aggiungerne uno con il pulsante in alto.</div>')+'</div></section></div>'+sourceNote()}
-function gamesView(){const filtered=GAMES.filter(g=>gameFilter==='all'||gameFilter==='future'&&gameFuture(g)||gameFilter==='past'&&!gameFuture(g));return '<p class="lead">Solo le gare della stagione 2026/27, comprese le amichevoli. Gli allenamenti e gli impegni dello staff sono esclusi.</p><div class="filters">'+[['future','In programma'],['all','Tutte'],['past','Già disputate']].map(o=>'<button data-game-filter="'+o[0]+'" class="chip '+(o[0]===gameFilter?'active':'')+'">'+o[1]+'</button>').join('')+'</div><div class="panel padded">'+(filtered.length?filtered.map(displayGame).join(''):'<div class="empty">Nessuna gara in questa selezione.</div>')+'</div>'+sourceNote()}
-function eventsView(){const filtered=events.filter(e=>(categoryFilter==='all'||e.category===categoryFilter)&&(e.title+' '+(e.notes||'')+' '+(e.location||'')).toLowerCase().includes(textFilter.toLowerCase())).sort(compareEvents);return '<p class="lead">Crea impegni personali, di lavoro, di casa o di altro tipo. Puoi modificarli quando vuoi.</p><div class="filters">'+[['all','Tutti'],...Object.entries(CATEGORIES)].map(o=>'<button data-category="'+o[0]+'" class="chip '+(o[0]===categoryFilter?'active':'')+'">'+o[1]+'</button>').join('')+'</div><div class="controls"><input id="event-search" class="search" aria-label="Cerca eventi" placeholder="Cerca un evento..." value="'+safe(textFilter)+'"><div class="actions"><button id="export" class="btn small ghost">Esporta backup</button><button id="import" class="btn small ghost">Importa backup</button></div></div><div class="panel padded">'+(filtered.length?filtered.map(displayEvent).join(''):'<div class="empty">Nessun evento trovato. Clicca “Nuovo evento” per aggiungerne uno.</div>')+'</div><div class="backup"><b>Come vengono salvati i dati:</b> gli appuntamenti restano soltanto in questo browser, su questo dispositivo. Non c’è un account e non sono caricati su un server. Usa il backup per spostarli su un altro telefono o per conservarne una copia.</div>'}
-function calendarView(){const year=cursor.getFullYear(),month=cursor.getMonth(),first=new Date(year,month,1),offset=(first.getDay()+6)%7,total=new Date(year,month+1,0).getDate(),cells=Math.ceil((offset+total)/7)*7;const byDate={};for(const g of GAMES)(byDate[g.date]??=[]).push({type:'game',val:g});for(const e of events)(byDate[e.date]??=[]).push({type:'event',val:e});let days='';for(let i=0;i<cells;i++){const d=new Date(year,month,1-offset+i),date=localDate(d),entries=byDate[date]||[];days+='<button class="day '+(d.getMonth()!==month?'out ':'')+(date===selected?'picked ':'')+(date===today()?'is-today':'')+'" data-day="'+date+'" aria-label="'+safe(formatDate(date))+': '+entries.length+' impegni"><span class="n">'+d.getDate()+'</span><span class="dots">'+entries.slice(0,5).map(x=>'<span class="dot '+(x.type==='event'?'e':'')+'"></span>').join('')+'</span></button>'}const selectedList=(byDate[selected]||[]).sort((a,b)=>(a.val.time||a.val.start||'').localeCompare(b.val.time||b.val.start||''));return '<p class="lead">Partite in arancione ed eventi personali in verde. Seleziona un giorno per vedere gli impegni.</p><div class="panel calendar"><div class="monthline"><button class="arrow" data-month="-1" aria-label="Mese precedente">‹</button><h2>'+safe(formatDate(cursor,{month:'long',year:'numeric'}))+'</h2><button class="arrow" data-month="1" aria-label="Mese successivo">›</button></div><div class="weekday">'+['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(s=>'<div>'+s+'</div>').join('')+'</div><div class="monthgrid">'+days+'</div></div><div class="panel daycard"><div class="section-title"><h3>'+safe(formatDate(selected))+'</h3><button class="btn small soft" id="add-day">＋ Aggiungi</button></div>'+(selectedList.length?selectedList.map(o=>'<div class="dayentry"><span class="bar '+(o.type==='event'?'e':'')+'"></span><div><b>'+safe(o.val.title)+'</b><div class="sub">'+safe(o.val.time||o.val.start||'Tutto il giorno')+' · '+(o.type==='event'?safe(CATEGORIES[o.val.category]):'Partita')+'</div></div></div>').join(''):'<div class="empty">Nessun impegno in questa giornata.</div>')+'</div>'+sourceNote()}
-function render(){document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===screen));$('date-heading').textContent=formatDate(new Date(),{weekday:'long',day:'numeric',month:'long',year:'numeric'});$('heading').textContent=({home:'La tua settimana',games:'Le partite',calendar:'La tua agenda',events:'I tuoi eventi'})[screen];$('screen').innerHTML=({home:homeView,games:gamesView,calendar:calendarView,events:eventsView})[screen]();bindScreen()}
-function bindScreen(){document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>go(b.dataset.goto));document.querySelectorAll('[data-game-filter]').forEach(b=>b.onclick=()=>{gameFilter=b.dataset.gameFilter;render()});document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{categoryFilter=b.dataset.category;render()});document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openModal(events.find(e=>e.id===b.dataset.edit)));document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{const e=events.find(e=>e.id===b.dataset.remove);if(e&&confirm('Vuoi eliminare “'+e.title+'”?')){events=events.filter(x=>x.id!==e.id);store();render()}});document.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()+Number(b.dataset.month),1);selected=localDate(cursor);render()});document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{selected=b.dataset.day;render()});if($('add-day'))$('add-day').onclick=()=>openModal(null,selected);if($('event-search'))$('event-search').oninput=e=>{textFilter=e.target.value;const pos=e.target.selectionStart;render();const el=$('event-search');el.focus();el.setSelectionRange(pos,pos)};if($('export'))$('export').onclick=downloadBackup;if($('import'))$('import').onclick=()=>$('import-file').click()}
-function go(s){screen=s;render();window.scrollTo({top:0,behavior:'smooth'})}
-document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.nav)));
-$('open-add').onclick=()=>openModal(null);$('x-close').onclick=closeModal;$('cancel').onclick=closeModal;$('modal-wrap').addEventListener('click',e=>{if(e.target===$('modal-wrap'))closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
-function openModal(e,date){$('event-form').reset();$('dialog-title').textContent=e?'Modifica evento':'Nuovo evento';$('f-id').value=e?.id||'';$('f-title').value=e?.title||'';$('f-category').value=e?.category||'personali';$('f-date').value=e?.date||date||today();$('f-start').value=e?.start||'';$('f-end').value=e?.end||'';$('f-location').value=e?.location||'';$('f-notes').value=e?.notes||'';$('modal-wrap').classList.add('show');$('f-title').focus()}
-function closeModal(){$('modal-wrap').classList.remove('show')}
-$('event-form').onsubmit=e=>{e.preventDefault();const obj={id:$('f-id').value||'e'+Date.now()+Math.floor(Math.random()*10000),title:$('f-title').value.trim(),category:$('f-category').value,date:$('f-date').value,start:$('f-start').value,end:$('f-end').value,location:$('f-location').value.trim(),notes:$('f-notes').value.trim()};if(!obj.title||!obj.date)return;if(obj.start&&obj.end&&obj.end<obj.start){alert('L’ora di fine non può precedere l’ora di inizio.');return}const i=events.findIndex(v=>v.id===obj.id);if(i===-1)events.push(obj);else events[i]=obj;store();closeModal();render()};
-function downloadBackup(){const data=JSON.stringify({app:'Francesca - La mia agenda',version:1,events},null,2),blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='francesca-backup-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
-$('import-file').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.events))throw Error('Invalid');const valid=data.events.filter(x=>typeof x.title==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&CATEGORIES[x.category]).map(x=>({id:String(x.id||'e'+Date.now()+Math.random()),title:String(x.title).slice(0,160),date:x.date,category:x.category,start:String(x.start||''),end:String(x.end||''),location:String(x.location||'').slice(0,220),notes:String(x.notes||'').slice(0,2500)}));if(!confirm('Importare '+valid.length+' eventi senza cancellare quelli esistenti?'))return;const ids=new Set(events.map(x=>x.id));for(const o of valid)if(!ids.has(o.id)){events.push(o);ids.add(o.id)}store();render();alert('Backup importato correttamente.')}catch{alert('Non è un backup valido di questa agenda.')}finally{e.target.value=''}};
-render();
-</script>
-<script>
+<section class="overview-grid" id="stats" aria-label="Numeri del calendario">
+ <article class="mini-stat"><div class="top">Gare in programma</div><div class="value">—</div></article>
+ <article class="mini-stat"><div class="top">Questo mese</div><div class="value">—</div></article>
+ <article class="mini-stat"><div class="top">Champions future</div><div class="value">—</div></article>
+</section>
 
-const FR_SB="https://vqrpkkrqynvlzjufiocn.supabase.co";
-const FR_KEY="sb_publishable_RGTsinQvL4hyv94mzNgNHA_uKqOfDuf";
-const FR_SESSION_KEY="francesca-cloud-session-v1";
-const priorLocal=Array.isArray(events)?events.slice():[];
-let frSession=null,remoteIds=new Set(),pendingSync=Promise.resolve(),cloudBusy=false,authMode="login",matchLive=false;
-try{frSession=JSON.parse(localStorage.getItem(FR_SESSION_KEY)||"null")}catch{}
-const frStyle=document.createElement("style");
-frStyle.textContent=".cloud-strip{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;background:#e7eee7;color:#315947;border:1px solid #d3e4d5;border-radius:13px;margin:-12px 0 24px;padding:11px 14px;font-size:12px}.cloud-strip button{padding:7px 12px;border-radius:8px;border:1px solid #cadfce;background:#fff;color:#204b36;font-weight:750}.cloud-status{display:flex;align-items:center;gap:8px}.cloud-dot{height:8px;width:8px;border-radius:50%;background:#d59166}.cloud-dot.connected{background:#438e60}.auth-screen{display:none;position:fixed;inset:0;z-index:40;background:#102b23bf;padding:15px;align-items:center;justify-content:center}.auth-screen.visible{display:flex}.auth-box{width:min(420px,100%);background:white;border-radius:20px;padding:26px;box-shadow:0 18px 85px #17261b44}.auth-box h2{font-size:25px;margin:5px 0 10px}.auth-box p{color:#60756d;line-height:1.6;font-size:13px}.auth-box label{display:block;font-weight:750;font-size:12px;margin:15px 0 7px}.auth-box input{width:100%;padding:13px;border:1px solid #cfded1;border-radius:11px;color:#234733;font:inherit}.auth-actions{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center;margin-top:19px}.auth-actions button{padding:11px;border-radius:10px;background:#204e3b;color:white;border:0;font:inherit;cursor:pointer}.auth-actions .auth-link{background:#eff4ee;color:#28503d}.auth-info{font-size:12px;color:#9b4e3e;margin-top:10px}.private-prompt{text-align:center;padding:32px 18px}.private-prompt p{color:#6f8075;line-height:1.55}.private-prompt button{background:#214e3d;color:white;border:0;padding:12px 17px;border-radius:11px;font-weight:750}.source-live{color:#37784c;font-weight:800}";
-document.head.appendChild(frStyle);
-const strip=document.createElement("div");strip.className="cloud-strip";strip.innerHTML='<span class="cloud-status"><span id="cloudDot" class="cloud-dot"></span><span id="cloudText">Partite consultabili · Eventi privati</span></span><button id="cloudAction" type="button">Accedi / Registrati</button>';
-document.querySelector("header.top").after(strip);
-const auth=document.createElement("div");auth.className="auth-screen";auth.id="frAuth";auth.innerHTML='<div class="auth-box" role="dialog" aria-modal="true" aria-labelledby="frAuthTitle"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kicker">Agenda privata</div><button type="button" id="frClose" aria-label="Chiudi" style="border:0;background:#edf1ec;border-radius:10px;padding:9px 12px">✕</button></div><h2 id="frAuthTitle">Accedi all’agenda</h2><p id="frAuthHelp">Usa l’email e la password di Francesca: gli eventi saranno protetti e disponibili su tutti i suoi dispositivi.</p><form id="frForm"><label for="frEmail">Indirizzo email</label><input type="email" autocomplete="email" id="frEmail" required placeholder="nome@email.it"><label for="frPassword">Password</label><input type="password" autocomplete="current-password" id="frPassword" required minlength="6" placeholder="Almeno 6 caratteri"><div id="frError" class="auth-info" role="status"></div><div class="auth-actions"><button type="button" class="auth-link" id="frMode">Crea un account</button><button id="frSubmit" type="submit">Accedi</button></div></form><p style="font-size:11px">Gli appuntamenti sono archiviati in un database con accesso riservato al loro proprietario. Le partite sono consultabili senza account.</p></div>';
-document.body.appendChild(auth);
-function frStatus(msg,busy){document.getElementById("cloudText").textContent=msg;document.getElementById("cloudDot").classList.toggle("connected",!!frSession&&!busy)}
-function frAccount(){const b=document.getElementById("cloudAction");b.textContent=frSession?"Esci":"Accedi / Registrati";frStatus(frSession?"Eventi sincronizzati · "+(frSession.user?.email||"account protetto"):"Partite consultabili · Accedi per gli eventi",false)}
-function frOpenAuth(){document.getElementById("frAuth").classList.add("visible");document.getElementById("frError").textContent="";document.getElementById("frEmail").focus()}
-function frCloseAuth(){document.getElementById("frAuth").classList.remove("visible")}
-document.getElementById("frClose").onclick=frCloseAuth;
-document.getElementById("frAuth").onclick=e=>{if(e.target.id==="frAuth")frCloseAuth()};
-document.getElementById("cloudAction").onclick=()=>{if(frSession){if(confirm("Uscire dall’agenda privata su questo dispositivo?"))frLogout()}else frOpenAuth()};
-document.getElementById("frMode").onclick=()=>{authMode=authMode==="login"?"signup":"login";document.getElementById("frAuthTitle").textContent=authMode==="login"?"Accedi all’agenda":"Crea un account";document.getElementById("frSubmit").textContent=authMode==="login"?"Accedi":"Registrati";document.getElementById("frMode").textContent=authMode==="login"?"Crea un account":"Ho già un account";document.getElementById("frError").textContent="";document.getElementById("frPassword").autocomplete=authMode==="login"?"current-password":"new-password"};
-function frSaveSession(s){frSession=s;localStorage.setItem(FR_SESSION_KEY,JSON.stringify(s));frAccount()}
-async function frAuthRequest(path,payload){const r=await fetch(FR_SB+"/auth/v1/"+path,{method:"POST",headers:{"apikey":FR_KEY,"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.msg||d.error_description||d.message||d.error||"Impossibile accedere");return d}
-async function frRefresh(){if(!frSession?.refresh_token)throw Error("Sessione scaduta");const d=await frAuthRequest("token?grant_type=refresh_token",{refresh_token:frSession.refresh_token});frSaveSession(d);return d}
-async function frDb(path,method="GET",data=null,extraHeaders={}){if(!frSession)throw Error("Accesso richiesto");if(frSession.expires_at&&Date.now()/1000>frSession.expires_at-90)await frRefresh();const invoke=()=>fetch(FR_SB+"/rest/v1/"+path,{method,headers:{"apikey":FR_KEY,"authorization":"Bearer "+frSession.access_token,"content-type":"application/json",...extraHeaders},body:data===null?undefined:JSON.stringify(data)});let res=await invoke();if(res.status===401){await frRefresh();res=await invoke()}if(!res.ok){let d=await res.json().catch(()=>({}));throw Error(d.message||d.error||("Server "+res.status))}if(res.status===204||method==="DELETE")return null;let s=await res.text();return s?JSON.parse(s):null}
-async function frLoad(){if(!frSession)return;cloudBusy=true;frStatus("Caricamento eventi privati…",true);try{let items=await frDb("francesca_agenda_events?select=id,data&owner_id=eq."+encodeURIComponent(frSession.user.id));remoteIds=new Set(items.filter(x=>x.id!=="__superlega_ical").map(x=>x.id));let remote=items.map(x=>x.data).filter(x=>x&&typeof x.title==="string");let extras=priorLocal.filter(x=>x&&typeof x.title==="string"&&!remoteIds.has(x.id));
-if(extras.length&&confirm("Sono presenti "+extras.length+" eventi salvati nella vecchia versione su questo dispositivo. Vuoi importarli anche online?")){remote.push(...extras)}
-events=remote;localStorage.setItem(KEY,JSON.stringify(events));render();if(extras.length&&remote.length>items.length)await frSyncNow();frStatus("Eventi privati sincronizzati · "+(frSession.user.email||""),false)}
-catch(err){frStatus("Errore sincronizzazione · "+err.message,true)}
-finally{cloudBusy=false}}
-async function frSyncNow(){if(!frSession)return;const wanted=events.map(x=>({owner_id:frSession.user.id,id:x.id,data:x})),nextIds=new Set(events.map(x=>x.id));if(wanted.length)await frDb("francesca_agenda_events?on_conflict=owner_id,id","POST",wanted,{"prefer":"resolution=merge-duplicates,return=minimal"});for(const id of remoteIds){if(!nextIds.has(id))await frDb("francesca_agenda_events?owner_id=eq."+encodeURIComponent(frSession.user.id)+"&id=eq."+encodeURIComponent(id),"DELETE")}remoteIds=nextIds;frStatus("Eventi privati sincronizzati · "+(frSession.user.email||""),false)}
-const originalStore=store;
-store=function(){originalStore();if(frSession){frStatus("Salvataggio online…",true);pendingSync=pendingSync.then(()=>frSyncNow()).catch(e=>{frStatus("Eventi salvati sul dispositivo · Sincronizzazione non riuscita",true);console.error("Sync:",e.message)})}};
-const originalOpen=openModal;
-openModal=function(e,date){if(!frSession){frOpenAuth();return}originalOpen(e,date)};
-const originalEventsView=eventsView;
-eventsView=function(){if(!frSession)return '<div class="panel private-prompt"><h2>Gli appuntamenti di Francesca</h2><p>Questa parte dell’agenda è privata. Accedi oppure crea un account con la tua email per sincronizzare gli eventi fra telefono e computer.</p><button type="button" id="privateLogin" onclick="frOpenAuth()">Accedi / Registrati</button></div>';return originalEventsView().replace("gli appuntamenti restano soltanto in questo browser, su questo dispositivo. Non c’è un account e non sono caricati su un server.","gli appuntamenti sono sincronizzati nell’account personale tramite un database protetto. È consigliabile conservare anche un backup.")};
-const originalSourceNote=sourceNote;
-sourceNote=function(){return originalSourceNote()};
-async function frLogout(){try{if(frSession?.access_token)await fetch(FR_SB+"/auth/v1/logout",{method:"POST",headers:{apikey:FR_KEY,authorization:"Bearer "+frSession.access_token}})}catch{}frSession=null;remoteIds.clear();localStorage.removeItem(FR_SESSION_KEY);localStorage.removeItem(KEY);events=[];frAccount();render()}
-document.getElementById("frForm").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("frError"),btn=document.getElementById("frSubmit");msg.textContent="";btn.disabled=true;const email=document.getElementById("frEmail").value.trim(),password=document.getElementById("frPassword").value;try{
-if(authMode==="signup"){const d=await frAuthRequest("signup",{email,password});if(!d.access_token){msg.style.color="#32774b";msg.textContent="Registrazione richiesta. Apri l’email di conferma, poi torna qui e premi «Accedi».";return}frSaveSession(d)}
-else{const d=await frAuthRequest("token?grant_type=password",{email,password});frSaveSession(d)}
-frCloseAuth();await frLoad();
-}catch(err){msg.style.color="#a04839";msg.textContent=({invalid_credentials:"Email o password non valide.",email_not_confirmed:"Conferma prima l’indirizzo email."})[err.message]||err.message}finally{btn.disabled=false}};
-async function frMatches(){ /* Collegamento dinamico in sync-superlega.js */ }
-async function frBoot(){if(!frSession){events=[];render();frAccount()}else{frAccount();try{if(frSession.expires_at&&Date.now()/1000>frSession.expires_at-90)await frRefresh();await frLoad()}catch(e){frStatus("Ricollega l’account per sincronizzare",true)}}frMatches()}
-frBoot();
-window.addEventListener("online",()=>{if(frSession){pendingSync=pendingSync.then(()=>frSyncNow()).catch(()=>{});setTimeout(frLoad,3000)}frMatches()});
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&frSession&&!cloudBusy){pendingSync.then(frLoad).catch(()=>{})}});
+<div class="box-header">
+ <div><h2>LE PROSSIME SFIDE</h2><span class="caption">I prossimi tre appuntamenti, senza distrazioni.</span></div>
+ <button type="button" class="pill-filter" id="showFullList">Programma completo ↗</button>
+</div>
+<section class="preview-row" id="preview" aria-label="Prossime partite"></section>
 
-</script>
-<script>
-(async function(){
-try{
-const response=await fetch("./partite.json?v="+Date.now(),{cache:"no-store"});
-if(!response.ok) return;
-const data=await response.json();
-if(!matchLive&&Array.isArray(data.matches)&&data.matches.length){
-window.FR_MATCH_FEED_LOADED=true;
-GAMES.splice(0,GAMES.length,...data.matches);
-render();
-}
-}catch(err){console.info("Partite: copia integrata disponibile")}
-})();
-</script>
-<script src="./sync-superlega.js"></script>
-</body></html>
+<div class="section-intro">
+ <div><h2>TUTTE LE PARTITE.</h2><p>Scegli il mese oppure sfoglia il programma completo.</p></div>
+ <span class="section-number">02 / CALENDARIO</span>
+</div>
+<nav class="view-menu" id="viewTabs" aria-label="Visualizzazione del calendario">
+ <div class="switcher">
+  <button type="button" class="active" data-view="calendar" aria-pressed="true">Calendario</button>
+  <button type="button" data-view="list" aria-pressed="false">Lista partite</button>
+ </div>
+ <div class="view-hint">Giorni evidenziati = giorni di gara</div>
+</nav>
+<section id="calendarView" aria-label="Calendario mensile">
+ <div class="grid-layout">
+  <article class="panel calendar-panel">
+   <div class="month-head">
+    <div><div class="month-name" id="monthTitle">Ottobre 2026</div><div class="month-sub" id="monthCount">Partite nel mese</div></div>
+    <div class="month-nav">
+     <button type="button" class="today-btn" id="goToday">Oggi</button>
+     <button type="button" class="circle-btn" id="prevMonth" aria-label="Mese precedente">‹</button>
+     <button type="button" class="circle-btn" id="nextMonth" aria-label="Mese successivo">›</button>
+    </div>
+   </div>
+   <div class="calendar-days" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span></div>
+   <div class="calendar-cells" id="calendarDays"></div>
+   <div class="calendar-legend" aria-label="Legenda competizioni">
+    <span class="legend-item"><i></i> SuperLega</span>
+    <span class="legend-item"><i class="champions"></i> Champions</span>
+    <span class="legend-item"><i class="coppa"></i> Coppe</span>
+    <span class="legend-item"><i class="amichevole"></i> Amichevoli</span>
+   </div>
+  </article>
+  <aside class="panel day-panel" id="dayPanel" aria-live="polite"></aside>
+ </div>
+</section>
+<section id="listView" class="hidden" aria-label="Programma completo">
+ <div class="toolbar">
+  <div class="toolbar-left" id="scopeFilters" aria-label="Filtra per data"></div>
+  <input class="term-search" id="searchMatches" type="search" placeholder="Cerca squadra o competizione" aria-label="Cerca le partite">
+ </div>
+ <div class="toolbar">
+  <div class="toolbar-left" id="kindFilters" aria-label="Filtra per competizione"></div>
+  <span class="list-result" id="listTotal"></span>
+ </div>
+ <div id="list"></div>
+</section>
+
+<footer class="source-footer">
+ <div><strong id="dataUpdated">Fonte: Google Calendar SUPERLEGA · importato il 19 ottobre 2026.</strong><div>Solo gli eventi contrassegnati come «Match». Il programma può cambiare: per le modifiche successive consulta Google Calendar.</div></div>
+ <span class="footer-mark">MATCHDAY / 26—27</span>
+</footer>
+</main>
+</div>
+
+<script type="application/json" id="match-data">{"matches":[{"date":"2026-09-16","time":"16:30","title":"Amichevole Fano - inizio riscaldamento ore 16:30","kind":"Amichevole","id":"gcqba7p7bbunv7ea3mr6o1s38o","uncertain":false},{"date":"2026-09-23","time":"18:00","title":"AMICHEVOLE: GROTTAZZOLINA vs PERUGIA inizio riscaldamento ore 17:15","kind":"Amichevole","id":"49s4ss74iknhmhpp7jtmokohvc","uncertain":false},{"date":"2026-09-25","time":"18:00","title":"Amichevole Terni 18:00","kind":"Amichevole","id":"6lim6d9j6phjeb9ncoqj4b9k6pgj8b9p74rm2b9mcgo30p34c4sj2c9pc4","uncertain":false},{"date":"2026-09-30","time":"17:00","title":"Amichevole Macerata - inizio riscaldamento ore 17:00","kind":"Amichevole","id":"rimc85kva5rduu5cu3f943pm4s","uncertain":false},{"date":"2026-10-02","time":"16:30","title":"Amichevole Grottazzolina - inizio riscaldamento ore 16:30","kind":"Amichevole","id":"5mn179mpjigc35sn1c9nnbk7vk","uncertain":false},{"date":"2026-10-07","time":"20:30","title":"Perugia - Santory ore 20:30","kind":"Amichevole","id":"4mickglsfctemq3jkrd78847a4","uncertain":false},{"date":"2026-10-08","time":"20:30","title":"Perugia - Santory","kind":"Amichevole","id":"3sqltfqdau470ha91atupeicbv","uncertain":false},{"date":"2026-10-18","time":"18:00","title":"1 Giornata Andata: Cuneo - Perugia ore 18:00","kind":"SuperLega","id":"hc9m13r9rq90jaoso9dlaa0ni4","uncertain":false},{"date":"2026-10-25","time":"18:00","title":"2 Giornata Andata: Perugia - Prata ore 18:00","kind":"SuperLega","id":"hebec0vl6nlbha8mojbj3astlg","uncertain":false},{"date":"2026-10-28","time":"20:30","title":"Recupero: Perugia - Padova ore 20:30","kind":"SuperLega","id":"759ge6h4jh51ht6hkfaci4qn9k","uncertain":false},{"date":"2026-10-31","time":"18:00","title":"3 Giornata Andata: Monza - Perugia ore 18:00","kind":"SuperLega","id":"0e03jrj834ce9a9epmrvg15ipo","uncertain":false},{"date":"2026-11-04","time":"20:30","title":"4 Giornata Andata: Perugia - Latina ore 20:30","kind":"SuperLega","id":"7ep8e1dg7ba87lgt08u4c8rp9p","uncertain":false},{"date":"2026-11-08","time":"18:00","title":"5 Giornata Andata: Trento - Perugia ore 18:00","kind":"SuperLega","id":"6mujjjo1secaf5jem4mpjbje3c","uncertain":false},{"date":"2026-11-14","time":"15:00","title":"Supercoppa","kind":"Supercoppa","id":"2dhpidknqv8bovkdrl2oqo94c7","uncertain":true},{"date":"2026-11-15","time":"15:00","title":"Supercoppa","kind":"Supercoppa","id":"6t988ueq42144t366eqjiiil36","uncertain":true},{"date":"2026-11-22","time":"18:00","title":"6 Giornata Andata: Piacenza - Perugia","kind":"SuperLega","id":"32cg52ch1aapecdbh70k8esvps","uncertain":false},{"date":"2026-11-25","time":"20:30","title":"Recupero \"x\" giornata WCCM","kind":"Mondiale per Club","id":"3869jp0694ur389fcrtuoushq2","uncertain":true},{"date":"2026-11-29","time":"18:00","title":"7 Giornata Andata: Perugia - Modena ore 18:00","kind":"SuperLega","id":"787q0jjgvoluchaifhpidhld0c","uncertain":false},{"date":"2026-12-02","time":"20:30","title":"8 Giornata Andata: Milano - Perugia ore 20:30","kind":"SuperLega","id":"39ekol7iq15fsju5umdbvbbe2b","uncertain":false},{"date":"2026-12-06","time":"18:00","title":"9 Giornata Andata: Perugia - Verona ore 18:00","kind":"SuperLega","id":"58epm0g89kanb75u201a4vrjvp","uncertain":false},{"date":"2026-12-09","time":"20:30","title":"Champions League: Perugia - Bucarest ore 20:30","kind":"Champions League","id":"4lnqq9h2k6qd4djsrjjsglilor","uncertain":false},{"date":"2026-12-14","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261214T140000Z","uncertain":true},{"date":"2026-12-15","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261215T140000Z","uncertain":true},{"date":"2026-12-16","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261216T140000Z","uncertain":true},{"date":"2026-12-17","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261217T140000Z","uncertain":true},{"date":"2026-12-18","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261218T140000Z","uncertain":true},{"date":"2026-12-19","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261219T140000Z","uncertain":true},{"date":"2026-12-20","time":"15:00","title":"WCC Polonia","kind":"Mondiale per Club","id":"0sp3cnogrc0gtlc3mlmqnf9jqg_20261220T140000Z","uncertain":true},{"date":"2026-12-26","time":"18:00","title":"1 Giornata Ritorno: Latina - Perugia ore 18:00","kind":"SuperLega","id":"6uchae1hjp2vt7lrv665o5a4co","uncertain":false},{"date":"2026-12-30","time":"20:30","title":"Q. ti Coppa Italia ore 20:30","kind":"Coppa Italia","id":"7f9f9sr1ust5ht4qkf81vpt3i2","uncertain":false},{"date":"2027-01-03","time":"18:00","title":"2 Giornata Ritorno: Perugia - Milano ore 18:00","kind":"SuperLega","id":"2t4vtaa05th5mulhct99eom28a","uncertain":false},{"date":"2027-01-06","time":"20:30","title":"Champions League: Montpellier - Perugia ore 20:30","kind":"Champions League","id":"4tsnlgj18631ofdkpp7ltohl7m","uncertain":false},{"date":"2027-01-10","time":"18:00","title":"3 Giornata Ritorno: Prata - Perugia ore 18:00","kind":"SuperLega","id":"59cuf7c7fi16qj88p77o884e15","uncertain":false},{"date":"2027-01-13","time":"20:30","title":"4 Giornata Ritorno: Perugia - Piacenza ore 20:30","kind":"SuperLega","id":"0kec41usplb2lui83tgoohut7a","uncertain":false},{"date":"2027-01-17","time":"18:00","title":"5 Giornata Ritorno: Padova - Perugia ore 18:00","kind":"SuperLega","id":"041r7ilt8pja2j0p3h0197pmcc","uncertain":false},{"date":"2027-01-20","time":"19:00","title":"Champions League: Ziraat - Perugia ore 19:00","kind":"Champions League","id":"7boruaah3i8m4m2irudi1b2hge","uncertain":false},{"date":"2027-01-24","time":"18:00","title":"6 Giornata Ritorno: Perugia - Trento ore 18:00","kind":"SuperLega","id":"7kvlunhalagsfn9s3f7g4bbhp5","uncertain":false},{"date":"2027-01-27","time":"20:30","title":"Champions League: Perugia - Montpellier ore 20:30","kind":"Champions League","id":"7k76o2jnbe867iapq35tg7rjg6","uncertain":false},{"date":"2027-01-31","time":"18:00","title":"7 Giornata Ritorno: Verona - Perugia ore 18:00","kind":"SuperLega","id":"253vsj15gol9g0b96t811qs83f","uncertain":false},{"date":"2027-02-10","time":"20:30","title":"Champions League: Bucarest - Perugia ore 20:30","kind":"Champions League","id":"4eqbp2mdhtvivqb7nsg006ecjm","uncertain":false},{"date":"2027-02-14","time":"18:00","title":"8 Giornata Ritorno: Perugia - Cuneo ore 18:00","kind":"SuperLega","id":"5v73rsjdc58ict7dhfsuuini73","uncertain":false},{"date":"2027-02-17","time":"20:30","title":"Champions League: Perugia - Ziraat ore 20:30","kind":"Champions League","id":"7mrje379gv7u9bm2n77efg3v0d","uncertain":false},{"date":"2027-02-21","time":"18:00","title":"9 Giornata Ritorno: Modena - Perugia ore 18:00","kind":"SuperLega","id":"7m3q3g77rvud8eu19vm9kiv525","uncertain":false},{"date":"2027-02-24","time":"20:30","title":"10 Giornata Ritorno: Lube - Perugia ore 20:30","kind":"SuperLega","id":"43q1graddq0o0jfj1ilgbgjf5m","uncertain":false},{"date":"2027-02-28","time":"18:00","title":"11 Giornata Ritorno: Perugia - Monza ore 18:00","kind":"SuperLega","id":"7g0k52d1uv16n81ukv3vebrqog","uncertain":false}]}</script>
+<script src="./matchday-core.js?v=2"></script>
+<script src="./matchday-ui.js?v=2"></script>
+</body>
+</html>
