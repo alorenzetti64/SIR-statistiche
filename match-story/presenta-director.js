@@ -9,7 +9,7 @@ const safe=s=>String(s??'').replace(/[\u0000-\u001f]/g,' ').replace(/\s+/g,' ').
 const separate=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[ \t]+\n/g,'\n').replace(/\n[ \t]+/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 const shrink=(s,n)=>{const v=separate(s);if(v.length<=n)return v;const cut=v.slice(0,n),last=Math.max(cut.lastIndexOf('. '),cut.lastIndexOf('; '),cut.lastIndexOf(', '));return cut.slice(0,last>n*.62?last+1:n).trim()};
 const isHigh=ch=>String(ch.owner).toLowerCase()==='max'&&/^\s*high\s*balls?\s*$/i.test(ch.title||'');
-const included=ch=>ch.owner==='Angelo'||isHigh(ch);
+const included=ch=>(ch.owner==='Angelo'&&!/^\s*LA\s+BUSSOLA\s*$/i.test(ch.title||''))||isHigh(ch);
 const validImage=src=>/^(https?:\/\/|data:image\/(?:jpeg|jpg|png|gif|webp);base64,)/i.test(String(src||''));
 const validVideo=href=>/^https:\/\//i.test(String(href||''))&&/(youtube\.com|youtu\.be|vimeo\.com)/i.test(String(href||''));
 const nodeText=node=>{
@@ -66,12 +66,12 @@ function make(ch,title,body,layout='message',imageId=null,suffix='0'){
 function story(ch,sourceData){
  const out=[],assets=sourceData.assets,byCard=(card)=>assets.filter(a=>all(card,'img').some(img=>(img.getAttribute('src')||'')===a.src));
  const introParts=chunks(sourceData.intro,300,4);
- out.push(make(ch,(ch.title||'').toUpperCase(),introParts[0]||'', 'cover',null,'cover'));
+ if(introParts[0])out.push(make(ch,(ch.title||'').toUpperCase(),introParts[0], 'summary',null,'intro-0'));
  if(/^\s*SIDE OUT PERUGIA\s*$/i.test(ch.title||'')&&sourceData.intro.includes('FERAL')&&sourceData.intro.includes('ALTEZZA')){
   out.push(make(ch,'IL LORO BREAK','Battuta con pochi errori e numerose variazioni.\nCentrali e posti 2 efficaci a muro.','summary',null,'side-break'));
-  out.push(make(ch,'GHIGLIOTTINA SU FERAL','TENERE VIVA LA PALLA.','message',null,'side-ghigliottina'));
-  out.push(make(ch,'HIGH BALL CORTE','Lavorare sul terzo uomo di muro.\nContro il muro alto di M2 e M3: Tik-tok o mani out.','message',null,'side-high'));
-  out.push(make(ch,'VARIAZIONI CORTE','Spin corte e float corte, soprattutto sui centrali.','message',null,'side-corte'));
+  out.push(make(ch,'GHIGLIOTTINA SU FERAL','TENERE VIVA LA PALLA.\nLa nostra priorità immediata, fin dal primo scambio.','summary',null,'side-ghigliottina'));
+  out.push(make(ch,'HIGH BALL CORTE','Lavorare sul terzo uomo di muro, il meno imponente dei tre.\nContro il muro alto di M2 e M3: Tik-tok o mani out.','summary',null,'side-high'));
+  out.push(make(ch,'VARIAZIONI CORTE','Spin corte e float corte, soprattutto sui centrali.\nTre principi: altezza mezzo side out, disponibilità a essere esclusi dall’attacco e comunicazione.','summary',null,'side-corte'));
   out.push(make(ch,'ALTEZZA MEZZO SIDE OUT','Accettiamo di essere esclusi dall’attacco per mettere l’alzatore e gli altri tre attaccanti nelle condizioni migliori.','summary',null,'side-altezza'));
   out.push(make(ch,'COMUNICARE','Libero: comunicazione verbale.\nPrima linea: gesti per aiutare la seconda linea sulle battute corte.','summary',null,'side-comunicare'));
   return out;
@@ -133,7 +133,7 @@ function preview(ch,report){
 async function open({report,chapters,editMode=false}){
  if(document.querySelector('.sir-dir'))return;
  const chosen=chapters.filter(included);
- const excluded=chapters.filter(ch=>ch.owner==='Max'&&!isHigh(ch));
+ const excluded=chapters.filter(ch=>!included(ch));
  if(!chosen.length){alert('Nessun capitolo di Angelo o HIGH BALLS di Max disponibile.');return}
  const records=new Map(chapters.map(ch=>[String(ch.section_id||ch.title),ch]));
  const images=new Map;chapters.filter(included).forEach(ch=>source(ch).assets.forEach(asset=>images.set(asset.id,asset)));
@@ -144,7 +144,7 @@ async function open({report,chapters,editMode=false}){
  let local=null;
  try{local=JSON.parse(localStorage.getItem(backupKey)||'null')}catch(e){}
  const shell=document.createElement('section');shell.className='sir-dir';shell.setAttribute('role','dialog');shell.setAttribute('aria-modal','true');shell.setAttribute('aria-label','PRESENTA · Regia tecnica');
- shell.innerHTML='<header class="sd-top"><strong class="sd-brand">SIR MATCH STORY <span>/ PRESENTA</span></strong><span class="sd-match"></span><div class="sd-tools"><button class="sd-tool" data-sd="index">INDICE</button><button class="sd-tool" data-sd="edit">MODIFICA</button><button class="sd-tool" data-sd="full">SCHERMO INTERO</button><button class="sd-tool" data-sd="close">CHIUDI</button></div></header><main class="sd-main"><div class="sd-stage"><div class="sd-surface" id="sdSurface"></div></div><aside class="sd-sidebar" id="sdEditor" hidden><div class="sd-side-top"><strong>REGIA · MODIFICA SLIDE</strong><p>Il report e le card originali rimangono invariati. Qui modifichi soltanto il racconto proiettato.</p></div><div class="sd-field"><label for="sdEditTitle">Titolo</label><textarea id="sdEditTitle" maxlength="170" rows="2"></textarea></div><div class="sd-field"><label for="sdEditBody">Messaggio / spiegazione</label><textarea id="sdEditBody" rows="5" maxlength="1200"></textarea><small>Se il testo è molto lungo, puoi dividerlo in più slide.</small></div><div class="sd-field"><label for="sdEditLayout">Tipo di schermata</label><select id="sdEditLayout"><option value="cover">Apertura capitolo</option><option value="message">Messaggio forte</option><option value="split">Immagine + testo</option><option value="photo">Immagine protagonista</option><option value="summary">Sintesi</option></select></div><div class="sd-field"><label for="sdEditPhoto">Immagine dal capitolo originale</label><select id="sdEditPhoto"></select></div><div class="sd-assets-preview" id="sdImagePreview">Nessuna immagine selezionata</div><div class="sd-editor-actions"><button class="sd-editbtn" data-sd="up">↑ Sposta</button><button class="sd-editbtn" data-sd="down">↓ Sposta</button><button class="sd-editbtn" data-sd="add">+ Slide</button><button class="sd-editbtn sd-danger" data-sd="delete">Elimina slide</button></div><div class="sd-side-divider"></div><div class="sd-editor-actions"><button class="sd-editbtn sd-save" data-sd="save">Salva adesso</button><button class="sd-editbtn" data-sd="reset">Rigenera dalle card</button></div><div class="sd-save-state" id="sdSaveState">Le modifiche si salvano automaticamente.</div></aside><div class="sd-nav-shade" id="sdNavigator" hidden><div class="sd-nav-panel"><header class="sd-nav-h"><div><small>INDICE DELLA PRESENTAZIONE</small><strong>I capitoli del racconto</strong></div><button class="sd-tool" data-sd="index-close">CHIUDI</button></header><div class="sd-nav-section">PRESENTA · CAPITOLI DI ANGELO E HIGH BALLS</div><div class="sd-nav-grid" id="sdChapters"></div><div class="sd-nav-other"><div class="sd-nav-section">MAX · SOLO ANTEPRIMA ORIGINALE</div><p class="sd-nav-msg">Questi capitoli non vengono trasformati in slide. Si aprono esattamente come materiale di consultazione.</p><div class="sd-nav-grid" id="sdExtras"></div></div></div></div><div class="sd-toast" id="sdToast" hidden></div></main><footer class="sd-footer-bar"><button class="sd-arrow" data-sd="previous" aria-label="Indietro">←</button><button class="sd-arrow sd-forward" data-sd="next" aria-label="Avanti">→</button><span class="sd-count" id="sdCount">01 / 01</span><div class="sd-progress" id="sdProgress"></div><span class="sd-btm-label" id="sdDetailHint">→ mostrerà il dettaglio successivo</span></footer>';
+ shell.innerHTML='<header class="sd-top"><strong class="sd-brand">SIR MATCH STORY <span>/ PRESENTA</span></strong><span class="sd-match"></span><div class="sd-tools"><button class="sd-tool sd-primary" data-sd="report">RAPPORTINO COMPLETO ↗</button><button class="sd-tool" data-sd="index">INDICE</button><button class="sd-tool" data-sd="edit">MODIFICA</button><button class="sd-tool" data-sd="full">SCHERMO INTERO</button><button class="sd-tool" data-sd="close">CHIUDI</button></div></header><main class="sd-main"><div class="sd-stage"><div class="sd-surface" id="sdSurface"></div></div><aside class="sd-sidebar" id="sdEditor" hidden><div class="sd-side-top"><strong>REGIA · MODIFICA SLIDE</strong><p>Il report e le card originali rimangono invariati. Qui modifichi soltanto il racconto proiettato.</p></div><div class="sd-field"><label for="sdEditTitle">Titolo</label><textarea id="sdEditTitle" maxlength="170" rows="2"></textarea></div><div class="sd-field"><label for="sdEditBody">Messaggio / spiegazione</label><textarea id="sdEditBody" rows="5" maxlength="1200"></textarea><small>Se il testo è molto lungo, puoi dividerlo in più slide.</small></div><div class="sd-field"><label for="sdEditLayout">Tipo di schermata</label><select id="sdEditLayout"><option value="cover">Apertura capitolo</option><option value="message">Messaggio forte</option><option value="split">Immagine + testo</option><option value="photo">Immagine protagonista</option><option value="summary">Sintesi</option></select></div><div class="sd-field"><label for="sdEditPhoto">Immagine dal capitolo originale</label><select id="sdEditPhoto"></select></div><div class="sd-assets-preview" id="sdImagePreview">Nessuna immagine selezionata</div><div class="sd-editor-actions"><button class="sd-editbtn" data-sd="up">↑ Sposta</button><button class="sd-editbtn" data-sd="down">↓ Sposta</button><button class="sd-editbtn" data-sd="add">+ Slide</button><button class="sd-editbtn sd-danger" data-sd="delete">Elimina slide</button></div><div class="sd-side-divider"></div><div class="sd-editor-actions"><button class="sd-editbtn sd-save" data-sd="save">Salva adesso</button><button class="sd-editbtn" data-sd="reset">Rigenera dalle card</button></div><div class="sd-save-state" id="sdSaveState">Le modifiche si salvano automaticamente.</div></aside><div class="sd-nav-shade" id="sdNavigator" hidden><div class="sd-nav-panel"><header class="sd-nav-h"><div><small>INDICE DELLA PRESENTAZIONE</small><strong>I capitoli del racconto</strong></div><button class="sd-tool" data-sd="index-close">CHIUDI</button></header><div class="sd-nav-section">PRESENTA · ANGELO (ESCLUSA LA BUSSOLA) E HIGH BALLS</div><div class="sd-nav-grid" id="sdChapters"></div><div class="sd-nav-other"><div class="sd-nav-section">ALTRI CAPITOLI · ANTEPRIMA ORIGINALE</div><p class="sd-nav-msg">Gli altri capitoli, compresa LA BUSSOLA, restano consultabili dal rapportino completo e in Anteprima.</p><div class="sd-nav-grid" id="sdExtras"></div></div></div></div><div class="sd-toast" id="sdToast" hidden></div></main><footer class="sd-footer-bar"><button class="sd-arrow" data-sd="previous" aria-label="Indietro">←</button><button class="sd-arrow sd-forward" data-sd="next" aria-label="Avanti">→</button><span class="sd-count" id="sdCount">01 / 01</span><div class="sd-progress" id="sdProgress"></div><span class="sd-btm-label" id="sdDetailHint">→ mostrerà il dettaglio successivo</span></footer>';
  document.body.append(shell);
  const previousFocus=document.activeElement,oldOverflow=document.body.style.overflow;
  document.body.style.overflow='hidden';
@@ -206,7 +206,7 @@ async function open({report,chapters,editMode=false}){
  function show(syncForm=true){
    if(!pages.length)return;
    at=Math.min(Math.max(0,at),pages.length-1);
-   const p=pages[at],asset=imageRef(p),hasDetail=!!(p.body?.trim()||asset),revealed=beat>0||!hasDetail;
+   const p=pages[at],asset=imageRef(p),hasDetail=!!(p.body?.trim()||asset),revealed=true;
    surface.replaceChildren();
    const scene=document.createElement('article');scene.className='sd-slide '+(p.owner==='Max'?'sd-max':'')+' sd-'+p.layout+(p.layout==='split'||p.layout==='summary'?' sd-light':'');
    const header=document.createElement('div');header.className='sd-eyebrow';
@@ -242,9 +242,9 @@ async function open({report,chapters,editMode=false}){
      if(!desc.hidden){const bodyMax=p.layout==='cover'?32:p.layout==='message'?37:p.layout==='summary'?40:p.layout==='split'?31:28;dynamicFont(desc,bodyMax,22,p.layout==='photo'?320:p.layout==='split'?360:355)}
    });
    $(shell,'#sdCount').textContent=String(at+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0');
-   $(shell,'#sdDetailHint').textContent=hasDetail&&!revealed?'→ mostra spiegazione / immagine':'→ prossima schermata';
-   $(shell,'[data-sd="previous"]').disabled=at===0&&beat===0;
-   $(shell,'[data-sd="next"]').disabled=at===pages.length-1&&(beat>0||!hasDetail);
+   $(shell,'#sdDetailHint').textContent='TUTTI GLI ELEMENTI DELLA SLIDE SONO VISIBILI';
+   $(shell,'[data-sd="previous"]').disabled=at===0;
+   $(shell,'[data-sd="next"]').disabled=at===pages.length-1;
    progress.replaceChildren();
    pages.forEach((page,i)=>{
      const b=document.createElement('button');b.type='button';b.className='sd-tick'+(i===at?' is-active':i<at?' is-past':'');
@@ -253,8 +253,8 @@ async function open({report,chapters,editMode=false}){
    });
    if(syncForm)editForm();resize();
  }
- function next(){const p=pages[at];if(!p)return;if(beat===0&&(p.body?.trim()||imageRef(p))){beat=1;show();return}if(at<pages.length-1){at++;beat=0;show()}}
- function prev(){if(beat===1){beat=0;show();return}if(at>0){at--;beat=1;show()}}
+ function next(){if(at<pages.length-1){at++;show()}}
+ function prev(){if(at>0){at--;show()}}
  function updateScene(prop,val){if(!pages[at])return;pages[at][prop]=val;if(prop==='imageId'&&val&&['cover','message','summary'].includes(pages[at].layout))pages[at].layout='split';mark();show()}
  function rebuildIndex(){
    chaptersEl.replaceChildren();extraEl.replaceChildren();
@@ -266,12 +266,13 @@ async function open({report,chapters,editMode=false}){
      const label=document.createElement('span');label.textContent=ch.title+' · '+ch.owner;
      b.append(n,label);b.onclick=()=>{navigator.hidden=true;at=first;beat=0;show()};chaptersEl.append(b)
    }
-   if(!excluded.length){const p=document.createElement('p');p.className='sd-nav-msg';p.textContent='Nessun altro capitolo Max.';extraEl.append(p)}
+   if(!excluded.length){const p=document.createElement('p');p.className='sd-nav-msg';p.textContent='Tutti i capitoli sono già in PRESENTA.';extraEl.append(p)}
    excluded.forEach(ch=>{const b=document.createElement('button');b.type='button';b.className='sd-preview-link';b.textContent='↗ '+ch.title;b.onclick=()=>preview(ch,report);extraEl.append(b)})
  }
  const delegated=async ev=>{
    const btn=ev.target.closest('[data-sd]');if(!btn)return;
    const action=btn.dataset.sd;
+   if(action==='report')window.open(new URL('./?view=players&id='+encodeURIComponent(report.id),location.href).href,'_blank','noopener');
    if(action==='next')next();
    if(action==='previous')prev();
    if(action==='index'){rebuildIndex();navigator.hidden=false}
