@@ -138,3 +138,8 @@
  .sir-dir .sd-rich-title{font-size:23px!important}
  .sir-dir .sd-rich-line input[type=number]{width:68px!important;max-width:68px}
 }
+
+/* Keep text tools accessible while scrolling through a long speech; avoid automatic broken words. */
+.sir-dir .sd-sidebar:not([hidden]) .sd-rich-toolbar{position:sticky!important;top:88px!important;z-index:5!important;box-shadow:0 7px 24px #182f4b22}
+.sir-dir .sd-slide .sd-h{hyphens:manual;word-break:normal;overflow-wrap:break-word}
+@media(max-width:650px){.sir-dir .sd-sidebar:not([hidden]) .sd-rich-toolbar{top:105px!important}}
