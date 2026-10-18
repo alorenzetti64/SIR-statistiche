@@ -158,13 +158,14 @@ async function open({report,chapters,editMode=false}){
  let local=null;
  try{local=JSON.parse(localStorage.getItem(backupKey)||'null')}catch(e){}
  const shell=document.createElement('section');shell.className='sir-dir';shell.setAttribute('role','dialog');shell.setAttribute('aria-modal','true');shell.setAttribute('aria-label','PRESENTA · Regia tecnica');
- shell.innerHTML='<header class="sd-top"><strong class="sd-brand">SIR MATCH STORY <span>/ PRESENTA</span></strong><span class="sd-match"></span><div class="sd-tools"><button class="sd-tool sd-primary" data-sd="report">RAPPORTINO COMPLETO ↗</button><button class="sd-tool" data-sd="edit">MODIFICA</button><button class="sd-tool" data-sd="full">SCHERMO INTERO</button><button class="sd-tool" data-sd="close">CHIUDI</button></div></header><main class="sd-main"><div class="sd-stage"><div class="sd-surface" id="sdSurface"></div></div><aside class="sd-sidebar" id="sdEditor" hidden><div class="sd-side-top"><strong>REGIA · MODIFICA SLIDE</strong><p>Il report e le card originali rimangono invariati. Qui modifichi soltanto il racconto proiettato.</p></div><div class="sd-field"><label for="sdEditTitle">Titolo</label><textarea id="sdEditTitle" maxlength="170" rows="2"></textarea></div><div class="sd-field"><label for="sdEditBody">Messaggio / spiegazione</label><textarea id="sdEditBody" rows="5" maxlength="1200"></textarea><small>Se il testo è molto lungo, puoi dividerlo in più slide.</small></div><div class="sd-field"><label for="sdEditLayout">Tipo di schermata</label><select id="sdEditLayout"><option value="cover">Apertura capitolo</option><option value="message">Messaggio forte</option><option value="split">Immagine + testo</option><option value="photo">Immagine protagonista</option><option value="summary">Sintesi</option></select></div><div class="sd-field"><label for="sdEditPhoto">Immagine dal capitolo originale</label><select id="sdEditPhoto"></select></div><div class="sd-assets-preview" id="sdImagePreview">Nessuna immagine selezionata</div><div class="sd-editor-actions"><button class="sd-editbtn" data-sd="up">↑ Sposta</button><button class="sd-editbtn" data-sd="down">↓ Sposta</button><button class="sd-editbtn" data-sd="add">+ Slide</button><button class="sd-editbtn sd-danger" data-sd="delete">Elimina slide</button></div><div class="sd-side-divider"></div><div class="sd-editor-actions"><button class="sd-editbtn sd-save" data-sd="save">Salva adesso</button><button class="sd-editbtn" data-sd="reset">Rigenera dalle card</button></div><div class="sd-save-state" id="sdSaveState">Le modifiche si salvano automaticamente.</div></aside><div class="sd-nav-shade" id="sdNavigator" hidden><div class="sd-nav-panel"><header class="sd-nav-h"><div><small>INDICE DELLA PRESENTAZIONE</small><strong>I capitoli del racconto</strong></div><button class="sd-tool" data-sd="index-close">CHIUDI</button></header><div class="sd-nav-section">PRESENTA · ANGELO (ESCLUSA LA BUSSOLA) E HIGH BALLS</div><div class="sd-nav-grid" id="sdChapters"></div><div class="sd-nav-other"><div class="sd-nav-section">ALTRI CAPITOLI · ANTEPRIMA ORIGINALE</div><p class="sd-nav-msg">Gli altri capitoli, compresa LA BUSSOLA, restano consultabili dal rapportino completo e in Anteprima.</p><div class="sd-nav-grid" id="sdExtras"></div></div></div></div><div class="sd-toast" id="sdToast" hidden></div></main><footer class="sd-footer-bar"><button class="sd-arrow" data-sd="previous" aria-label="Indietro">←</button><button class="sd-arrow sd-forward" data-sd="next" aria-label="Avanti">→</button><span class="sd-count" id="sdCount">01 / 01</span><div class="sd-progress" id="sdProgress"></div><span class="sd-btm-label" id="sdDetailHint">→ mostrerà il dettaglio successivo</span></footer>';
+ shell.innerHTML='<header class="sd-top"><strong class="sd-brand">SIR MATCH STORY <span>/ PRESENTA</span></strong><span class="sd-match"></span><div class="sd-tools"><button class="sd-tool sd-primary" data-sd="report">RAPPORTINO COMPLETO ↗</button><button class="sd-tool" data-sd="edit">MODIFICA</button><button class="sd-tool" data-sd="full">SCHERMO INTERO</button><button class="sd-tool" data-sd="close">CHIUDI</button></div></header><main class="sd-main"><div class="sd-stage"><div class="sd-surface" id="sdSurface"></div></div><aside class="sd-sidebar" id="sdEditor" hidden><div class="sd-side-top"><strong>REGIA · MODIFICA SLIDE</strong><p>Il report e le card originali rimangono invariati. Qui modifichi soltanto il racconto proiettato.</p></div><div class="sd-field"><label for="sdEditTitle">Titolo</label><textarea id="sdEditTitle" maxlength="170" rows="2"></textarea></div><div class="sd-field"><label for="sdEditBody">Messaggio / spiegazione</label><textarea id="sdEditBody" rows="5" maxlength="1200"></textarea><small>Se il testo è molto lungo, puoi dividerlo in più slide.</small></div><div class="sd-field"><label for="sdTitleSize">Dimensione titolo <output id="sdTitleSizeValue">Auto</output></label><input id="sdTitleSize" type="range" min="30" max="135" step="1" value="89"><small>Regola le dimensioni direttamente mentre guardi la slide.</small></div><div class="sd-field"><label for="sdBodySize">Dimensione testo <output id="sdBodySizeValue">Auto</output></label><input id="sdBodySize" type="range" min="18" max="52" step="1" value="34"></div><div class="sd-field"><label for="sdEditLayout">Tipo di schermata</label><select id="sdEditLayout"><option value="cover">Apertura capitolo</option><option value="message">Messaggio forte</option><option value="split">Immagine + testo</option><option value="photo">Immagine protagonista</option><option value="summary">Sintesi</option></select></div><div class="sd-field"><label for="sdEditPhoto">Immagine dal capitolo originale</label><select id="sdEditPhoto"></select></div><div class="sd-assets-preview" id="sdImagePreview">Nessuna immagine selezionata</div><div class="sd-editor-actions"><button class="sd-editbtn" data-sd="up">↑ Sposta</button><button class="sd-editbtn" data-sd="down">↓ Sposta</button><button class="sd-editbtn" data-sd="add">+ Slide</button><button class="sd-editbtn sd-danger" data-sd="delete">Elimina slide</button></div><div class="sd-side-divider"></div><div class="sd-editor-actions"><button class="sd-editbtn sd-save" data-sd="save">Salva adesso</button><button class="sd-editbtn" data-sd="reset">Rigenera dalle card</button></div><div class="sd-save-state" id="sdSaveState">Le modifiche si salvano automaticamente.</div></aside><div class="sd-nav-shade" id="sdNavigator" hidden><div class="sd-nav-panel"><header class="sd-nav-h"><div><small>INDICE DELLA PRESENTAZIONE</small><strong>I capitoli del racconto</strong></div><button class="sd-tool" data-sd="index-close">CHIUDI</button></header><div class="sd-nav-section">PRESENTA · ANGELO (ESCLUSA LA BUSSOLA) E HIGH BALLS</div><div class="sd-nav-grid" id="sdChapters"></div><div class="sd-nav-other"><div class="sd-nav-section">ALTRI CAPITOLI · ANTEPRIMA ORIGINALE</div><p class="sd-nav-msg">Gli altri capitoli, compresa LA BUSSOLA, restano consultabili dal rapportino completo e in Anteprima.</p><div class="sd-nav-grid" id="sdExtras"></div></div></div></div><div class="sd-toast" id="sdToast" hidden></div></main><footer class="sd-footer-bar"><button class="sd-arrow" data-sd="previous" aria-label="Indietro">←</button><button class="sd-arrow sd-forward" data-sd="next" aria-label="Avanti">→</button><span class="sd-count" id="sdCount">01 / 01</span><div class="sd-progress" id="sdProgress"></div><span class="sd-btm-label" id="sdDetailHint">→ mostrerà il dettaglio successivo</span></footer>';
  document.body.append(shell);
  const previousFocus=document.activeElement,oldOverflow=document.body.style.overflow;
  document.body.style.overflow='hidden';
  const stage=$(shell,'.sd-stage'),surface=$(shell,'#sdSurface'),editor=$(shell,'#sdEditor');
  const navigator=$(shell,'#sdNavigator'),progress=$(shell,'#sdProgress'),chaptersEl=$(shell,'#sdChapters'),extraEl=$(shell,'#sdExtras');
  const titleInput=$(shell,'#sdEditTitle'),bodyInput=$(shell,'#sdEditBody'),layoutInput=$(shell,'#sdEditLayout'),photoInput=$(shell,'#sdEditPhoto');
+ const titleSizeInput=$(shell,'#sdTitleSize'),bodySizeInput=$(shell,'#sdBodySize');
  const previewEl=$(shell,'#sdImagePreview'),status=$(shell,'#sdSaveState'),toaster=$(shell,'#sdToast');
  $(shell,'.sd-match').textContent=report.title||'MATCH REPORT';
  let ro=null;
@@ -211,6 +212,9 @@ async function open({report,chapters,editMode=false}){
    photoInput.value=p.imageId||'';
    if(photoInput.selectedIndex<0)photoInput.value='';
    chooseImage();
+   titleSizeInput.value=p.titleSize||89;bodySizeInput.value=p.bodySize||34;
+   $(shell,'#sdTitleSizeValue').textContent=p.titleSize?p.titleSize+' px':'Auto';
+   $(shell,'#sdBodySizeValue').textContent=p.bodySize?p.bodySize+' px':'Auto';
  }
  function dynamicFont(el,preferred,min,allowedHeight){
    let v=preferred;
@@ -257,7 +261,7 @@ async function open({report,chapters,editMode=false}){
          pages[at][field]=value;mark();
          if(field==='title')titleInput.value=value;else bodyInput.value=value;
        });
-       el.addEventListener('blur',()=>show(false));
+       el.addEventListener('blur',()=>{ if(!editing)return; const value=el.innerText.slice(0,limit); if(pages[at][field]!==value){pages[at][field]=value;mark()} });
        el.addEventListener('keydown',e=>e.stopPropagation());
      }
    }
@@ -266,8 +270,8 @@ async function open({report,chapters,editMode=false}){
      if(!scene.isConnected)return;
      const maxTitle=p.layout==='cover'?130:p.layout==='message'?107:p.layout==='summary'?84:p.layout==='split'?68:64;
      const titleSpace=(p.layout==='photo'||p.layout==='split')?360:480;
-     dynamicFont(head,maxTitle,34,titleSpace);
-     if(!desc.hidden){const bodyMax=p.layout==='cover'?32:p.layout==='message'?37:p.layout==='summary'?40:p.layout==='split'?31:28;dynamicFont(desc,bodyMax,22,p.layout==='photo'?320:p.layout==='split'?360:355)}
+     dynamicFont(head,p.titleSize?Math.min(maxTitle,Number(p.titleSize)):maxTitle,28,titleSpace);
+     if(!desc.hidden){const bodyMax=p.layout==='cover'?32:p.layout==='message'?37:p.layout==='summary'?40:p.layout==='split'?31:28;dynamicFont(desc,p.bodySize?Math.min(bodyMax,Number(p.bodySize)):bodyMax,16,p.layout==='photo'?320:p.layout==='split'?360:355)}
    });
    $(shell,'#sdCount').textContent=String(at+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0');
    $(shell,'#sdDetailHint').textContent='TUTTI GLI ELEMENTI DELLA SLIDE SONO VISIBILI';
@@ -329,6 +333,12 @@ async function open({report,chapters,editMode=false}){
  bodyInput.addEventListener('input',()=>{pages[at].body=bodyInput.value;mark();show(false)});
  layoutInput.addEventListener('change',()=>updateScene('layout',layoutInput.value));
  photoInput.addEventListener('change',()=>updateScene('imageId',photoInput.value||null));
+ titleSizeInput.addEventListener('input',()=>{
+   pages[at].titleSize=Number(titleSizeInput.value);$(shell,'#sdTitleSizeValue').textContent=titleSizeInput.value+' px';mark();show(false);
+ });
+ bodySizeInput.addEventListener('input',()=>{
+   pages[at].bodySize=Number(bodySizeInput.value);$(shell,'#sdBodySizeValue').textContent=bodySizeInput.value+' px';mark();show(false);
+ });
  const keydown=e=>{
    if(!shell.isConnected)return;
    if(e.target.matches('input,textarea,select,[contenteditable=true]'))return;
