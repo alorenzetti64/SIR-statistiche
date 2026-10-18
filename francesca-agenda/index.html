@@ -488,7 +488,7 @@ openModal=function(e,date){if(!frSession){frOpenAuth();return}originalOpen(e,dat
 const originalEventsView=eventsView;
 eventsView=function(){if(!frSession)return '<div class="panel private-prompt"><h2>Gli appuntamenti di Francesca</h2><p>Questa parte dell’agenda è privata. Accedi oppure crea un account con la tua email per sincronizzare gli eventi fra telefono e computer.</p><button type="button" id="privateLogin" onclick="frOpenAuth()">Accedi / Registrati</button></div>';return originalEventsView().replace("gli appuntamenti restano soltanto in questo browser, su questo dispositivo. Non c’è un account e non sono caricati su un server.","gli appuntamenti sono sincronizzati nell’account personale tramite un database protetto. È consigliabile conservare anche un backup.")};
 const originalSourceNote=sourceNote;
-sourceNote=function(){if(matchLive)return '<p class="footnote"><span class="source-live">Partite aggiornate da Google Calendar Superlega.</span> Sono visibili solo le gare contrassegnate “match”.</p>';return originalSourceNote().replace("Questa prima versione è una copia delle partite, non una sincronizzazione automatica.","La copia iniziale è disponibile; non è stato possibile attivare la lettura automatica del calendario perché servono i permessi di condivisione Google.")};
+sourceNote=function(){if(!matchLive&&window.FR_MATCH_FEED_LOADED)return '<p class="footnote"><span class="source-live">Partite sincronizzate quotidianamente con Google Calendar Superlega.</span> La data dell’ultimo aggiornamento è indicata nel file partite.json.</p>';if(matchLive)return '<p class="footnote"><span class="source-live">Partite aggiornate da Google Calendar Superlega.</span> Sono visibili solo le gare contrassegnate “match”.</p>';return originalSourceNote().replace("Questa prima versione è una copia delle partite, non una sincronizzazione automatica.","La copia iniziale è disponibile; non è stato possibile attivare la lettura automatica del calendario perché servono i permessi di condivisione Google.")};
 async function frLogout(){try{if(frSession?.access_token)await fetch(FR_SB+"/auth/v1/logout",{method:"POST",headers:{apikey:FR_KEY,authorization:"Bearer "+frSession.access_token}})}catch{}frSession=null;remoteIds.clear();localStorage.removeItem(FR_SESSION_KEY);localStorage.removeItem(KEY);events=[];frAccount();render()}
 document.getElementById("frForm").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("frError"),btn=document.getElementById("frSubmit");msg.textContent="";btn.disabled=true;const email=document.getElementById("frEmail").value.trim(),password=document.getElementById("frPassword").value;try{
 if(authMode==="signup"){const d=await frAuthRequest("signup",{email,password});if(!d.access_token){msg.style.color="#32774b";msg.textContent="Registrazione richiesta. Apri l’email di conferma, poi torna qui e premi «Accedi».";return}frSaveSession(d)}
@@ -509,6 +509,7 @@ const response=await fetch("./partite.json?v="+Date.now(),{cache:"no-store"});
 if(!response.ok) return;
 const data=await response.json();
 if(!matchLive&&Array.isArray(data.matches)&&data.matches.length){
+window.FR_MATCH_FEED_LOADED=true;
 GAMES.splice(0,GAMES.length,...data.matches);
 render();
 }
