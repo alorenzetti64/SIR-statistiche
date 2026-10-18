@@ -502,4 +502,17 @@ window.addEventListener("online",()=>{if(frSession){pendingSync=pendingSync.then
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&frSession&&!cloudBusy){pendingSync.then(frLoad).catch(()=>{})}});
 
 </script>
+<script>
+(async function(){
+try{
+const response=await fetch("./partite.json?v="+Date.now(),{cache:"no-store"});
+if(!response.ok) return;
+const data=await response.json();
+if(!matchLive&&Array.isArray(data.matches)&&data.matches.length){
+GAMES.splice(0,GAMES.length,...data.matches);
+render();
+}
+}catch(err){console.info("Partite: copia integrata disponibile")}
+})();
+</script>
 </body></html>
