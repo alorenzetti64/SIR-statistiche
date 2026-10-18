@@ -86,3 +86,23 @@
 }
 .sir-dir .sd-slide.sd-split .sd-textcol,.sir-dir .sd-slide.sd-photo .sd-textcol{overflow:auto;scrollbar-width:thin;scrollbar-color:#c46d8a transparent}
 .sir-dir .sd-slide [data-sd-editable]{overflow-wrap:anywhere}
+
+/* iPad hard fix: REGIA is a fully independent full-screen scrollable modal. */
+.sir-dir .sd-sidebar:not([hidden]){
+ position:fixed!important;inset:0!important;top:0!important;right:0!important;bottom:0!important;left:0!important;
+ z-index:2147480010!important;width:100vw!important;max-width:none!important;min-width:0!important;
+ height:100dvh!important;max-height:100dvh!important;min-height:0!important;
+ display:block!important;overflow-y:scroll!important;overflow-x:hidden!important;
+ overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;
+ padding:0 0 100px!important;border:0!important;box-shadow:none!important;
+ touch-action:pan-y!important;
+}
+.sir-dir .sd-sidebar:not([hidden]) .sd-side-top{position:sticky!important;top:0!important;z-index:5!important;padding:17px 23px!important;background:#f7f8f9!important}
+.sir-dir .sd-sidebar:not([hidden]) .sd-field{padding:15px 23px 0!important}
+.sir-dir .sd-sidebar:not([hidden]) .sd-editor-actions{padding:16px 23px 0!important}
+.sir-dir .sd-sidebar:not([hidden]) .sd-assets-preview{margin:10px 23px!important}
+.sir-dir .sd-sidebar:not([hidden]) .sd-save-state{padding:18px 23px!important}
+.sir-dir .sd-sidebar:not([hidden]) input,.sir-dir .sd-sidebar:not([hidden]) textarea,.sir-dir .sd-sidebar:not([hidden]) select{font-size:17px!important}
+.sir-dir .sd-sidebar:not([hidden]) textarea{min-height:112px!important}
+.sir-dir .sd-main:has(.sd-sidebar:not([hidden])){display:flex!important;flex-direction:row!important}
+@media(min-width:850px){.sir-dir .sd-sidebar:not([hidden]) .sd-field,.sir-dir .sd-sidebar:not([hidden]) .sd-editor-actions,.sir-dir .sd-sidebar:not([hidden]) .sd-assets-preview,.sir-dir .sd-sidebar:not([hidden]) .sd-save-state{max-width:950px;margin-left:auto!important;margin-right:auto!important}}
