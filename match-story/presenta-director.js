@@ -4,6 +4,7 @@
 const DB_API='https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-director';
 const layouts=['cover','message','split','photo','summary'];
 const rich=window.SirPresentaRichText;
+const backgrounds=window.SirPresentaBackgrounds;
 if(!rich)throw Error('Editor testo non caricato: aggiorna la pagina.');
 
 const $=(root,selector)=>root.querySelector(selector);
@@ -180,6 +181,7 @@ async function open({report,chapters,editMode=false}){
  let ro=null;
  const showToast=msg=>{toaster.textContent=msg;toaster.hidden=false;clearTimeout(showToast.handle);showToast.handle=setTimeout(()=>toaster.hidden=true,2600)};
  const imageRef=page=>page.customImageUrl&&validImage(page.customImageUrl) ?{id:'direct-upload',src:page.customImageUrl,alt:page.customImageName||'Immagine caricata in REGIA'}:images.get(page.imageId||'');
+ const backgroundPanel=backgrounds.build(editor,{reportId:report.id,getPage:()=>pages[at],getPages:()=>pages,getImage:imageRef,changed:mark,draw:()=>show(false),save:()=>save(false)});
  function resize(){if(!shell.isConnected)return;const r=stage.getBoundingClientRect(),scale=Math.min((r.width-22)/1280,(r.height-22)/720);surface.style.transform='scale('+Math.max(.07,scale)+')'}
  ro=new ResizeObserver(resize);ro.observe(stage);
  function note(){status.textContent=dirty?'Modifiche in attesa di salvataggio…':stale?'Materiale originale cambiato: per aggiornare la sequenza usa «Rigenera dalle card» (le modifiche al racconto verranno sostituite).':'✓ Regia salvata. Le card del report restano intatte.'}
@@ -225,6 +227,7 @@ async function open({report,chapters,editMode=false}){
    photoInput.value=p.customImageUrl?'__uploaded__':(p.imageId||'');
    if(photoInput.selectedIndex<0)photoInput.value='';
    chooseImage();
+   backgroundPanel.refresh();
    titleSizeInput.value=p.titleSize||89;bodySizeInput.value=p.bodySize||34;titleFontInput.value=p.titleFont||'inter';bodyFontInput.value=p.bodyFont||'inter';
    $(shell,'#sdTitleSizeValue').textContent=p.titleSize?p.titleSize+' px':'Auto';
    $(shell,'#sdBodySizeValue').textContent=p.bodySize?p.bodySize+' px':'Auto';
@@ -241,6 +244,7 @@ async function open({report,chapters,editMode=false}){
    const p=pages[at],asset=imageRef(p),hasDetail=!!(p.body?.trim()||asset),revealed=true;
    surface.replaceChildren();
    const scene=document.createElement('article');scene.className='sd-slide '+(p.owner==='Max'?'sd-max':'')+' sd-'+p.layout+(p.layout==='split'||p.layout==='summary'?' sd-light':'');
+   backgrounds.apply(scene,p);
    const header=document.createElement('div');header.className='sd-eyebrow';
    const tag=document.createElement('span');tag.textContent='SIR MATCH STORY  /  '+(p.chapterTitle||'');
    const by=document.createElement('span');by.className='sd-owner';by.textContent=p.owner==='Max'?'MAX':'ANGELO';
