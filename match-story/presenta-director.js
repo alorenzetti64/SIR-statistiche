@@ -112,23 +112,37 @@ function story(ch,sourceData){
 function createDeck(chapters){const pages=[];for(const ch of chapters.filter(included))pages.push(...story(ch,source(ch)));return pages}
 function signature(chapters){return chapters.map(ch=>[ch.section_id,ch.updated_at,ch.title,ch.position].join(':')).join('|').slice(0,4000)}
 function preview(ch,report){
- const win=window.open('','_blank');
- if(!win){alert('Consenti i popup per aprire Anteprima.');return}
- const doc=win.document;
- doc.open();doc.write('<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anteprima capitolo</title><style>body{background:#edf1f6;color:#15283e;font:16px/1.5 system-ui;margin:0;padding:20px 14px}main{max-width:740px;margin:auto}header{background:#102940;color:white;padding:18px 22px;border-radius:12px}header h1{font-size:25px;margin:5px 0}header small{letter-spacing:.08em;color:#f4c2cf;font-weight:800}.sd-preview-content{background:#fffdf6;border:1px solid #cad4df;border-radius:12px;padding:23px;margin:16px auto;overflow-wrap:anywhere;line-height:1.6}.sd-preview-content img{display:block;max-width:100%;height:auto;margin:13px auto}.sd-preview-content .editor-content-card,.sd-preview-content .tabbed-card-panel{background:#f6f9ff;border:1px solid #c9d6e5;border-radius:10px;padding:15px;margin:13px 0}.sd-preview-content .tabbed-card-panel[hidden]{display:none}.sd-preview-content .tabbed-card-nav{display:flex;flex-wrap:wrap;gap:5px}.sd-preview-content .tabbed-card-nav button{background:#f1f5f9;border:1px solid #9faeba;border-radius:6px;padding:9px;cursor:pointer}.sd-preview-content .tabbed-card-nav button[aria-selected=true]{background:#173a52;color:#fff}.sd-preview-content .editor-highlight{border-left:5px solid #d83567;background:#f7f1f4;padding:9px 12px;margin:8px 0}.sd-preview-content a{color:#0c5aa8}.sd-preview-content *{max-width:100%}body>a{color:#fff}</style></head><body><main><header><small></small><h1></h1><p></p></header><article class="sd-preview-content" id="content"></article></main></body></html>');doc.close();
- $('header small',doc)?.replaceChildren(doc.createTextNode('ANTEPRIMA · '+ch.owner));
- $('header h1',doc)?.replaceChildren(doc.createTextNode(ch.title));
- $('header p',doc)?.replaceChildren(doc.createTextNode(report.title||''));
- const holder=doc.getElementById('content');
- holder.innerHTML=String(ch.content||'');
- all(holder,'script,iframe,object,embed,form,input,textarea,style').forEach(el=>el.remove());
- all(holder,'*').forEach(el=>{for(const at of [...el.attributes]){const k=at.name.toLowerCase(),v=at.value;if(k.startsWith('on')||k==='srcdoc'||(k==='href'&&!/^https?:\/\//i.test(v)&&!v.startsWith('#'))||(k==='src'&&!validImage(v)))el.removeAttribute(at.name)}});
- holder.addEventListener('click',ev=>{
+ const chapters=Array.isArray(ch)?ch:[ch];
+ // Opens the complete original chapter contents from the already loaded report,
+ // including unpublished chapters. No dependence on PLAYERS publish state.
+ const win=window.open('about:blank','_blank');
+ if(!win){alert('Il browser ha bloccato la finestra. Consenti i popup per Match Story.');return}
+ const doc=win.document;doc.open();doc.write('<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anteprima Match Story</title><style>body{background:#edf1f6;color:#15283e;font:16px/1.5 system-ui;margin:0;padding:18px 14px}main{max-width:840px;margin:auto}header{background:#102940;color:white;padding:17px 22px;border-radius:12px;margin-bottom:15px}header h1{font-size:24px;margin:5px 0}header small{letter-spacing:.08em;color:#f4c2cf;font-weight:800}nav{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 18px}nav a{background:#17344f;color:#fff;text-decoration:none;border-radius:6px;padding:8px 10px;font-size:12px;font-weight:700}section.chapter{background:#fffdf6;border:1px solid #cad4df;border-radius:12px;padding:22px;margin:16px auto;overflow-wrap:anywhere}section.chapter>h2{margin:0 0 14px;border-bottom:2px solid #df4079;padding-bottom:12px;font-size:23px}.sd-preview-content img{display:block;max-width:100%;height:auto;margin:13px auto}.sd-preview-content .editor-content-card,.sd-preview-content .tabbed-card-panel{background:#f6f9ff;border:1px solid #c9d6e5;border-radius:10px;padding:15px;margin:13px 0}.sd-preview-content .tabbed-card-panel[hidden]{display:none}.sd-preview-content .tabbed-card-nav{display:flex;flex-wrap:wrap;gap:5px}.sd-preview-content .tabbed-card-nav button{background:#f1f5f9;border:1px solid #9faeba;border-radius:6px;padding:9px;cursor:pointer}.sd-preview-content .tabbed-card-nav button[aria-selected=true]{background:#173a52;color:#fff}.sd-preview-content .editor-highlight{border-left:5px solid #d83567;background:#f7f1f4;padding:9px 12px;margin:8px 0}.sd-preview-content a{color:#0c5aa8}.sd-preview-content *{max-width:100%}.sd-owner-label{font-size:11px;color:#8a4261;font-weight:900;letter-spacing:.12em;text-transform:uppercase}a.return-top{display:block;margin-top:18px;color:#105481;font-size:13px}</style></head><body><main><header><small>ANTEPRIMA · MATERIALE ORIGINALE</small><h1 id="storyTitle"></h1><p id="reportTitle"></p></header><nav id="chapterNav" aria-label="Capitoli del rapportino"></nav><div id="chapterContents"></div></main></body></html>');doc.close();
+ doc.getElementById('storyTitle').textContent=chapters.length===1?chapters[0].title:'RAPPORTINO COMPLETO';
+ doc.getElementById('reportTitle').textContent=report.title||'';
+ const content=doc.getElementById('chapterContents'),nav=doc.getElementById('chapterNav');
+ chapters.forEach((item,i)=>{
+  const section=doc.createElement('section');section.className='chapter';section.id='capitolo-'+(i+1);
+  const owner=doc.createElement('div');owner.className='sd-owner-label';owner.textContent=item.owner||'';
+  const title=doc.createElement('h2');title.textContent=item.title;section.append(owner,title);
+  const holder=doc.createElement('div');holder.className='sd-preview-content';holder.innerHTML=String(item.content||'');
+  all(holder,'script,iframe,object,embed,form,input,textarea,style').forEach(el=>el.remove());
+  all(holder,'*').forEach(el=>{for(const at of [...el.attributes]){const k=at.name.toLowerCase(),v=at.value;if(k.startsWith('on')||k==='srcdoc'||(k==='href'&&!/^https?:\/\//i.test(v)&&!v.startsWith('#'))||(k==='src'&&!validImage(v)))el.removeAttribute(at.name)}});
+  section.append(holder);
+  if(chapters.length>1){
+   const jump=doc.createElement('a');jump.className='return-top';jump.href='#chapterNav';jump.textContent='↑ Torna all’indice';section.append(jump);
+   const link=doc.createElement('a');link.href='#'+section.id;link.textContent=item.title+' · '+item.owner;nav.append(link);
+  }
+  content.append(section);
+ });
+ doc.addEventListener('click',ev=>{
   const b=ev.target.closest('.tabbed-card-nav button');
-  if(!b)return;const group=b.closest('.tabbed-card-group'),items=all(group,'.tabbed-card-nav button'),at=items.indexOf(b);
+  if(!b)return;const group=b.closest('.tabbed-card-group');if(!group)return;
+  const items=all(group,'.tabbed-card-nav button'),at=items.indexOf(b);
   items.forEach((btn,i)=>btn.setAttribute('aria-selected',String(i===at)));
   all(group,'.tabbed-card-panel').forEach((p,i)=>p.hidden=i!==at);
  });
+ win.focus();
 }
 async function open({report,chapters,editMode=false}){
  if(document.querySelector('.sir-dir'))return;
@@ -272,7 +286,7 @@ async function open({report,chapters,editMode=false}){
  const delegated=async ev=>{
    const btn=ev.target.closest('[data-sd]');if(!btn)return;
    const action=btn.dataset.sd;
-   if(action==='report')window.open(new URL('./?view=players&id='+encodeURIComponent(report.id),location.href).href,'_blank','noopener');
+   if(action==='report')preview(chapters,report);
    if(action==='next')next();
    if(action==='previous')prev();
    if(action==='index'){rebuildIndex();navigator.hidden=false}
