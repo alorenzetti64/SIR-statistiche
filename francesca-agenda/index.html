@@ -451,7 +451,6 @@ render();
 
 const FR_SB="https://vqrpkkrqynvlzjufiocn.supabase.co";
 const FR_KEY="sb_publishable_RGTsinQvL4hyv94mzNgNHA_uKqOfDuf";
-const FR_JWT="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcnBra3JxeW52bHpqdWZpb2NuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNzY4NDUsImV4cCI6MjA4ODY1Mjg0NX0.o_nITwrhDXQbcb4V191ecFdJ1XYBH675ht__ombDkq4";
 const FR_SESSION_KEY="francesca-cloud-session-v1";
 const priorLocal=Array.isArray(events)?events.slice():[];
 let frSession=null,remoteIds=new Set(),pendingSync=Promise.resolve(),cloudBusy=false,authMode="login",matchLive=false;
@@ -475,7 +474,7 @@ function frSaveSession(s){frSession=s;localStorage.setItem(FR_SESSION_KEY,JSON.s
 async function frAuthRequest(path,payload){const r=await fetch(FR_SB+"/auth/v1/"+path,{method:"POST",headers:{"apikey":FR_KEY,"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.msg||d.error_description||d.message||d.error||"Impossibile accedere");return d}
 async function frRefresh(){if(!frSession?.refresh_token)throw Error("Sessione scaduta");const d=await frAuthRequest("token?grant_type=refresh_token",{refresh_token:frSession.refresh_token});frSaveSession(d);return d}
 async function frDb(path,method="GET",data=null,extraHeaders={}){if(!frSession)throw Error("Accesso richiesto");if(frSession.expires_at&&Date.now()/1000>frSession.expires_at-90)await frRefresh();const invoke=()=>fetch(FR_SB+"/rest/v1/"+path,{method,headers:{"apikey":FR_KEY,"authorization":"Bearer "+frSession.access_token,"content-type":"application/json",...extraHeaders},body:data===null?undefined:JSON.stringify(data)});let res=await invoke();if(res.status===401){await frRefresh();res=await invoke()}if(!res.ok){let d=await res.json().catch(()=>({}));throw Error(d.message||d.error||("Server "+res.status))}if(res.status===204||method==="DELETE")return null;let s=await res.text();return s?JSON.parse(s):null}
-async function frLoad(){if(!frSession)return;cloudBusy=true;frStatus("Caricamento eventi privati…",true);try{let items=await frDb("francesca_agenda_events?select=id,data&owner_id=eq."+encodeURIComponent(frSession.user.id));remoteIds=new Set(items.map(x=>x.id));let remote=items.map(x=>x.data).filter(x=>x&&typeof x.title==="string");let extras=priorLocal.filter(x=>x&&typeof x.title==="string"&&!remoteIds.has(x.id));
+async function frLoad(){if(!frSession)return;cloudBusy=true;frStatus("Caricamento eventi privati…",true);try{let items=await frDb("francesca_agenda_events?select=id,data&owner_id=eq."+encodeURIComponent(frSession.user.id));remoteIds=new Set(items.filter(x=>x.id!=="__superlega_ical").map(x=>x.id));let remote=items.map(x=>x.data).filter(x=>x&&typeof x.title==="string");let extras=priorLocal.filter(x=>x&&typeof x.title==="string"&&!remoteIds.has(x.id));
 if(extras.length&&confirm("Sono presenti "+extras.length+" eventi salvati nella vecchia versione su questo dispositivo. Vuoi importarli anche online?")){remote.push(...extras)}
 events=remote;localStorage.setItem(KEY,JSON.stringify(events));render();if(extras.length&&remote.length>items.length)await frSyncNow();frStatus("Eventi privati sincronizzati · "+(frSession.user.email||""),false)}
 catch(err){frStatus("Errore sincronizzazione · "+err.message,true)}
@@ -488,14 +487,14 @@ openModal=function(e,date){if(!frSession){frOpenAuth();return}originalOpen(e,dat
 const originalEventsView=eventsView;
 eventsView=function(){if(!frSession)return '<div class="panel private-prompt"><h2>Gli appuntamenti di Francesca</h2><p>Questa parte dell’agenda è privata. Accedi oppure crea un account con la tua email per sincronizzare gli eventi fra telefono e computer.</p><button type="button" id="privateLogin" onclick="frOpenAuth()">Accedi / Registrati</button></div>';return originalEventsView().replace("gli appuntamenti restano soltanto in questo browser, su questo dispositivo. Non c’è un account e non sono caricati su un server.","gli appuntamenti sono sincronizzati nell’account personale tramite un database protetto. È consigliabile conservare anche un backup.")};
 const originalSourceNote=sourceNote;
-sourceNote=function(){if(!matchLive&&window.FR_MATCH_FEED_LOADED)return '<p class="footnote"><span class="source-live">Controllo quotidiano delle partite programmato da Google Calendar Superlega.</span> La data dell’ultimo aggiornamento è indicata nel file partite.json.</p>';if(matchLive)return '<p class="footnote"><span class="source-live">Partite aggiornate da Google Calendar Superlega.</span> Sono visibili solo le gare contrassegnate “match”.</p>';return originalSourceNote().replace("Questa prima versione è una copia delle partite, non una sincronizzazione automatica.","La copia iniziale è disponibile; non è stato possibile attivare la lettura automatica del calendario perché servono i permessi di condivisione Google.")};
+sourceNote=function(){return originalSourceNote()};
 async function frLogout(){try{if(frSession?.access_token)await fetch(FR_SB+"/auth/v1/logout",{method:"POST",headers:{apikey:FR_KEY,authorization:"Bearer "+frSession.access_token}})}catch{}frSession=null;remoteIds.clear();localStorage.removeItem(FR_SESSION_KEY);localStorage.removeItem(KEY);events=[];frAccount();render()}
 document.getElementById("frForm").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("frError"),btn=document.getElementById("frSubmit");msg.textContent="";btn.disabled=true;const email=document.getElementById("frEmail").value.trim(),password=document.getElementById("frPassword").value;try{
 if(authMode==="signup"){const d=await frAuthRequest("signup",{email,password});if(!d.access_token){msg.style.color="#32774b";msg.textContent="Registrazione richiesta. Apri l’email di conferma, poi torna qui e premi «Accedi».";return}frSaveSession(d)}
 else{const d=await frAuthRequest("token?grant_type=password",{email,password});frSaveSession(d)}
 frCloseAuth();await frLoad();
 }catch(err){msg.style.color="#a04839";msg.textContent=({invalid_credentials:"Email o password non valide.",email_not_confirmed:"Conferma prima l’indirizzo email."})[err.message]||err.message}finally{btn.disabled=false}};
-async function frMatches(){try{const res=await fetch(FR_SB+"/functions/v1/francesca-partite",{headers:{"apikey":FR_KEY,"authorization":"Bearer "+FR_JWT}});if(!res.ok)throw Error("Calendario non disponibile");const data=await res.json();if(data.live&&Array.isArray(data.matches)&&data.matches.length>=15){GAMES.splice(0,GAMES.length,...data.matches);matchLive=true;render()} }catch(e){console.info("Calendario: si usa la copia verificata",e.message)}}
+async function frMatches(){ /* Collegamento dinamico in sync-superlega.js */ }
 async function frBoot(){if(!frSession){events=[];render();frAccount()}else{frAccount();try{if(frSession.expires_at&&Date.now()/1000>frSession.expires_at-90)await frRefresh();await frLoad()}catch(e){frStatus("Ricollega l’account per sincronizzare",true)}}frMatches()}
 frBoot();
 window.addEventListener("online",()=>{if(frSession){pendingSync=pendingSync.then(()=>frSyncNow()).catch(()=>{});setTimeout(frLoad,3000)}frMatches()});
@@ -516,4 +515,5 @@ render();
 }catch(err){console.info("Partite: copia integrata disponibile")}
 })();
 </script>
+<script src="./sync-superlega.js"></script>
 </body></html>
