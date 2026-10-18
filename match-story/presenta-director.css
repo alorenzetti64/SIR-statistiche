@@ -58,3 +58,12 @@
 @media(max-width:950px){.sd-top{padding:8px 10px;height:54px}.sd-brand{font-size:11px}.sd-match{display:none}.sir-dir .sd-tool{padding:8px;font-size:10px}.sd-footer-bar{height:60px;padding:8px;gap:7px}.sd-count{font-size:11px}.sd-sidebar{width:min(345px,48vw);min-width:0}.sd-btm-label{display:none}.sd-stage{padding:3px}.sd-nav-grid{grid-template-columns:1fr}.sd-nav-panel{max-height:95%}}
 @media(max-width:600px){.sd-brand{font-size:10px}.sd-tools{gap:4px}.sir-dir .sd-tool{padding:7px;font-size:9px}.sd-sidebar{position:absolute;right:0;top:0;bottom:0;width:min(360px,100vw);min-width:unset;z-index:5;box-shadow:-15px 0 35px #0009}.sd-progress{gap:2px}.sd-tick{min-width:3px}.sd-nav-h strong{font-size:21px}}
 @media(prefers-reduced-motion:reduce){.sir-dir *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Inline editing: direct changes in the projected slide. */
+.sir-dir .sd-slide [data-sd-editable]{border:2px dashed #f16999;border-radius:7px;outline:none;padding:9px;cursor:text;box-shadow:0 0 0 4px #ee40751a;transition:box-shadow .2s,border-color .2s;min-height:55px;user-select:text;-webkit-user-select:text}
+.sir-dir .sd-slide [data-sd-editable]:focus{border-color:#f92e78;box-shadow:0 0 0 5px #ee40752e;background:#fff4}
+.sir-dir .sd-slide.sd-light [data-sd-editable]:focus{background:#fbdce9}
+.sir-dir .sd-slide [data-sd-editable]:empty:before{content:attr(data-placeholder);color:#ffffff90;pointer-events:none}
+.sir-dir .sd-slide.sd-light [data-sd-editable]:empty:before{color:#243c4d80}
+.sir-dir .sd-sidebar input[type=range]{padding:5px 0;accent-color:#d72e65;cursor:ew-resize}
+.sir-dir .sd-field output{float:right;font-variant-numeric:tabular-nums;color:#b82b5f;font-weight:800}
