@@ -70,4 +70,4 @@ function drawHero(){
  (g.uncertain?'<span class="hero-tag">DA CONFERMARE</span>':'')+'</div>';
  date.innerHTML='<span class="day">'+esc(g.date.slice(8))+'</span><div class="month">'+esc(shortMonthFmt.format(dt).replace('.','').toUpperCase())+'</div><div class="weekday">'+esc(dayFmt.format(dt).toUpperCase())+'</div><div class="hero-hour">'+esc(g.time)+'</div>';
 }
-function drawCount(){const counter=el('matchCount');if(counter)counter.textContent=games.length+' PARTITE'}
+function drawCount(){const counter=el('matchCount');if(counter)counter.textContent=futureGames().length+' IN PROGRAMMA'}
