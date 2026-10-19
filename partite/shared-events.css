@@ -149,3 +149,5 @@ body.event-modal-open{overflow:hidden}
  .date-cell .day-kinds{align-items:center}
  .day-kind{font-size:6.8px}
 }
+
+.event-visibility-note{font-size:11px;color:#7b7885;line-height:1.5;margin:2px 0 10px}
