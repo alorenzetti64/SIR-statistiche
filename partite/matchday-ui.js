@@ -4,32 +4,45 @@ function drawCalendar(){
  el('monthTitle').textContent=monthFmt.format(monthCursor);
  const first=new Date(y,m,1,12),start=(first.getDay()+6)%7;
  const slots=Math.ceil((start+new Date(y,m+1,0).getDate())/7)*7;
- const count=games.filter(g=>g.date.slice(0,7)===dateKey(first).slice(0,7)).length;
- el('monthCount').textContent=count+(count===1?' partita':' partite');
+ const prefix=dateKey(first).slice(0,7);
+ const matchCount=games.filter(g=>g.date.slice(0,7)===prefix).length;
+ const eventCount=sharedEvents.filter(e=>e.start_date.slice(0,7)<=prefix&&eventEnds(e).slice(0,7)>=prefix).length;
+ el('monthCount').textContent=matchCount+' MATCH · '+eventCount+' EVENTI';
  let html='';
  for(let i=0;i<slots;i++){
-  const d=new Date(y,m,i-start+1,12),key=dateKey(d),daily=games.filter(g=>g.date===key);
+  const d=new Date(y,m,i-start+1,12),key=dateKey(d);
+  const dailyMatches=games.filter(g=>g.date===key),dailyEvents=eventsOnDay(key);
   const selected=key===chosenDate;
-  const classes=['date-cell',selected?'selected':'',key===todayKey()?'is-today':'',d.getMonth()!==m?'other-month':'',daily.length?'has-match':''].filter(Boolean).join(' ');
-  const marks=daily.slice(0,4).map(g=>'<i aria-hidden="true" class="mark '+klass(g)+'"></i>').join('');
-  const label=longFmt.format(d)+(daily.length?', '+daily.length+(daily.length===1?' partita':' partite'):'');
-  html+='<button type="button" class="'+classes+'" data-day="'+key+'" aria-label="'+esc(label)+'" aria-pressed="'+selected+'"><span class="date-number">'+d.getDate()+'</span><span class="indicators">'+marks+'</span></button>';
+  const classes=['date-cell',selected?'selected':'',key===todayKey()?'is-today':'',d.getMonth()!==m?'other-month':'',dailyMatches.length?'has-match':'',dailyEvents.length?'has-event':''].filter(Boolean).join(' ');
+  const pieces=[];
+  if(dailyMatches.length)pieces.push('<span class="day-kind kind-match">MATCH</span>');
+  if(dailyEvents.length)pieces.push('<span class="day-kind kind-event">EVENTO</span>');
+  const label=longFmt.format(d)+': '+dailyMatches.length+' match, '+dailyEvents.length+' eventi';
+  html+='<button type="button" class="'+classes+'" data-day="'+key+'" aria-label="'+esc(label)+'" aria-pressed="'+selected+'"><span class="date-number">'+d.getDate()+'</span><span class="day-kinds">'+pieces.join('')+'</span></button>';
  }
  el('calendarDays').innerHTML=html;
  drawDay();
 }
 function drawDay(){
- const dayGames=games.filter(g=>g.date===chosenDate);
+ const dayMatches=games.filter(g=>g.date===chosenDate);
+ const dayEvents=eventsOnDay(chosenDate);
+ const counts=[];
+ if(dayMatches.length)counts.push(dayMatches.length+' MATCH');
+ if(dayEvents.length)counts.push(dayEvents.length+(dayEvents.length===1?' EVENTO':' EVENTI'));
  let html='<span class="day-kicker">GIORNO SELEZIONATO</span><h3>'+esc(longFmt.format(atDay(chosenDate)))+'</h3>'+
- '<div class="day-count">'+(dayGames.length?dayGames.length+(dayGames.length===1?' partita':' partite'):'Nessuna partita')+'</div>';
- if(dayGames.length){
-  html+=dayGames.map(g=>{
-   const f=fixture(g);
-   return '<div class="day-match"><div class="kind">'+esc(g.kind)+'</div><h4>'+esc(matchTitle(g.title))+'</h4><p>Ore '+esc(g.time)+(f.venue?' · '+esc(f.venue):'')+(g.uncertain?' · Da confermare':'')+'</p></div>';
-  }).join('');
- }else{
-  html+='<div class="day-empty"><div class="symbol">—</div>Nessuna partita prevista.</div>';
+ '<div class="day-count">'+(counts.length?counts.join(' · '):'Nessun appuntamento')+'</div>';
+ for(const g of dayMatches){
+  const f=fixture(g);
+  html+='<div class="day-record record-match"><span class="record-kind">MATCH</span>'+
+   '<h4>'+esc(matchTitle(g.title))+'</h4><p>'+esc(g.kind)+' · Ore '+esc(g.time)+(f.venue?' · '+esc(f.venue):'')+(g.uncertain?' · Da confermare':'')+'</p></div>';
  }
+ for(const e of dayEvents){
+  html+='<div class="day-record record-event"><span class="record-kind">EVENTO</span>'+
+   '<h4>'+esc(e.title)+'</h4><p>'+esc(eventDayTime(e,chosenDate))+(e.location?' · '+esc(e.location):'')+'</p>'+
+   (e.description?'<p class="day-description">'+esc(e.description)+'</p>':'')+
+   '<button type="button" class="day-edit" data-edit-event="'+esc(e.id)+'">Modifica evento</button></div>';
+ }
+ if(!dayMatches.length&&!dayEvents.length)html+='<div class="day-empty"><div class="symbol">—</div>Nessuna partita o evento previsto.</div>';
  el('dayPanel').innerHTML=html;
 }
 function drawProgram(){
@@ -37,7 +50,7 @@ function drawProgram(){
  // Il calendario usa invece "games" senza filtri, quindi conserva tutte le date.
  const upcoming=futureGames();
  const countLabel=el('upcomingCount');
- if(countLabel)countLabel.textContent=upcoming.length+(upcoming.length===1?' GARA':' GARE');
+ if(countLabel&&activeSection==='matches')countLabel.textContent=upcoming.length+(upcoming.length===1?' GARA':' GARE');
  const months=new Map();
  for(const g of upcoming){
   const key=g.date.slice(0,7);
