@@ -66,6 +66,20 @@
    <div class="share-invite-text">Se vuoi condividere un evento con me, clicca <strong>+</strong></div>
    <button type="button" class="share-plus" id="createSharedEvent" aria-label="Aggiungi un evento condiviso">+</button>
   </section>
+  <section class="push-panel" id="pushPanel" aria-label="Notifiche PARTITE">
+   <div class="push-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+   </div>
+   <div class="push-main">
+    <div class="push-heading">NOTIFICHE <span class="push-label">FACOLTATIVE</span></div>
+    <p class="push-summary" id="pushHelp">Partite ed eventi: 1 ora prima · Tutto il giorno: ore 8:00 · Nuovi eventi: subito</p>
+    <p class="push-state" id="pushState" role="status" aria-live="polite">Verifica disponibilità notifiche...</p>
+   </div>
+   <div class="push-actions">
+    <button type="button" class="push-button" id="pushToggle">Attiva notifiche</button>
+    <button type="button" class="push-test hidden" id="pushTest">Prova notifica</button>
+   </div>
+  </section>
   <nav class="section-selector" aria-label="Seleziona gli appuntamenti">
    <button class="section-choice active" type="button" id="showMatchesSection" aria-pressed="true">PARTITE IN PROGRAMMA</button>
    <button class="section-choice" type="button" id="showSharedSection" aria-pressed="false">EVENTI CONDIVISI <span id="sharedEventsBadge" class="shared-badge" aria-label="Numero di eventi"></span></button>
@@ -157,4 +171,5 @@
 <script src="./matchday-core.js?v=4"></script>
 <script src="./shared-events.js?v=6"></script>
 <script src="./matchday-ui.js?v=5"></script>
+<script src="./push-notifications.js?v=1"></script>
 </body></html>
