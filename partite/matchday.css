@@ -251,3 +251,136 @@ img,svg{display:block}
  .date-cell{min-height:62px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* PARTITE V3 — PROGRAMMA COMPATTO */
+.hero.hero-compact{
+  grid-template-columns:minmax(0,1fr) 190px;
+  min-height:0;overflow:hidden;border-radius:24px;
+  box-shadow:0 17px 39px rgba(20,54,38,.12);
+}
+.hero.hero-compact .hero-text{min-height:218px;padding:26px 30px 25px 35px;justify-content:center}
+.hero.hero-compact .hero-stage{min-height:218px}
+.hero.hero-compact h1.hero-fixture{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 13px;
+  margin:16px 0 19px;max-width:100%;font:900 clamp(31px,4.4vw,55px)/.96 'Barlow Condensed',Impact,sans-serif;
+  text-transform:uppercase;letter-spacing:-.3px;overflow-wrap:anywhere;
+}
+.hero.hero-compact .hero-versus{font:800 clamp(17px,2vw,22px)/1 'Barlow Condensed',Impact,sans-serif;color:#c8e990;letter-spacing:1px}
+.hero.hero-compact .hero-pills{gap:7px}
+.hero.hero-compact .hero-tag{padding:7px 11px;font-size:9px;letter-spacing:.65px}
+.hero.hero-compact .hero-rel{margin-left:4px;border:1px solid rgba(210,237,188,.4);padding:4px 8px;border-radius:50px;font-size:9px;color:#f6ffe8;letter-spacing:.8px}
+.hero.hero-compact .big-date{right:23px;bottom:25px;text-align:right}
+.hero.hero-compact .big-date .day{font-size:84px;letter-spacing:-2px}
+.hero.hero-compact .big-date .month{font-size:12px;margin-top:7px;letter-spacing:3px}
+.hero.hero-compact .big-date .weekday{font-size:10px;letter-spacing:1.2px}
+.hero.hero-compact .hero-hour{
+ display:inline-block;margin-top:10px;border-radius:50px;padding:4px 10px;
+ background:#d9f58a;color:#174233;font:800 14px/1.2 'Barlow Condensed',Impact,sans-serif;letter-spacing:.8px;
+}
+.hero.hero-compact .court-art{width:390px;height:380px;right:-110px;top:-95px;opacity:.24}
+.hero.hero-compact .ball-art{width:155px;height:155px;right:11px;top:7px;opacity:.27}
+.hero.hero-compact .hero-end-season{font-size:60px!important}
+.program-intro{margin:29px 0 19px;align-items:center}
+.program-intro h2{font-size:clamp(29px,3.4vw,40px)}
+.program-intro .program-count{display:inline-flex;align-items:center;border-radius:50px;background:#e6eee1;color:#496a53;padding:7px 12px;font-size:11px;font-weight:800;white-space:nowrap}
+.program-heading{display:flex;align-items:center;gap:13px;min-width:0}
+.calendar-toggle{display:inline-flex;align-items:center;gap:9px;background:#1f4a39;color:#fff;border:1px solid #1f4a39;border-radius:13px;padding:12px 16px;font-weight:800;font-size:12px;white-space:nowrap;box-shadow:0 5px 14px #294d3022}
+.calendar-toggle:hover,.calendar-toggle.active{background:#326c50;border-color:#326c50}
+.calendar-toggle svg{width:16px;height:16px;flex:none}
+.calendar-section{margin:0 0 26px;scroll-margin-top:14px}
+.calendar-section.hidden{display:none!important}
+.calendar-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 13px}
+.calendar-top h3{font:800 28px/1 'Barlow Condensed',Impact,sans-serif;text-transform:uppercase;margin:0}
+.calendar-close{padding:9px 13px;border-radius:10px;border:1px solid #dce5db;background:#fff;color:#365b44;font-size:11px;font-weight:800}
+.calendar-close:hover{background:#e9f0e6}
+.calendar-section .grid-layout{grid-template-columns:minmax(0,1.4fr) minmax(280px,.78fr)}
+.calendar-section .calendar-panel{box-shadow:0 10px 30px #1438210d}
+.calendar-section .day-panel{min-height:280px}
+.calendar-section .month-head{margin-bottom:8px}
+.calendar-section .month-sub{display:none}
+.month-group{margin-bottom:23px}
+.month-group-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:24px 0 13px}
+.month-group-title{font-size:28px;margin:0;white-space:normal}
+.month-group-title:after{display:none}
+.month-jump{
+ border:1px solid #dbe6da;border-radius:10px;padding:9px 12px;
+ background:#edf3e9;color:#37624a;font-size:10px;letter-spacing:.6px;font-weight:800;
+ display:inline-flex;gap:7px;align-items:center;white-space:nowrap;
+}
+.month-jump:hover{border-color:#b1cbb0;background:#e2f0df}
+.month-jump span{font-size:16px;line-height:1}
+.match-row.match-action{width:100%;text-align:left;font:inherit;cursor:pointer;appearance:none}
+.match-row.match-action:focus-visible{outline-offset:2px}
+.match-row.match-action .row-title{font-size:15px;line-height:1.3;font-weight:800;display:block;color:#1b382c}
+.match-row.match-action .match-info{display:block}
+.match-row.match-action .match-meta{display:flex}
+.match-row.match-action .match-category{display:inline-block}
+.match-row.match-action .match-date>span{display:block}
+.match-row.match-action .row-right{display:flex;align-items:center;gap:12px}
+.match-row.match-action .match-hour{display:flex}
+.match-row.match-action .match-arrow{font-size:26px;color:#6b9175;line-height:1}
+.match-row.match-action:hover .match-arrow{color:#2c6240}
+.match-row.match-action.past{opacity:.77}
+.match-row.match-action.past:hover{opacity:1}
+.month-group:first-child .month-group-head{margin-top:7px}
+.source-footer{margin-top:30px}
+.source-footer .footer-mark{font-size:16px}
+@media(max-width:960px){
+ .hero.hero-compact{grid-template-columns:minmax(0,1fr) 155px}
+ .hero.hero-compact .hero-text{min-height:198px;padding:24px 20px 23px 28px}
+ .hero.hero-compact .hero-stage{min-height:198px}
+ .hero.hero-compact .big-date{right:22px}
+ .hero.hero-compact .big-date .day{font-size:75px}
+ .calendar-section .grid-layout{grid-template-columns:1fr}
+ .calendar-section .day-panel{min-height:0}
+}
+@media(max-width:760px){
+ .site{padding-top:0}
+ .hero.hero-compact{
+  grid-template-columns:minmax(0,1fr) 100px;
+  grid-template-rows:none;
+  min-height:0;border-radius:19px
+ }
+ .hero.hero-compact .hero-text{min-height:170px;padding:19px 0 18px 19px;justify-content:center}
+ .hero.hero-compact .hero-stage{min-height:170px}
+ .hero.hero-compact h1.hero-fixture{font-size:clamp(28px,7.1vw,39px);gap:4px 7px;margin:13px 0 14px}
+ .hero.hero-compact .hero-versus{font-size:15px}
+ .hero.hero-compact .hero-pills{gap:5px}
+ .hero.hero-compact .hero-tag{font-size:8px;padding:6px 8px;letter-spacing:0}
+ .hero.hero-compact .hero-rel{font-size:8px;padding:4px 6px;letter-spacing:.3px}
+ .hero.hero-compact .kicker{font-size:9px;gap:6px;letter-spacing:1px}
+ .hero.hero-compact .kicker-line{width:12px}
+ .hero.hero-compact .big-date{right:11px;bottom:21px;text-align:right}
+ .hero.hero-compact .big-date .day{font-size:61px;letter-spacing:-1px}
+ .hero.hero-compact .big-date .month{font-size:10px;letter-spacing:1.7px;margin-top:5px}
+ .hero.hero-compact .big-date .weekday{font-size:8px;letter-spacing:.8px}
+ .hero.hero-compact .hero-hour{font-size:13px;margin-top:8px}
+ .hero.hero-compact .court-art{top:-130px;right:-126px;width:355px}
+ .hero.hero-compact .ball-art{top:-29px;right:-20px;width:126px}
+ .program-intro{margin:25px 0 15px;gap:9px}
+ .program-intro h2{font-size:30px}
+ .program-intro .program-count{padding:6px 9px;font-size:10px}
+ .program-heading{gap:8px}
+ .calendar-toggle{font-size:11px;padding:10px 11px;gap:6px}
+ .calendar-toggle svg{width:14px;height:14px}
+ .month-group-head{margin:23px 0 11px}
+ .month-group-title{font-size:27px}
+ .month-jump{padding:7px 9px;font-size:9px;gap:4px}
+ .match-row.match-action .row-title{font-size:13px}
+ .match-row.match-action .row-right{gap:5px;flex-direction:column}
+ .match-row.match-action .match-arrow{font-size:16px}
+ .match-row.match-action{min-height:86px;padding:10px}
+ .calendar-section .grid-layout{gap:11px}
+ .calendar-top h3{font-size:25px}
+ .calendar-section .day-panel{min-height:0}
+}
+@media(max-width:385px){
+ .hero.hero-compact{grid-template-columns:minmax(0,1fr) 89px}
+ .hero.hero-compact .hero-text{padding-left:15px}
+ .hero.hero-compact h1.hero-fixture{font-size:27px}
+ .hero.hero-compact .big-date{right:8px}
+ .hero.hero-compact .big-date .day{font-size:54px}
+ .program-intro h2{font-size:26px}
+ .calendar-toggle{font-size:10px;padding:9px 8px}
+ .calendar-toggle svg{width:12px;height:12px}
+}
