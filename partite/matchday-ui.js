@@ -33,11 +33,20 @@ function drawDay(){
  el('dayPanel').innerHTML=html;
 }
 function drawProgram(){
+ // L'elenco mostra solo le gare non ancora iniziate.
+ // Il calendario usa invece "games" senza filtri, quindi conserva tutte le date.
+ const upcoming=futureGames();
+ const countLabel=el('upcomingCount');
+ if(countLabel)countLabel.textContent=upcoming.length+(upcoming.length===1?' GARA':' GARE');
  const months=new Map();
- for(const g of games){
+ for(const g of upcoming){
   const key=g.date.slice(0,7);
   if(!months.has(key))months.set(key,[]);
   months.get(key).push(g);
+ }
+ if(!upcoming.length){
+  el('list').innerHTML='<div class="empty-result"><b>Nessuna partita in programma</b></div>';
+  return;
  }
  el('list').innerHTML=[...months].map(([month,items])=>{
   const head='<div class="month-group-head"><h3 class="month-group-title">'+esc(monthFmt.format(atDay(month+'-01')))+'</h3>'+
