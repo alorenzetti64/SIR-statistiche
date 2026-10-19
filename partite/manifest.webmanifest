@@ -1,0 +1,19 @@
+{
+  "name": "PARTITE · Perugia 2026/27",
+  "short_name": "PARTITE",
+  "description": "Calendario delle partite e degli eventi condivisi",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7f3",
+  "theme_color": "#163e34",
+  "icons": [
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
