@@ -1,0 +1,436 @@
+/* PARTITE / IMPACT — Design B, standalone visual preview.
+   Keeps the original Partite application, JavaScript, data and event storage unchanged. */
+:root{
+  --paper:#f3f0ec;--paper2:#eae5df;--ink:#181a1e;--muted:#717780;
+  --forest:#171a1e;--pine:#26292e;--accent:#ff5144;--sun:#f6b66e;
+  --white:#fff;--line:#e7dfd7;
+  --shadow:0 13px 34px rgba(34,28,28,.065);
+}
+html{background:#f3f0ec}
+body{
+  color:#1d1e21;
+  background:
+    radial-gradient(ellipse 70% 30% at 5% 2%,rgba(255,78,58,.055),transparent 80%),
+    radial-gradient(ellipse 60% 30% at 110% 63%,rgba(255,117,63,.04),transparent 80%),
+    #f3f0ec;
+}
+.site{max-width:1250px;padding:0 32px 75px}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #ff5d4d;outline-offset:3px}
+.site-header{min-height:98px;border-bottom:1px solid #e1d9d1}
+.brand-icon{
+ background:linear-gradient(135deg,#f33b32,#fc6d3f)!important;
+ border-radius:11px;transform:rotate(-6deg);color:white;
+ box-shadow:5px 5px 0 rgba(35,28,28,.13);
+}
+.brand-meta b{color:#1c1b20;font-size:27px;letter-spacing:.65px}
+.edition{color:#666972;letter-spacing:1.55px}
+.edition strong{color:#e44134}
+.header-pill{
+ background:#17191e;color:#fff;border-color:#17191e;
+ padding:11px 17px;font-weight:900;letter-spacing:.55px;
+}
+.header-pill i{background:#ff5144}
+.design-switch{
+ margin:18px 0 20px;min-height:44px;display:flex;justify-content:space-between;gap:16px;
+ align-items:center;border-radius:9px;background:#222328;color:#faf7f4;padding:11px 17px;
+ border-left:4px solid #ff5144;box-shadow:0 8px 18px rgba(25,20,20,.07);
+}
+.design-switch-name{display:flex;align-items:center;gap:9px;font-size:10px;font-weight:850;letter-spacing:1.2px;text-transform:uppercase}
+.design-switch-name strong{font-weight:900;color:#ff877b}
+.design-switch-name:before{content:'';display:block;width:8px;height:8px;background:#ff5144;border-radius:2px;transform:rotate(45deg)}
+.design-back{
+ text-decoration:none;border:1px solid rgba(255,255,255,.28);color:#fff;
+ border-radius:7px;padding:8px 12px;font-size:11px;font-weight:850;letter-spacing:.1px;
+ transition:background .2s,transform .2s;white-space:nowrap;
+}
+.design-back:hover{background:#ff5144;border-color:#ff5144;transform:translateY(-1px)}
+/* Main match, as a sports editorial scoreboard */
+.hero.hero-compact{
+ position:relative;min-height:0;grid-template-columns:minmax(0,1fr) 233px;
+ background:linear-gradient(118deg,#111419 2%,#1c1b20 59%,#37171b 100%);
+ border:1px solid #353035;border-radius:9px 31px 9px 9px;
+ box-shadow:0 22px 45px rgba(42,29,30,.18);
+}
+.hero.hero-compact:before{
+ content:"";z-index:0;position:absolute;inset:0;border:0;border-radius:0;filter:none;
+ width:auto;height:auto;opacity:1;pointer-events:none;
+ background:
+  repeating-linear-gradient(114deg,transparent 0,transparent 105px,rgba(255,255,255,.017) 106px,transparent 108px),
+  radial-gradient(ellipse at 81% 40%,rgba(255,68,54,.19),transparent 46%);
+}
+.hero.hero-compact:after{
+ content:"PERUGIA";position:absolute;right:-10px;bottom:-34px;width:auto;height:auto;
+ border:0;border-radius:0;pointer-events:none;
+ font:900 165px/.85 'Barlow Condensed',Impact,sans-serif;letter-spacing:-1px;
+ color:rgba(255,255,255,.025);
+}
+.hero.hero-compact .hero-text{
+ padding:32px 25px 30px 39px;min-height:257px;
+ border-left:6px solid #ff5144;z-index:3;position:relative;
+}
+.hero.hero-compact .hero-stage{min-height:257px;z-index:1}
+.hero.hero-compact .kicker{
+ font-weight:900;letter-spacing:2.15px;font-size:11px;color:#ff9b8d;
+}
+.hero.hero-compact .kicker-line{background:#ff5346;width:30px;height:3px}
+.hero.hero-compact .hero-rel{
+ color:#ffd5d0;border:1px solid rgba(255,101,83,.49);
+ font-size:9px;letter-spacing:1px;border-radius:3px;
+ padding:5px 8px;margin-left:6px;
+}
+.hero.hero-compact h1.hero-fixture{
+ font:900 clamp(45px,5.8vw,76px)/.94 'Barlow Condensed',Impact,sans-serif;
+ text-transform:uppercase;letter-spacing:-1.4px;
+ margin:15px 0 22px;max-width:690px;display:flex;flex-wrap:wrap;gap:4px 14px;
+ align-items:baseline;text-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+.hero.hero-compact .hero-versus{
+ color:#ff5b4e;font:900 clamp(22px,2.4vw,29px)/1 'Barlow Condensed',Impact,sans-serif;
+ text-shadow:none;letter-spacing:0;
+}
+.hero.hero-compact .hero-tag{
+ border-radius:4px;border:1px solid rgba(255,255,255,.23);
+ background:rgba(255,255,255,.055);color:#e4d5d5;
+ font-weight:900;letter-spacing:1px;font-size:10px;padding:8px 12px;
+}
+.hero.hero-compact .hero-tag.primary{
+ background:#ff5144;color:#171719;border-color:#ff5144;
+}
+.hero.hero-compact .big-date{
+ padding:17px 18px 16px;bottom:25px;right:29px;z-index:2;
+ border-top:3px solid #ff5144;border-left:1px solid rgba(255,255,255,.16);
+ background:rgba(16,18,22,.69);text-align:right;
+ box-shadow:0 14px 25px rgba(0,0,0,.15);
+}
+.hero.hero-compact .big-date .day{
+ color:#ff6456;font-size:93px;letter-spacing:-2.5px;
+}
+.hero.hero-compact .big-date .month{font-size:13px;color:#fff;letter-spacing:3px;margin-top:7px}
+.hero.hero-compact .big-date .weekday{color:#d7caca;font-size:10px;letter-spacing:1.5px}
+.hero.hero-compact .hero-hour{
+ background:#ff5144;color:#15191e;border-radius:3px;margin-top:10px;
+ padding:6px 10px;font:900 19px/1 'Barlow Condensed',Impact,sans-serif;
+}
+.hero.hero-compact .court-art{
+ top:-139px;right:-125px;width:525px;height:485px;opacity:.17;transform:rotate(-10deg);
+ filter:drop-shadow(0 0 20px rgba(255,48,40,.3));
+}
+.hero.hero-compact .court-art path,.hero.hero-compact .court-art circle{stroke:#ff796d}
+.hero.hero-compact .ball-art{
+ width:235px;height:235px;right:-22px;top:-32px;opacity:.38;transform:rotate(-20deg);
+}
+.hero.hero-compact .ball-art path,.hero.hero-compact .ball-art circle{stroke:#ff7567}
+.hero.hero-compact.no-game h1{font-size:53px}
+.hero.hero-compact .hero-end-season{font-size:62px!important}
+/* Share event invite, with a contrasting violet track */
+.share-invite{
+ margin:21px 0 18px;padding:17px 19px;border-radius:9px;
+ border:1px solid #3c3345;border-left:5px solid #b493ff;
+ background:linear-gradient(108deg,#262029,#34293e 58%,#382941 100%);
+ box-shadow:0 10px 26px rgba(40,26,53,.1);
+}
+.share-invite-icon{
+ width:39px;height:39px;border-radius:7px;background:#59496c;color:#edd6ff;
+}
+.share-invite-text{color:#fff;font-size:14px;font-weight:700;letter-spacing:.05px}
+.share-invite-text strong{color:#c19cfe}
+.share-plus{
+ width:48px;height:48px;border-radius:7px;color:#25202d;background:#c5a0ff;
+ box-shadow:0 9px 20px rgba(156,110,227,.24);
+}
+.share-plus:hover{background:#ddc6ff}
+/* Segments and headings */
+.section-selector{
+ margin-top:25px;border-radius:10px;padding:5px;border:1px solid #dbd4cc;
+ background:#e7e1dc;gap:5px;
+}
+.section-choice{
+ border-radius:7px;color:#6f6868;min-height:45px;letter-spacing:1.05px;
+ font-size:11px;font-weight:900;
+}
+.section-choice.active{background:#191b20;color:#fff;box-shadow:inset 0 -3px 0 #ff5144}
+.section-choice#showSharedSection.active{background:#322941;color:#fff;box-shadow:inset 0 -3px 0 #ae8ae6}
+.shared-badge{background:#dec9ff;color:#553b71}
+.program-intro{margin:30px 0 18px!important}
+.program-intro h2{
+ color:#202026;font:900 clamp(33px,4.4vw,46px)/.95 'Barlow Condensed',Impact,sans-serif;
+ text-transform:uppercase;letter-spacing:.4px;
+}
+.program-heading{gap:13px}
+.program-intro .program-count{background:#1c1f22;color:#fff;border-radius:5px;letter-spacing:1px}
+.calendar-toggle{
+ background:#ff5144;color:#1b1b1c;border-color:#ff5144;
+ border-radius:8px;box-shadow:0 8px 22px rgba(244,72,60,.19);
+ text-transform:uppercase;letter-spacing:.4px;font-weight:900;
+ padding:13px 18px;transition:background .2s,transform .18s,box-shadow .2s;
+}
+.calendar-toggle:hover,.calendar-toggle.active{
+ background:#f4382f;border-color:#f4382f;transform:translateY(-2px);
+ box-shadow:0 12px 24px rgba(244,72,60,.25);
+}
+/* Fixture groups and sport-style scoring cards */
+.month-group{margin:0 0 31px}
+.month-group-head{margin:32px 0 12px;padding-bottom:12px;border-bottom:2px solid #ddd6d0}
+.month-group:first-child .month-group-head{margin-top:12px}
+.month-group-title{
+ font:900 clamp(30px,3.5vw,40px)/1 'Barlow Condensed',Impact,sans-serif;
+ text-transform:uppercase;letter-spacing:.1px;color:#181c1e;margin:0;
+ display:flex;align-items:center;gap:10px;
+}
+.month-group-title:before{
+ content:"";width:5px;height:28px;background:#ff5144;border-radius:1px;
+ flex:none;display:block;
+}
+.month-jump{
+ color:#f6f4f3;background:#292b30;border-color:#292b30;
+ border-radius:6px;letter-spacing:1px;font-size:9px;font-weight:900;
+ padding:9px 12px;
+}
+.month-jump:hover{background:#ff5144;border-color:#ff5144;color:#1d1b1b}
+.match-list{gap:9px}
+.match-row.match-action{
+ display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:0;min-height:105px;
+ padding:0;background:#fff;border:1px solid #e8e1da;border-radius:10px;
+ box-shadow:0 5px 14px rgba(29,24,24,.035);
+ overflow:hidden;text-align:left;
+ transition:border-color .18s,box-shadow .18s,transform .18s;
+}
+.match-row.match-action:hover{
+ background:#fff;border-color:#f2a196;
+ box-shadow:0 10px 24px rgba(40,25,22,.1);
+ transform:translateX(4px);
+}
+.match-row.match-action .match-date{
+ align-self:stretch;border:0;border-radius:0;padding:9px 8px;
+ background:#22232a;color:#fff;
+ display:flex;justify-content:center;align-items:center;flex-direction:column;
+}
+.match-row.match-action .match-date strong{
+ font:900 51px/.86 'Barlow Condensed',Impact,sans-serif;letter-spacing:-1px;color:#ff6659;
+}
+.match-row.match-action .match-date span{
+ color:#d0c4c0;letter-spacing:1px;text-transform:uppercase;
+ font-size:10px;font-weight:900;margin-top:9px;
+}
+.match-row.match-action .match-info{padding:15px 14px;min-width:0}
+.match-row.match-action .match-meta{gap:9px;margin-bottom:7px}
+.match-row.match-action .match-category{
+ border-radius:4px;padding:5px 9px;letter-spacing:.5px;text-transform:uppercase;
+ font-size:9px;font-weight:900;
+ background:#ffede9;color:#ae3b31;
+}
+.match-row.match-action .match-category.champions{background:#f0e9ff;color:#69529f}
+.match-row.match-action .match-category.coppa{background:#fff0df;color:#97611b}
+.match-row.match-action .match-category.amichevole{background:#ebecef;color:#56606c}
+.match-row.match-action .match-meta>span:not(.match-category){font-size:10px;font-weight:850;color:#7d7573}
+.match-row.match-action .row-title{
+ color:#1a1b20;font:800 clamp(16px,2vw,20px)/1.2 'DM Sans',sans-serif;
+ letter-spacing:-.5px;overflow-wrap:anywhere;
+}
+.match-row.match-action .row-right{
+ gap:12px;padding:0 15px 0 8px;display:flex;align-items:center;
+}
+.match-row.match-action .match-hour strong{
+ color:#222327;font:900 30px/1 'Barlow Condensed',Impact,sans-serif;letter-spacing:-.3px;
+}
+.match-row.match-action .match-hour span{color:#9c9390;font-size:9px;font-weight:900}
+.match-row.match-action .match-arrow{color:#fd5144;font-size:27px;line-height:1}
+.match-row.match-action:hover .match-arrow{color:#cf372d}
+.match-row.match-action.past{opacity:.62}
+/* Calendar is a full companion view; matches/events are always differentiated by TEXT. */
+.calendar-section{scroll-margin-top:18px}
+.calendar-top h3{color:#1e2225;font:900 31px/1 'Barlow Condensed',Impact,sans-serif}
+.calendar-close{border-radius:6px;color:#252627;border-color:#ddd6d1}
+.calendar-section .calendar-panel{
+ background:#fff;border:1px solid #e6ddd3;border-radius:11px;padding:21px;
+ box-shadow:0 12px 28px rgba(35,23,23,.055);
+}
+.calendar-section .month-name{
+ color:#1b1d22;font:900 clamp(28px,3.3vw,37px)/1 'Barlow Condensed',Impact,sans-serif;
+ text-transform:uppercase;letter-spacing:.4px;
+}
+.calendar-section .month-nav button{border-radius:7px}
+.calendar-section .month-nav .today-btn{background:#ff5144;border-color:#ff5144;color:#1a1c20}
+.calendar-section .month-nav .circle-btn{background:#f0ede9;border-color:#e4dbd4;color:#33373a}
+.calendar-section .program-count{font-size:10px;color:#746f70}
+.calendar-days span{color:#928b87;font-weight:900;font-size:10px}
+.calendar-section .date-cell{
+ min-height:92px;border:1px solid #f1ece7;border-radius:7px;background:#f7f5f2;
+ color:#36393c;transition:background .15s,border-color .15s,transform .15s;
+}
+.calendar-section .date-cell:hover{border-color:#ffc7bf;background:#fff5f3;transform:translateY(-1px)}
+.calendar-section .date-cell.other-month{opacity:.38}
+.calendar-section .date-cell.is-today .date-number{background:#202228;color:white;border-radius:4px}
+.calendar-section .date-cell.selected{background:#fff0ec;border-color:#ff5144;box-shadow:inset 0 0 0 1px #ff5144}
+.calendar-section .date-cell.has-event{background:#f6f2ff;border-color:#e5daff}
+.calendar-section .date-cell.has-match.has-event{
+ background:linear-gradient(140deg,#fff0ec 47%,#f4efff 53%);
+ border-color:#c8a6cf;
+}
+.calendar-section .date-cell .day-kind{
+ border-radius:3px;font-weight:900;font-size:8px;letter-spacing:.4px;padding:3px 5px;
+}
+.calendar-section .day-kind.kind-match{background:#ff5448;color:#fff}
+.calendar-section .day-kind.kind-event{background:#a985fa;color:#21192e}
+.calendar-section .calendar-legend{color:#7c7777}
+.calendar-section .calendar-legend i{background:#ff5448}
+.calendar-section .calendar-legend i.champions{background:#8368b1}
+.calendar-section .calendar-legend i.coppa{background:#e09b58}
+.calendar-section .calendar-legend i.amichevole{background:#9fa2a8}
+.calendar-section .legend-event{background:#a985fa;color:#24192e;border-radius:3px;font-weight:900}
+.calendar-section .day-panel{
+ border-radius:10px;background:linear-gradient(140deg,#1a1d23,#292126 100%);
+ color:#fff;box-shadow:0 12px 28px rgba(35,23,23,.08);
+}
+.calendar-section .day-panel:before{border-color:rgba(255,100,77,.17)}
+.calendar-section .day-panel h3{color:#fff}
+.calendar-section .day-panel .day-kicker{color:#ffaba3}
+.calendar-section .day-count{color:#d1c7c5}
+.calendar-section .day-record{border-top-color:rgba(255,255,255,.15)}
+.calendar-section .day-record.record-match .record-kind{background:#ff5448;color:#fff}
+.calendar-section .day-record.record-event .record-kind{background:#ae88fa;color:#1a1523}
+.calendar-section .day-record p{color:#d0c7cb}
+.calendar-section .day-record .day-description{color:#e2d9de}
+.calendar-section .day-record .day-edit{border-color:#b09cb5;color:#f2e6fb;border-radius:5px}
+.calendar-section .day-empty{color:#ded2d5}
+.calendar-section .day-empty .symbol{color:#71525a}
+/* Event list shares the impact treatment, retaining a distinct violet identity. */
+#sharedSection{margin-top:14px}
+.shared-event-card{
+ background:#fff;border:1px solid #e7dfe9;border-left:4px solid #ac84fa;
+ border-radius:10px;box-shadow:0 6px 17px rgba(30,24,34,.045);
+}
+.shared-event-date{border-radius:6px;background:#32263f}
+.shared-event-date strong{color:#c8a6ff}
+.shared-event-date span{color:#d4bee7}
+.shared-event-type{border-radius:3px;color:#6d4ba2;background:#eee5ff}
+.shared-event-info h3{font-size:17px;color:#1d1b24}
+.shared-event-buttons button{border-radius:6px;background:#f7f2ff;color:#5d417c}
+.shared-event-buttons button:hover{background:#eadbff}
+.events-empty{background:#faf8fb;border-color:#dacde4;border-radius:9px}
+.event-overlay{background:rgba(14,14,18,.8)}
+.event-dialog{
+ background:#fff;border-radius:12px;box-shadow:0 26px 80px rgba(9,9,13,.38);
+ border-top:5px solid #a984f5;
+}
+.event-dialog h2{color:#1a1b20}
+.event-dialog-label{color:#7956a8}
+.event-all-day{border-radius:7px}
+.event-close{border-radius:6px}
+.event-save{background:#8864ba;color:#fff;border-radius:6px}
+.event-save:hover{background:#6a49a2}
+.event-cancel,.event-delete{border-radius:6px}
+.event-field input,.event-field textarea{border-radius:6px}
+.event-toast{border-radius:7px;background:#1b1f22;border-left:4px solid #a984f5}
+.source-footer{border-color:#ded4cc;color:#8c827c}
+.source-footer strong{color:#625957}
+.source-footer .footer-mark{font-size:21px;color:#dd4a3e}
+@media(min-width:761px){
+ .hero.hero-compact .hero-fixture{padding-right:10px}
+ .hero.hero-compact .hero-stage:before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,75,61,.06));
+  clip-path:polygon(22% 0,100% 0,100% 100%,0 100%);
+ }
+}
+@media(max-width:1030px){
+ .site{padding:0 22px 65px}
+ .hero.hero-compact{grid-template-columns:minmax(0,1fr) 197px}
+ .hero.hero-compact .hero-text{min-height:237px;padding:29px 15px 26px 25px}
+ .hero.hero-compact .hero-stage{min-height:237px}
+ .hero.hero-compact h1.hero-fixture{font-size:clamp(40px,5.4vw,63px);gap:5px 10px}
+ .hero.hero-compact .big-date{right:17px;padding:12px}
+ .hero.hero-compact .big-date .day{font-size:80px}
+ .calendar-section .date-cell{min-height:80px}
+ .match-row.match-action .row-title{font-size:17px}
+}
+@media(max-width:760px){
+ .site{padding:0 14px 78px}
+ .site-header{min-height:75px;gap:8px}
+ .brand-icon{width:42px;height:42px}
+ .brand-meta b{font-size:22px;white-space:nowrap}
+ .header-pill{font-size:9px;letter-spacing:.15px;padding:8px 9px}
+ .design-switch{margin:12px 0 15px;min-height:42px;padding:10px 12px;gap:8px}
+ .design-switch-name{font-size:9px;letter-spacing:.6px}
+ .design-back{padding:7px 9px;font-size:10px}
+ .hero.hero-compact{
+  grid-template-columns:minmax(0,1fr) 104px;grid-template-rows:none;
+  border-radius:8px 19px 8px 8px;
+ }
+ .hero.hero-compact .hero-text{padding:19px 0 17px 13px;min-height:194px;border-left:4px solid #ff5144}
+ .hero.hero-compact .hero-stage{min-height:194px}
+ .hero.hero-compact .kicker{font-size:9px;letter-spacing:1px;gap:6px}
+ .hero.hero-compact .kicker-line{width:14px;height:2px}
+ .hero.hero-compact .hero-rel{font-size:8px;padding:3px 5px;margin-left:0;letter-spacing:.3px}
+ .hero.hero-compact h1.hero-fixture{
+  font-size:clamp(30px,7vw,43px);margin:12px 0 14px;
+  gap:3px 7px;letter-spacing:-.5px;line-height:.93;
+ }
+ .hero.hero-compact .hero-versus{font-size:16px}
+ .hero.hero-compact .hero-pills{gap:5px}
+ .hero.hero-compact .hero-tag{font-size:8px;padding:6px 7px;letter-spacing:.2px}
+ .hero.hero-compact .big-date{right:8px;bottom:14px;padding:6px 7px 8px;border-top:2px solid #ff5144}
+ .hero.hero-compact .big-date .day{font-size:63px;letter-spacing:-1px}
+ .hero.hero-compact .big-date .month{font-size:10px;margin-top:5px;letter-spacing:1px}
+ .hero.hero-compact .big-date .weekday{font-size:8px;letter-spacing:.4px}
+ .hero.hero-compact .hero-hour{font-size:14px;padding:5px 7px;margin-top:7px}
+ .hero.hero-compact .court-art{top:-125px;right:-130px;width:360px;opacity:.14}
+ .hero.hero-compact .ball-art{width:156px;height:156px;right:-33px;top:-25px}
+ .share-invite{margin:14px 0 13px;padding:11px 12px;border-radius:8px;gap:10px}
+ .share-invite-icon{width:32px;height:32px;border-radius:6px}
+ .share-invite-text{font-size:12px}
+ .share-plus{width:42px;height:42px;border-radius:6px;font-size:29px}
+ .section-selector{margin-top:15px;border-radius:8px}
+ .section-choice{font-size:9px;letter-spacing:.4px;padding:9px 5px;border-radius:6px}
+ .program-intro{margin:23px 0 13px!important}
+ .program-intro h2{font-size:30px}
+ .program-intro .program-count{font-size:9px;padding:6px 8px}
+ .calendar-toggle{font-size:10px;border-radius:6px;padding:10px 10px;gap:6px}
+ .month-group-head{margin:22px 0 11px;padding-bottom:8px}
+ .month-group-title{font-size:29px}
+ .month-group-title:before{height:22px;width:4px}
+ .month-jump{font-size:8px;padding:7px 8px}
+ .match-row.match-action{grid-template-columns:58px minmax(0,1fr) auto;min-height:90px;border-radius:7px}
+ .match-row.match-action .match-date{padding:6px 4px}
+ .match-row.match-action .match-date strong{font-size:37px}
+ .match-row.match-action .match-date span{font-size:9px;margin-top:7px}
+ .match-row.match-action .match-info{padding:12px 7px 11px 10px}
+ .match-row.match-action .match-meta{gap:6px;margin-bottom:7px}
+ .match-row.match-action .match-category{font-size:8px;padding:4px 6px}
+ .match-row.match-action .match-meta>span:not(.match-category){font-size:9px}
+ .match-row.match-action .row-title{font-size:13px;letter-spacing:-.28px}
+ .match-row.match-action .row-right{padding:7px 10px 7px 2px;gap:5px;flex-direction:column;justify-content:center}
+ .match-row.match-action .match-hour strong{font-size:23px}
+ .match-row.match-action .match-arrow{font-size:18px}
+ .calendar-section .calendar-panel{padding:14px 10px}
+ .calendar-section .month-name{font-size:29px}
+ .calendar-section .date-cell{min-height:82px;padding:6px 3px;border-radius:5px}
+ .calendar-section .date-cell .day-kind{font-size:7px;letter-spacing:0;padding:3px 2px}
+ .calendar-section .calendar-days,.calendar-section .calendar-cells{gap:3px}
+ .calendar-section .day-panel{min-height:0}
+ .event-dialog{border-radius:9px}
+ .shared-event-date{border-radius:5px}
+ .shared-event-card{border-radius:7px}
+}
+@media(max-width:390px){
+ .design-switch-name{font-size:8px}
+ .design-switch{gap:7px}
+ .design-back{font-size:9px;padding:7px}
+ .hero.hero-compact{grid-template-columns:minmax(0,1fr) 89px}
+ .hero.hero-compact .hero-text{min-height:187px;padding-left:10px}
+ .hero.hero-compact .hero-stage{min-height:187px}
+ .hero.hero-compact h1.hero-fixture{font-size:clamp(27px,7vw,32px)}
+ .hero.hero-compact .big-date .day{font-size:53px}
+ .hero.hero-compact .big-date .month{font-size:9px}
+ .hero.hero-compact .hero-hour{font-size:13px}
+ .brand-meta b{font-size:19px}
+ .header-pill{font-size:8px;padding:7px}
+ .section-choice{font-size:8.5px}
+ .program-intro h2{font-size:26px}
+ .calendar-toggle{font-size:9px;padding:9px}
+}
+@media(prefers-reduced-motion:no-preference){
+ .hero.hero-compact{animation:impact-reveal .4s ease-out both}
+ .match-row.match-action:focus-visible{transform:none}
+ @keyframes impact-reveal{from{opacity:.2;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+}
