@@ -1,37 +1,47 @@
-/* PARTITE — Notifiche push: pannello compatto per iPhone e desktop */
+/* PARTITE — Campanella notifiche, unica presenza nell'intestazione */
+.site-header{position:relative;z-index:25;overflow:visible}
+.header-right{min-width:0}
+.push-menu{position:relative;flex:none;display:flex;align-items:center;z-index:27}
+.push-bell{
+ position:relative;display:grid;place-items:center;
+ width:43px;height:43px;min-width:43px;padding:0;border:1px solid #d8e2d8;
+ border-radius:14px;background:#fff;color:#294d3d;
+ box-shadow:0 4px 12px rgba(29,65,43,.035);
+ transition:background .16s,border-color .16s,transform .16s;
+}
+.push-bell:hover{background:#edf5e8;border-color:#b8ceb7}
+.push-bell:active{transform:scale(.97)}
+.push-bell svg{display:block;width:21px;height:21px}
+.push-bell-dot{
+ display:none;position:absolute;right:7px;top:7px;width:8px;height:8px;
+ border-radius:50%;background:#64a448;border:1.5px solid white;
+}
+.push-bell.push-bell-active .push-bell-dot{display:block}
+.push-bell[aria-expanded="true"]{background:#e6f0df;border-color:#98bd9b}
 .push-panel{
- display:flex;align-items:center;gap:14px;
- padding:15px 17px;margin:0 0 19px;
- background:#f6f9f3;border:1px solid #dce8d8;border-radius:17px;
- box-shadow:0 5px 16px rgba(31,64,39,.025);
+ position:absolute;top:calc(100% + 11px);right:0;z-index:40;
+ width:min(332px,calc(100vw - 28px));max-width:none;margin:0;
+ display:flex;flex-direction:column;align-items:stretch;gap:0;
+ padding:18px;border:1px solid #d8e4d5;border-radius:16px;
+ background:#fff;box-shadow:0 16px 48px rgba(12,49,30,.18);
 }
-.push-icon{
- width:39px;height:39px;min-width:39px;
- display:grid;place-items:center;border-radius:13px;
- background:#e2eedb;color:#326747;
+.push-panel[hidden]{display:none!important}
+.push-panel:before{
+ content:"";position:absolute;right:14px;top:-7px;width:12px;height:12px;
+ transform:rotate(45deg);background:#fff;border-left:1px solid #d8e4d5;border-top:1px solid #d8e4d5;
 }
-.push-icon svg{width:22px;height:22px;display:block}
-.push-main{flex:1;min-width:0}
-.push-heading{
- font-size:11px;font-weight:900;color:#244e35;letter-spacing:1.35px;
- display:flex;align-items:center;gap:9px;
-}
-.push-label{
- font-size:8px;font-weight:850;letter-spacing:.5px;
- color:#647e6b;background:#e8f0e5;border-radius:25px;
- padding:4px 7px;
-}
-.push-summary{font-size:11px;font-weight:650;color:#53685b;line-height:1.45;margin:4px 0 0}
-.push-state{font-size:11px;font-weight:700;color:#477858;line-height:1.45;margin:6px 0 0}
-.push-state.is-error{color:#aa5a5b}
-.push-actions{display:flex;flex-direction:column;gap:7px;align-items:stretch;flex:none}
+.push-heading{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900;letter-spacing:1.2px;color:#234c36}
+.push-label{font-size:8px;font-weight:850;letter-spacing:.3px;color:#66856d;background:#e9f2e7;border-radius:40px;padding:4px 7px}
+.push-summary{font-size:11px;font-weight:600;color:#65756a;line-height:1.5;margin:11px 0 0}
+.push-state{font-size:11px;font-weight:750;color:#427b56;line-height:1.45;margin:11px 0 0}
+.push-state.is-error{color:#af5f60}
+.push-actions{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;margin-top:16px}
 .push-button,.push-test{
- min-height:35px;padding:8px 13px;border-radius:10px;
- font-size:11px;font-weight:850;white-space:nowrap;
- border:1px solid #285740;
+ flex:1 1 auto;min-height:38px;padding:8px 11px;border-radius:10px;
+ font-size:11px;font-weight:850;border:1px solid #285740;
  transition:background .16s,transform .16s;
 }
-.push-button{background:#265b3f;color:#fff}
+.push-button{background:#265b3f;color:white}
 .push-button:hover{background:#387952}
 .push-panel.push-active .push-button{background:#fff;color:#3a7250;border-color:#adc8b5}
 .push-panel.push-active .push-button:hover{background:#eff5ef}
@@ -41,20 +51,16 @@
 .push-button:disabled,.push-test:disabled{opacity:.55;cursor:wait}
 .push-test.hidden{display:none!important}
 @media(max-width:760px){
- .push-panel{padding:12px;gap:10px;align-items:flex-start;border-radius:14px;margin-bottom:15px}
- .push-icon{width:30px;min-width:30px;height:30px;border-radius:9px}
- .push-icon svg{width:19px;height:19px}
- .push-heading{font-size:10px;letter-spacing:.8px;gap:6px}
- .push-label{font-size:7.5px;padding:3px 6px}
- .push-summary{font-size:10px;line-height:1.45}
- .push-state{font-size:10px;line-height:1.45}
- .push-actions{min-width:102px}
- .push-button,.push-test{padding:8px 9px;min-height:34px;font-size:10px;white-space:normal;text-align:center;max-width:126px}
+ .header-right{gap:7px}
+ .push-bell{width:39px;height:39px;min-width:39px;border-radius:12px}
+ .push-bell svg{width:20px;height:20px}
+ .push-panel{padding:15px;right:0;width:min(318px,calc(100vw - 24px));border-radius:14px}
+ .push-panel:before{right:11px}
+ .push-summary,.push-state{font-size:11px}
 }
-@media(max-width:380px){
- .push-panel{gap:7px;padding:10px 8px}
- .push-icon{width:28px;min-width:28px;height:28px}
- .push-summary{font-size:9.5px}
- .push-actions{min-width:89px}
- .push-button,.push-test{font-size:9px;padding:7px 6px;max-width:105px}
+@media(max-width:370px){
+ .header-right{gap:5px}
+ .push-bell{width:36px;height:36px;min-width:36px}
+ .push-bell svg{width:18px;height:18px}
+ .push-panel{width:calc(100vw - 22px)}
 }
