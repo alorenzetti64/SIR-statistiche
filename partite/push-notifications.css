@@ -1,0 +1,60 @@
+/* PARTITE — Notifiche push: pannello compatto per iPhone e desktop */
+.push-panel{
+ display:flex;align-items:center;gap:14px;
+ padding:15px 17px;margin:0 0 19px;
+ background:#f6f9f3;border:1px solid #dce8d8;border-radius:17px;
+ box-shadow:0 5px 16px rgba(31,64,39,.025);
+}
+.push-icon{
+ width:39px;height:39px;min-width:39px;
+ display:grid;place-items:center;border-radius:13px;
+ background:#e2eedb;color:#326747;
+}
+.push-icon svg{width:22px;height:22px;display:block}
+.push-main{flex:1;min-width:0}
+.push-heading{
+ font-size:11px;font-weight:900;color:#244e35;letter-spacing:1.35px;
+ display:flex;align-items:center;gap:9px;
+}
+.push-label{
+ font-size:8px;font-weight:850;letter-spacing:.5px;
+ color:#647e6b;background:#e8f0e5;border-radius:25px;
+ padding:4px 7px;
+}
+.push-summary{font-size:11px;font-weight:650;color:#53685b;line-height:1.45;margin:4px 0 0}
+.push-state{font-size:11px;font-weight:700;color:#477858;line-height:1.45;margin:6px 0 0}
+.push-state.is-error{color:#aa5a5b}
+.push-actions{display:flex;flex-direction:column;gap:7px;align-items:stretch;flex:none}
+.push-button,.push-test{
+ min-height:35px;padding:8px 13px;border-radius:10px;
+ font-size:11px;font-weight:850;white-space:nowrap;
+ border:1px solid #285740;
+ transition:background .16s,transform .16s;
+}
+.push-button{background:#265b3f;color:#fff}
+.push-button:hover{background:#387952}
+.push-panel.push-active .push-button{background:#fff;color:#3a7250;border-color:#adc8b5}
+.push-panel.push-active .push-button:hover{background:#eff5ef}
+.push-test{background:#dff0d9;color:#366147;border-color:#c3e0c0}
+.push-test:hover{background:#cce7c7}
+.push-button:active,.push-test:active{transform:scale(.98)}
+.push-button:disabled,.push-test:disabled{opacity:.55;cursor:wait}
+.push-test.hidden{display:none!important}
+@media(max-width:760px){
+ .push-panel{padding:12px;gap:10px;align-items:flex-start;border-radius:14px;margin-bottom:15px}
+ .push-icon{width:30px;min-width:30px;height:30px;border-radius:9px}
+ .push-icon svg{width:19px;height:19px}
+ .push-heading{font-size:10px;letter-spacing:.8px;gap:6px}
+ .push-label{font-size:7.5px;padding:3px 6px}
+ .push-summary{font-size:10px;line-height:1.45}
+ .push-state{font-size:10px;line-height:1.45}
+ .push-actions{min-width:102px}
+ .push-button,.push-test{padding:8px 9px;min-height:34px;font-size:10px;white-space:normal;text-align:center;max-width:126px}
+}
+@media(max-width:380px){
+ .push-panel{gap:7px;padding:10px 8px}
+ .push-icon{width:28px;min-width:28px;height:28px}
+ .push-summary{font-size:9.5px}
+ .push-actions{min-width:89px}
+ .push-button,.push-test{font-size:9px;padding:7px 6px;max-width:105px}
+}
