@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="PARTITE">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="./matchday.css?v=5"><link rel="stylesheet" href="./shared-events.css?v=5">
-<link rel="stylesheet" href="./push-notifications.css?v=1">
+<link rel="stylesheet" href="./push-notifications.css?v=2">
 </head>
 <body>
 <div class="site" id="top">
@@ -25,6 +25,21 @@
   <div class="header-right">
    <span class="edition">STAGIONE <strong>2026 / 27</strong></span>
    <span class="header-pill"><i aria-hidden="true"></i><span id="matchCount">37 IN PROGRAMMA</span></span>
+   <div class="push-menu" id="pushMenu">
+    <button type="button" class="push-bell" id="pushBell" aria-label="Apri impostazioni notifiche" aria-expanded="false" aria-controls="pushPanel" title="Notifiche">
+     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+     <span class="push-bell-dot" aria-hidden="true"></span>
+    </button>
+    <section class="push-panel" id="pushPanel" aria-label="Notifiche PARTITE" hidden>
+     <div class="push-heading">NOTIFICHE <span class="push-label">FACOLTATIVE</span></div>
+     <p class="push-summary" id="pushHelp">Partite ed eventi: 1 ora prima · Tutto il giorno: ore 8:00 · Nuovi eventi: subito</p>
+     <p class="push-state" id="pushState" role="status" aria-live="polite">Verifica disponibilità notifiche...</p>
+     <div class="push-actions">
+      <button type="button" class="push-button" id="pushToggle">Attiva notifiche</button>
+      <button type="button" class="push-test hidden" id="pushTest">Prova notifica</button>
+     </div>
+    </section>
+   </div>
   </div>
  </header>
  <main>
@@ -66,20 +81,6 @@
    <div class="share-invite-icon" aria-hidden="true"><span>✦</span></div>
    <div class="share-invite-text">Se vuoi condividere un evento con me, clicca <strong>+</strong></div>
    <button type="button" class="share-plus" id="createSharedEvent" aria-label="Aggiungi un evento condiviso">+</button>
-  </section>
-  <section class="push-panel" id="pushPanel" aria-label="Notifiche PARTITE">
-   <div class="push-icon" aria-hidden="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-   </div>
-   <div class="push-main">
-    <div class="push-heading">NOTIFICHE <span class="push-label">FACOLTATIVE</span></div>
-    <p class="push-summary" id="pushHelp">Partite ed eventi: 1 ora prima · Tutto il giorno: ore 8:00 · Nuovi eventi: subito</p>
-    <p class="push-state" id="pushState" role="status" aria-live="polite">Verifica disponibilità notifiche...</p>
-   </div>
-   <div class="push-actions">
-    <button type="button" class="push-button" id="pushToggle">Attiva notifiche</button>
-    <button type="button" class="push-test hidden" id="pushTest">Prova notifica</button>
-   </div>
   </section>
   <nav class="section-selector" aria-label="Seleziona gli appuntamenti">
    <button class="section-choice active" type="button" id="showMatchesSection" aria-pressed="true">PARTITE IN PROGRAMMA</button>
@@ -172,5 +173,5 @@
 <script src="./matchday-core.js?v=4"></script>
 <script src="./shared-events.js?v=6"></script>
 <script src="./matchday-ui.js?v=5"></script>
-<script src="./push-notifications.js?v=1"></script>
+<script src="./push-notifications.js?v=2"></script>
 </body></html>
