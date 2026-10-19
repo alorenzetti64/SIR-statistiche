@@ -2,7 +2,7 @@
 /* PARTITE · EVENTI CONDIVISI, separati da CASA e dal calendario dei match */
 const SHARED_ENDPOINT='https://vqrpkkrqynvlzjufiocn.supabase.co/rest/v1/partite_shared_events';
 const SHARED_PUBLIC_KEY='sb_publishable_RGTsinQvL4hyv94mzNgNHA_uKqOfDuf';
-const SHARED_HEADERS={'apikey':SHARED_PUBLIC_KEY,'Authorization':'Bearer '+SHARED_PUBLIC_KEY,'Accept':'application/json','Content-Type':'application/json'};
+const SHARED_HEADERS={'apikey':SHARED_PUBLIC_KEY,'Accept':'application/json','Content-Type':'application/json'};
 let sharedEvents=[];
 let sharedLoading=true;
 let sharedLoadError='';
