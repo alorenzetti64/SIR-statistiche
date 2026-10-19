@@ -35,7 +35,7 @@ function klass(g){
 }
 function matchTitle(t){
  let s=String(t).trim();
- s=s.replace(/\s*(?:ore|alle)\s*\d{1,2}(?:[:.]\d{2})?\b.*$/i,'').trim();
+ s=s.replace(/\s*(?:ore|alle)\s*\d{1,2}(?:[:.]\d{2})?\b.*$/i,'').replace(/\s+\d{1,2}[:.]\d{2}\b.*$/,'').trim();
  s=s.replace(/\s*[-–—]?\s*inizio riscaldamento\b.*$/i,'').trim();
  const colon=s.indexOf(':');
  if(colon!==-1)s=s.slice(colon+1).trim();
