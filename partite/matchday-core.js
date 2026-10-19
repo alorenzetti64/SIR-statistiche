@@ -35,8 +35,11 @@ function klass(g){
 }
 function matchTitle(t){
  let s=String(t).trim();
- if(s.includes(':'))s=s.slice(s.lastIndexOf(':')+1).trim();
- return s.replace(/\s*(?:ore|alle)\s*\d{1,2}(?:[:.]\d{2})?\b.*$/i,'').trim()||t;
+ s=s.replace(/\s*(?:ore|alle)\s*\d{1,2}(?:[:.]\d{2})?\b.*$/i,'').trim();
+ s=s.replace(/\s*[-–—]?\s*inizio riscaldamento\b.*$/i,'').trim();
+ const colon=s.indexOf(':');
+ if(colon!==-1)s=s.slice(colon+1).trim();
+ return s||t;
 }
 function fixture(g){
  const title=matchTitle(g.title);
