@@ -7,7 +7,23 @@
  const testButton=document.getElementById('pushTest');
  const state=document.getElementById('pushState');
  const help=document.getElementById('pushHelp');
- if(!banner||!button||!testButton||!state||!help)return;
+ const bell=document.getElementById('pushBell');
+ const menu=document.getElementById('pushMenu');
+ if(!banner||!button||!testButton||!state||!help||!bell||!menu)return;
+ function setOpen(open){
+  banner.hidden=!open;
+  bell.setAttribute('aria-expanded',String(open));
+ }
+ bell.addEventListener('click',()=>setOpen(banner.hidden));
+ document.addEventListener('click',event=>{
+  if(!banner.hidden&&!menu.contains(event.target))setOpen(false);
+ });
+ document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&!banner.hidden){
+   setOpen(false);
+   bell.focus();
+  }
+ });
  let busy=false;
  let currentSubscription=null;
  const pushCapable=()=> 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -26,6 +42,8 @@
  function render(){
   const subscribed=!!currentSubscription&&pushCapable()&&Notification.permission==='granted';
   banner.classList.toggle('push-active',subscribed);
+  bell.classList.toggle('push-bell-active',subscribed);
+  bell.setAttribute('aria-label',subscribed?'Notifiche attive. Apri impostazioni':'Apri impostazioni notifiche');
   button.disabled=busy;
   testButton.classList.toggle('hidden',!subscribed);
   testButton.disabled=busy;
