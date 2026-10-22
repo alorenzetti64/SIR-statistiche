@@ -169,7 +169,8 @@ $('nativeOrderList').addEventListener('pointerdown',e=>{
  if(!row||(e.pointerType==='touch'&&!handle))return;
  if(!$('nativeEdit').hidden){$('nativeOrderStatus').textContent='Salva o annulla la modifica del capitolo prima di spostarlo.';return}
  const from=Number(row.dataset.nativeOrderIndex);
- const grab=handle||row.querySelector('.native-order-handle');
+ // La cattura deve restare sul contenitore immobile: la riga viene riordinata nel DOM durante il gesto.
+ const grab=$('nativeOrderList');
  nativePointerDrag={pointerId:e.pointerId,from,row,grab,startX:e.clientX,startY:e.clientY,lastY:e.clientY,active:false,frame:null};
  grab.setPointerCapture(e.pointerId);
  if(handle||e.pointerType!=='touch')e.preventDefault();
