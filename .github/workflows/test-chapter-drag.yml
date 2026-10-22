@@ -65,7 +65,9 @@ jobs:
             await page.mouse.down();
             await page.mouse.move(b.x+b.width/2,b.y+b.height-5,{steps:18});
             await page.mouse.up();
-            await page.locator('#nativeOrderStatus').getByText('Ordine salvato online',{exact:false}).waitFor({timeout:15000});
+            await page.waitForTimeout(900);
+            console.log('DESKTOP_STATE',JSON.stringify({status:await page.locator('#nativeOrderStatus').innerText(),order:await orderUI(page),persisted:s.state()}));
+            await page.locator('#nativeOrderStatus').getByText('Ordine salvato online',{exact:false}).waitFor({timeout:5000});
             assert.deepEqual(s.state().current.map(x=>x.section_id),['s-b','s-c','s-d','s-a'],'Desktop drag must move first to last');
             await page.locator('#nativeArchive').click();
             await page.locator('[data-report="test-match"]').click();
