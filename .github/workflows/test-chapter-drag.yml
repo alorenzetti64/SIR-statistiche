@@ -1,0 +1,95 @@
+name: Verify chapter drag reorder on desktop and phone
+on:
+  push:
+    branches: [SIR-Match-Story]
+    paths:
+      - ".github/workflows/test-chapter-drag.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright-core@1.58.1
+      - name: Real browser mouse and touch tests
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/test-server.log 2>&1 &
+          node --input-type=module <<'JS'
+          import {chromium} from 'playwright-core';
+          import assert from 'node:assert/strict';
+          const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+          const report={id:'test-match',title:'Perugia vs Test',competition:'SuperLega',match_date:'2026-10-22',report_category:'SuperLega',venue:'Casa'};
+          const initial=[
+           {section_id:'s-a',owner:'Angelo',title:'Primo capitolo',content:'<p>A</p>',position:0},
+           {section_id:'s-b',owner:'Max',title:'Secondo capitolo',content:'<p>B</p>',position:1},
+           {section_id:'s-c',owner:'Angelo',title:'Terzo capitolo',content:'<p>C</p>',position:2},
+           {section_id:'s-d',owner:'Max',title:'Quarto capitolo',content:'<p>D</p>',position:3}
+          ];
+          async function makeSession(isMobile){
+           let current=initial.map(x=>({...x})),calls=0;
+           const ctx=await browser.newContext(isMobile?{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1}:{viewport:{width:1440,height:900}});
+           const page=await ctx.newPage(),errors=[];
+           page.on('pageerror',e=>errors.push(e.message));
+           await page.route('**/functions/v1/match-story-api**',async route=>{
+             const req=route.request(),url=new URL(req.url()),action=url.searchParams.get('action');
+             let result={ok:true};
+             if(action==='status')result={configured:true};
+             if(action==='list'||action==='public-archive')result={reports:[report]};
+             if(action==='sections')result={sections:current.map(x=>({...x}))};
+             if(action==='draft')result={report:{draft:{}}};
+             if(action==='section-reorder'){
+               const order=JSON.parse(req.postData()).order;
+               assert.equal(order.length,4);
+               current=order.map((x,i)=>({...current.find(p=>p.section_id===x.section_id&&p.owner===x.owner),position:i}));
+               calls++;result={ok:true,count:4};
+             }
+             await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+           });
+           await page.goto('http://127.0.0.1:8765/match-story/index.html',{waitUntil:'domcontentloaded'});
+           await page.locator('[data-report="test-match"]').click({timeout:20000});
+           await page.locator('#nativeOrderList .native-order-row').first().waitFor();
+           return {page,ctx,errors,state:()=>({current,calls})};
+          }
+          async function orderUI(page){return await page.locator('#nativeOrderList .native-order-row .native-order-title').allInnerTexts()}
+          try{
+            const s=await makeSession(false),page=s.page;
+            assert.equal(await page.locator('#nativeOrderList [data-native-move]').count(),0,'Old arrows removed');
+            assert.equal(await page.locator('#nativeOrderList .native-order-handle').count(),4);
+            const from=page.locator('#nativeOrderList .native-order-handle').nth(0);
+            const to=page.locator('#nativeOrderList .native-order-row').nth(3);
+            await from.scrollIntoViewIfNeeded();
+            const a=await from.boundingBox(),b=await to.boundingBox();
+            await page.mouse.move(a.x+a.width/2,a.y+a.height/2);
+            await page.mouse.down();
+            await page.mouse.move(b.x+b.width/2,b.y+b.height-5,{steps:18});
+            await page.mouse.up();
+            await page.locator('#nativeOrderStatus').getByText('Ordine salvato online',{exact:false}).waitFor({timeout:15000});
+            assert.deepEqual(s.state().current.map(x=>x.section_id),['s-b','s-c','s-d','s-a'],'Desktop drag must move first to last');
+            await page.locator('#nativeArchive').click();
+            await page.locator('[data-report="test-match"]').click();
+            assert.deepEqual((await orderUI(page)).map(x=>x.split('\n')[0]),['Secondo capitolo','Terzo capitolo','Quarto capitolo','Primo capitolo'],'Persist after reopening');
+            assert.deepEqual(s.errors,[]);
+            console.log('DESKTOP MOUSE DRAG PASSED');
+            await s.ctx.close();
+            const m=await makeSession(true),mobile=m.page;
+            const start=mobile.locator('#nativeOrderList .native-order-handle').nth(3),target=mobile.locator('#nativeOrderList .native-order-row').nth(0);
+            await start.scrollIntoViewIfNeeded();await target.scrollIntoViewIfNeeded();
+            const a2=await start.boundingBox(),b2=await target.boundingBox();
+            const session=await m.ctx.newCDPSession(mobile);
+            const origin={x:Math.round(a2.x+a2.width/2),y:Math.round(a2.y+a2.height/2)};
+            const dest={x:Math.round(b2.x+b2.width/2),y:Math.round(b2.y+8)};
+            await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...origin,id:1}]});
+            for(let i=1;i<=24;i++){
+              await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:Math.round(origin.x+(dest.x-origin.x)*i/24),y:Math.round(origin.y+(dest.y-origin.y)*i/24),id:1}]});
+              await new Promise(resolve=>setTimeout(resolve,12));
+            }
+            await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+            await mobile.locator('#nativeOrderStatus').getByText('Ordine salvato online',{exact:false}).waitFor({timeout:15000});
+            assert.deepEqual(m.state().current.map(x=>x.section_id),['s-d','s-a','s-b','s-c'],'Touch drag moves last to top');
+            assert.deepEqual(m.errors,[]);
+            console.log('SMARTPHONE TOUCH DRAG PASSED');
+            await m.ctx.close();
+          }finally{await browser.close()}
+          JS
