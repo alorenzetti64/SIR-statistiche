@@ -76,7 +76,9 @@ jobs:
             const m=await makeSession(true),mobile=m.page;
             const start=mobile.locator('#nativeOrderList .native-order-handle').nth(3),target=mobile.locator('#nativeOrderList .native-order-row').nth(0);
             await start.scrollIntoViewIfNeeded();await target.scrollIntoViewIfNeeded();
+            await mobile.evaluate(()=>{window.debugPointer=[];const box=document.getElementById('nativeOrderList');for(const type of ['pointerdown','pointermove','pointerup','pointercancel','lostpointercapture'])box.addEventListener(type,e=>{if(window.debugPointer.length<35||type!=='pointermove')window.debugPointer.push([type,e.pointerType,e.target?.className,e.clientY,document.getElementById('nativeOrderStatus').innerText]);},true)});
             const a2=await start.boundingBox(),b2=await target.boundingBox();
+            console.log('MOBILE_COORDS',JSON.stringify({a2,b2,viewport:mobile.viewportSize()}));
             const session=await m.ctx.newCDPSession(mobile);
             const origin={x:Math.round(a2.x+a2.width/2),y:Math.round(a2.y+a2.height/2)};
             const dest={x:Math.round(b2.x+b2.width/2),y:Math.round(b2.y+8)};
@@ -86,7 +88,9 @@ jobs:
               await new Promise(resolve=>setTimeout(resolve,12));
             }
             await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-            await mobile.locator('#nativeOrderStatus').getByText('Ordine salvato online',{exact:false}).waitFor({timeout:15000});
+            await mobile.waitForTimeout(900);
+            console.log('MOBILE_STATE',JSON.stringify({status:await mobile.locator('#nativeOrderStatus').innerText(),order:await orderUI(mobile),persisted:m.state(),events:await mobile.evaluate(()=>window.debugPointer)}));
+            await mobile.locator('#nativeOrderStatus').getByText('Ordine salvato online',{exact:false}).waitFor({timeout:4000});
             assert.deepEqual(m.state().current.map(x=>x.section_id),['s-d','s-a','s-b','s-c'],'Touch drag moves last to top');
             assert.deepEqual(m.errors,[]);
             console.log('SMARTPHONE TOUCH DRAG PASSED');
