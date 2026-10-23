@@ -64,5 +64,65 @@ function formatCommand(editor,range,cmd){
   return !!ok;
  }catch(e){return false}
 }
-window.SirPresentaRichText={sanitize,plainFromEditor,fromPlain,restoreSelection,applySpan,formatCommand};
+
+function insideList(editor,range){
+ if(!range||!editor.contains(range.commonAncestorContainer))return null;
+ let node=range.startContainer;
+ if(node.nodeType===Node.TEXT_NODE)node=node.parentElement;
+ const li=node?.closest?.('li');
+ if(!li||!editor.contains(li))return null;
+ const list=li.parentElement;
+ return list&&(list.tagName==='UL'||list.tagName==='OL')&&editor.contains(list)?li:null;
+}
+function cursorIn(editor){
+ const selection=window.getSelection();
+ if(!selection||!selection.rangeCount)return null;
+ const range=selection.getRangeAt(0);
+ return editor.contains(range.commonAncestorContainer)?range.cloneRange():null;
+}
+function setCaretAtStart(node){
+ const range=document.createRange(),selection=window.getSelection();
+ range.selectNodeContents(node);range.collapse(true);
+ selection.removeAllRanges();selection.addRange(range);
+}
+// Remove one bullet without destroying its text or the surrounding list.
+// The rows before/after the selected row remain independent list items.
+function removeBullet(editor,range){
+ const li=insideList(editor,range);
+ if(!li)return false;
+ const list=li.parentElement,parent=list.parentNode;
+ if(!parent)return false;
+ const paragraph=document.createElement('div');
+ while(li.firstChild)paragraph.append(li.firstChild);
+ if(!paragraph.textContent.trim()&&!paragraph.querySelector('br'))paragraph.append(document.createElement('br'));
+ const afterList=list.cloneNode(false);
+ while(li.nextSibling)afterList.append(li.nextSibling);
+ parent.insertBefore(paragraph,list.nextSibling);
+ if(afterList.childNodes.length)parent.insertBefore(afterList,paragraph.nextSibling);
+ li.remove();
+ if(!list.querySelector('li'))list.remove();
+ editor.focus({preventScroll:true});
+ setCaretAtStart(paragraph);
+ editor.dispatchEvent(new Event('input',{bubbles:true}));
+ return true;
+}
+// The list tool works with a *cursor*, not only highlighted words.
+// On a bulleted line it removes that bullet; on normal text it starts a list.
+function toggleBulletList(editor,range){
+ const selected=range&&editor.contains(range.commonAncestorContainer)?range:cursorIn(editor);
+ if(!selected)return false;
+ if(selected.collapsed&&insideList(editor,selected))return removeBullet(editor,selected);
+ return formatCommand(editor,selected,'insertUnorderedList');
+}
+// Enter or Backspace on an empty bullet returns to normal text.
+// This also works with iPad's on-screen keyboard through beforeinput.
+function escapeEmptyBullet(editor,range){
+ if(!range||!range.collapsed)return false;
+ const li=insideList(editor,range);
+ if(!li)return false;
+ const text=(li.innerText||li.textContent||'').replace(/\u200b/g,'').replace(/\u00a0/g,' ').trim();
+ return !text&&removeBullet(editor,range);
+}
+
+window.SirPresentaRichText={sanitize,plainFromEditor,fromPlain,restoreSelection,applySpan,formatCommand,toggleBulletList,removeBullet,escapeEmptyBullet,insideList};
 })();
