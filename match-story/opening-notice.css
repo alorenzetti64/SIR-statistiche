@@ -1,0 +1,47 @@
+
+/* SIR Match Story — comunicazione facoltativa all'apertura */
+.msn-overlay,.msn-editor-overlay{position:fixed;inset:0;z-index:2147480600;display:flex;align-items:center;justify-content:center;background:rgba(7,19,34,.84);padding:20px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.msn-overlay[hidden],.msn-editor-overlay[hidden],.msn-editor [hidden],.msn-overlay [hidden]{display:none!important}
+.msn-dialog{background:#fff;border-radius:18px;width:min(620px,100%);max-height:min(93dvh,950px);overflow-y:auto;box-shadow:0 24px 100px #0008;color:#102a40;text-align:left;animation:msnIn .23s ease-out}
+@keyframes msnIn{from{transform:translateY(18px);opacity:.5}to{transform:translateY(0);opacity:1}}
+.msn-banner{display:flex;justify-content:space-between;align-items:center;min-height:68px;background:#102940;color:white;padding:13px 22px;gap:12px}
+.msn-banner small{letter-spacing:.14em;font-weight:850;font-size:12px;color:#ffc2d2}
+.msn-x{border:1px solid #ffffff77;border-radius:50%;background:#ffffff18;color:white;font-size:26px;width:40px;height:40px;line-height:35px;cursor:pointer;flex:none}
+.msn-picture{background:#ecf0f4;text-align:center}
+.msn-picture img{display:block;max-width:100%;max-height:38dvh;width:100%;object-fit:contain}
+.msn-pop-content{padding:26px 33px 33px}
+.msn-pop-content h2{color:#142b40;font-weight:900;font-size:clamp(21px,3.2vw,32px);line-height:1.14;margin:0 0 18px;overflow-wrap:anywhere}
+.msn-message{white-space:pre-wrap;font-size:clamp(17px,2.2vw,20px);line-height:1.55;overflow-wrap:anywhere;color:#27435a;margin:0 0 27px}
+.msn-dismiss{background:#bd2f5b;color:white;padding:14px 22px;border:0;border-radius:9px;font-weight:850;letter-spacing:.03em;font-size:16px;width:100%;min-height:52px}
+.msn-manage-btn{background:#173a57!important;color:white!important}
+.msn-editor-overlay{z-index:2147480550;align-items:flex-start;padding:24px 12px}
+.msn-editor{background:#f9fbfc;color:#172f42;width:min(800px,100%);min-height:300px;border-radius:14px;box-shadow:0 20px 90px #0009;overflow:hidden;margin:auto}
+.msn-editor-head{background:#122d45;padding:25px 26px;color:white;display:flex;justify-content:space-between;align-items:flex-start;gap:15px}
+.msn-editor-head small{letter-spacing:.14em;color:#f4a7c1;font-weight:850;font-size:11px}
+.msn-editor-head h2{font-size:clamp(21px,3vw,27px);line-height:1.15;margin:6px 0;color:white}
+.msn-editor-head p{margin:5px 0;font-size:14px;line-height:1.4;color:#dce5ec}
+.msn-editor-close{width:43px;height:43px;flex:none;border:1px solid #cfdce6;border-radius:8px;background:#ffffff20;color:white;font-size:29px}
+.msn-fields{padding:22px 28px 32px;display:flex;flex-direction:column;gap:11px}
+.msn-fields>label:not(.msn-checkbox){font-weight:800;font-size:14px;color:#233e52}
+.msn-fields input[type=text],.msn-fields input[type=password],.msn-fields textarea{background:#fff!important;color:#1d3449!important;border:1px solid #9fb0bd!important;border-radius:8px!important;padding:13px!important;font-family:system-ui,sans-serif!important;font-size:17px!important;max-width:100%;width:100%;line-height:1.5;box-sizing:border-box}
+.msn-fields textarea{resize:vertical;min-height:145px}
+.msn-checkbox{display:flex;align-items:center;gap:15px;padding:18px 17px;background:#e7eef5;border:2px solid #d9a0b5;border-radius:10px;margin-bottom:9px;cursor:pointer}
+.msn-checkbox input{width:28px;height:28px;flex:none;accent-color:#bc2e61}
+.msn-checkbox span{display:flex;flex-direction:column;gap:5px}
+.msn-checkbox b{font-size:16px;color:#173a52}
+.msn-checkbox small{font-size:13px;color:#5b6d79;line-height:1.4}
+.msn-upload-row,.msn-actions,.msn-login-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msn-upload-row button,.msn-actions button,.msn-login-row button{padding:13px 16px;min-height:47px;border-radius:8px;border:1px solid #213f57;background:white;color:#213f57;font-weight:800;cursor:pointer;max-width:100%}
+.msn-upload-row button:first-child,.msn-actions button:last-child,.msn-login-row button{background:#173a55;color:white}
+.msn-upload-row button:disabled,.msn-actions button:disabled{opacity:.55;cursor:wait}
+.msn-actions button{flex:1 1 180px}
+.msn-preview-image{background:#e9eef3;border-radius:10px;min-height:110px;max-height:275px;border:1px dashed #b4c3cc;display:flex;align-items:center;justify-content:center;color:#617284;text-align:center;font-size:14px;overflow:hidden}
+.msn-preview-image img{display:block;max-height:275px;max-width:100%;object-fit:contain}
+.msn-login{background:#f8e7ec;padding:16px;border:1px solid #d3acbd;border-radius:9px;margin-top:7px}
+.msn-login p{font-size:14px;margin:0 0 10px;color:#6d2b4b}
+.msn-login-row{margin-top:9px}
+.msn-login-row input{flex:1 1 180px;width:auto}
+.msn-feedback{font-size:14px;line-height:1.45;margin:6px 0;min-height:20px;color:#1b634c}
+.msn-feedback.msn-error{color:#a02244}
+@media(max-width:600px){.msn-overlay,.msn-editor-overlay{padding:10px;align-items:flex-start}.msn-dialog{margin:auto;border-radius:12px}.msn-pop-content{padding:23px 21px}.msn-editor-head{padding:17px}.msn-fields{padding:17px}.msn-checkbox{padding:12px}.msn-editor{margin:0 auto}}
+@media(prefers-reduced-motion:reduce){.msn-dialog{animation:none}}
