@@ -235,3 +235,17 @@
 .sir-dir .sd-insert-actions .sd-insert-slide:hover{background:#ac2050}
 .sir-dir .sd-insert-actions p{font-size:13px;line-height:1.45;margin:9px 3px 0;color:#436074}
 @media(max-width:650px){.sir-dir .sd-insert-actions{margin:12px 14px;padding:12px}.sir-dir .sd-insert-actions .sd-insert-slide{font-size:14px}}
+
+/* Editable bullets: a direct, visible way to return to normal paragraphs. */
+.sir-dir .sd-rich-line .sd-rbutton.sd-unlist{
+  background:#fff7e9;color:#843c11;border:2px solid #d5a16c;
+  font-weight:900;min-height:44px;touch-action:manipulation;
+}
+.sir-dir .sd-rich-line .sd-rbutton.sd-unlist:focus-visible{
+  outline:3px solid #d8296c;outline-offset:2px;
+}
+.sir-dir .sd-rich-input ul,.sir-dir .sd-rich-input ol{margin:.35em 0 .7em;padding-left:1.55em;list-style-position:outside}
+.sir-dir .sd-rich-input li{margin:.23em 0;padding-left:.18em;min-height:1.35em}
+.sir-dir .sd-rich-input li:empty:after{content:'\200b'}
+.sir-dir .sd-slide .sd-content ul,.sir-dir .sd-slide .sd-content ol{padding-left:1.4em;margin:.2em 0 .5em}
+.sir-dir .sd-slide .sd-content li{margin:.15em 0}
