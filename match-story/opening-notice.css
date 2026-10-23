@@ -45,3 +45,14 @@
 .msn-feedback.msn-error{color:#a02244}
 @media(max-width:600px){.msn-overlay,.msn-editor-overlay{padding:10px;align-items:flex-start}.msn-dialog{margin:auto;border-radius:12px}.msn-pop-content{padding:23px 21px}.msn-editor-head{padding:17px}.msn-fields{padding:17px}.msn-checkbox{padding:12px}.msn-editor{margin:0 auto}}
 @media(prefers-reduced-motion:reduce){.msn-dialog{animation:none}}
+
+/* 2026-10-23 — iPad native photo picker and prominent STAFF authorization */
+.msn-editor-needs-login .msn-fields > :not(.msn-login):not(.msn-feedback){display:none!important}
+.msn-editor-needs-login .msn-login{display:block!important;margin:4px 0 18px}
+.msn-login{order:-10;padding:20px!important;background:#fff3e9!important;border:2px solid #cf9867!important}
+.msn-login p{font-size:16px!important;font-weight:700;color:#613f29!important}
+.msn-upload-picker{position:relative;display:flex;align-items:center;justify-content:center;min-height:54px;flex:1 1 280px;max-width:100%;padding:12px 16px;border-radius:8px;border:1px solid #173a55;background:#173a55;color:white;font-size:15px;font-weight:800;text-align:center;cursor:pointer;touch-action:manipulation;overflow:hidden}
+.msn-upload-picker:focus-within{outline:3px solid #e13e74;outline-offset:2px}
+.msn-upload-picker input[type=file]{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important;font-size:100px!important;z-index:1}
+.msn-upload-picker.msn-busy{opacity:.58;pointer-events:none}
+.msn-upload-row button{flex:0 1 auto}
