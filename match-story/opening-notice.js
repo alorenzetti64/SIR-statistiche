@@ -26,7 +26,9 @@ function popup(data,force=false){
  document.addEventListener('keydown',onKey);document.body.append(o);o.querySelector('.msn-x').focus({preventScroll:true});
 }
 let lastNoticeCheck=0,hiddenAt=0;
-async function loadNotice(){lastNoticeCheck=Date.now();try{const notice=await request('public');popup(notice)}catch(e){console.warn('Avviso non disponibile',e)}}
+async function loadNotice(){
+ if(document.querySelector('.msn-editor-overlay:not([hidden])')||document.getElementById('msn-overlay'))return;
+ lastNoticeCheck=Date.now();try{const notice=await request('public');popup(notice)}catch(e){console.warn('Avviso non disponibile',e)}}
 function editor(){
  if(isPlayers)return;
  const target=document.querySelector('#staffRoom .archive-top .line')||document.querySelector('#staffRoom .archive-top');if(!target)return;
