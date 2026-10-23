@@ -228,3 +228,10 @@
  .sir-dir .sd-margins-grid{grid-template-columns:1fr;gap:12px}
  .sir-dir .sd-margins-group{padding:12px}
 }
+
+/* Easy-to-reach, genuinely blank slide insertion in REGIA on iPad/desktop. */
+.sir-dir .sd-insert-actions{max-width:950px;margin:14px auto 6px;padding:15px 18px;border:1px solid #a9c4d5;border-radius:11px;background:#ecf4f9;color:#27475c}
+.sir-dir .sd-insert-actions .sd-insert-slide{display:block;width:100%;min-height:55px;background:#c92961;border:1px solid #c92961;color:#fff;border-radius:8px;font-size:16px;font-weight:850;letter-spacing:.025em;cursor:pointer;touch-action:manipulation}
+.sir-dir .sd-insert-actions .sd-insert-slide:hover{background:#ac2050}
+.sir-dir .sd-insert-actions p{font-size:13px;line-height:1.45;margin:9px 3px 0;color:#436074}
+@media(max-width:650px){.sir-dir .sd-insert-actions{margin:12px 14px;padding:12px}.sir-dir .sd-insert-actions .sd-insert-slide{font-size:14px}}
