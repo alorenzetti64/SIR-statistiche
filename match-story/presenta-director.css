@@ -195,3 +195,36 @@
   word-spacing:.12em;
   font-kerning:normal;
 }
+
+/* Editable headers and footers — SIR PRESENTA */
+.sir-dir .sd-margins{max-width:950px;margin:18px auto;padding:18px 20px 20px;background:#f1f5f9;color:#1f374b;border:1px solid #bfd1dc;border-left:5px solid #d92c63;border-radius:12px}
+.sir-dir .sd-margins-head strong{font-size:17px;color:#193b54;font-weight:900;letter-spacing:.03em}
+.sir-dir .sd-margins-head p{font-size:13px;line-height:1.45;color:#526779;margin:6px 0 16px}
+.sir-dir .sd-margins-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sir-dir .sd-margins-group{display:flex;flex-direction:column;gap:9px;min-width:0;padding:15px;background:#fff;border:1px solid #d2dfe7;border-radius:9px}
+.sir-dir .sd-margins-group>strong{color:#b62b59;font-size:13px;letter-spacing:.12em}
+.sir-dir .sd-margins-group>label{font-size:13px;font-weight:750;color:#243f53;margin-top:5px}
+.sir-dir .sd-margins-group input[type=text]{width:100%;min-height:43px;max-width:100%;padding:10px 11px;background:white;color:#243f53;border:1px solid #a9bfcd;border-radius:7px;font:16px/1.3 system-ui,-apple-system,sans-serif;letter-spacing:normal;box-sizing:border-box}
+.sir-dir .sd-margins-group input[type=text]:focus{border-color:#d62d67;outline:2px solid #f3b4c9}
+.sir-dir .sd-margins-group input[disabled]{opacity:.47;background:#e8eef2;cursor:not-allowed}
+.sir-dir .sd-margins-group input[type=range]{width:100%;height:35px;accent-color:#d62c67;cursor:ew-resize}
+.sir-dir .sd-margins-group output{color:#bd2760;float:right;font-weight:800}
+.sir-dir .sd-margins-checkbox{display:flex!important;align-items:center;gap:10px;cursor:pointer;padding:8px 0}
+.sir-dir .sd-margins-checkbox input{width:22px;height:22px;flex:none;accent-color:#c92c60}
+.sir-dir .sd-margins-checkbox span{font-size:13px}
+.sir-dir .sd-margins-actions{border-top:1px solid #c8d9e1;margin-top:15px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+.sir-dir .sd-margins-actions p{font-size:13px;color:#547084;flex:1 1 100%;margin:0 0 5px}
+.sir-dir .sd-margins-actions .sd-editbtn{flex:1 1 190px;min-height:45px;white-space:normal}
+.sir-dir .sd-margins-actions .sd-margins-copy{background:#193b52;color:white;border-color:#193b52}
+.sir-dir .sd-slide .sd-eyebrow{font-size:var(--sd-label-header-size,15px);min-width:0}
+.sir-dir .sd-slide .sd-eyebrow>span{min-width:0;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sir-dir .sd-slide .sd-eyebrow .sd-owner{font-size:var(--sd-label-header-size,15px);max-width:32%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sir-dir .sd-slide .sd-foot{font-size:var(--sd-label-footer-size,13px);min-width:0}
+.sir-dir .sd-slide .sd-foot>small{font-size:inherit;min-width:0;max-width:47%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sir-dir .sd-slide .sd-foot>small:last-child{text-align:right}
+.sir-dir .sd-slide .sd-foot .sd-clip-link{flex:none}
+@media(max-width:750px){
+ .sir-dir .sd-margins{margin:14px 12px;padding:15px}
+ .sir-dir .sd-margins-grid{grid-template-columns:1fr;gap:12px}
+ .sir-dir .sd-margins-group{padding:12px}
+}
