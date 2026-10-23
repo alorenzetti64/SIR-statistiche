@@ -185,3 +185,13 @@
  .sir-dir .sd-bg-row label{flex-basis:100%}
  .sir-dir .sd-bg-controls select,.sir-dir .sd-bg-controls input[type=range]{max-width:100%;flex-basis:100%}
 }
+
+/* Typography fix: text selections insert nested spans with independent font sizes.
+   The original -0.068em tracking on the large h2 was inherited as a fixed negative
+   pixel value even when a nested span was reduced to 20–40px, overlapping glyphs. */
+.sir-dir .sd-slide .sd-h,
+.sir-dir .sd-slide .sd-h *{
+  letter-spacing:.012em!important;
+  word-spacing:.12em;
+  font-kerning:normal;
+}
