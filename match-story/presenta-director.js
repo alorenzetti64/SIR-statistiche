@@ -5,6 +5,8 @@ const DB_API='https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-
 const layouts=['cover','message','split','photo','summary'];
 const rich=window.SirPresentaRichText;
 const backgrounds=window.SirPresentaBackgrounds;
+const margins=window.SirPresentaMargins;
+if(!margins)throw Error('Editor intestazioni non caricato: aggiorna la pagina.');
 if(!rich)throw Error('Editor testo non caricato: aggiorna la pagina.');
 
 const $=(root,selector)=>root.querySelector(selector);
@@ -182,6 +184,7 @@ async function open({report,chapters,editMode=false}){
  const showToast=msg=>{toaster.textContent=msg;toaster.hidden=false;clearTimeout(showToast.handle);showToast.handle=setTimeout(()=>toaster.hidden=true,2600)};
  const imageRef=page=>page.customImageUrl&&validImage(page.customImageUrl) ?{id:'direct-upload',src:page.customImageUrl,alt:page.customImageName||'Immagine caricata in REGIA'}:images.get(page.imageId||'');
  const backgroundPanel=backgrounds.build(editor,{reportId:report.id,getPage:()=>pages[at],getPages:()=>pages,getImage:imageRef,changed:mark,draw:()=>show(false),save:()=>save(false)});
+ const marginsPanel=margins.build(editor,{getPage:()=>pages[at],getPages:()=>pages,changed:mark,draw:()=>show(false)});
  function resize(){if(!shell.isConnected)return;const r=stage.getBoundingClientRect(),scale=Math.min((r.width-22)/1280,(r.height-22)/720);surface.style.transform='scale('+Math.max(.07,scale)+')'}
  ro=new ResizeObserver(resize);ro.observe(stage);
  function note(){status.textContent=dirty?'Modifiche in attesa di salvataggio…':stale?'Materiale originale cambiato: per aggiornare la sequenza usa «Rigenera dalle card» (le modifiche al racconto verranno sostituite).':'✓ Regia salvata. Le card del report restano intatte.'}
@@ -228,6 +231,7 @@ async function open({report,chapters,editMode=false}){
    if(photoInput.selectedIndex<0)photoInput.value='';
    chooseImage();
    backgroundPanel.refresh();
+   marginsPanel.refresh();
    titleSizeInput.value=p.titleSize||89;bodySizeInput.value=p.bodySize||34;titleFontInput.value=p.titleFont||'inter';bodyFontInput.value=p.bodyFont||'inter';
    $(shell,'#sdTitleSizeValue').textContent=p.titleSize?p.titleSize+' px':'Auto';
    $(shell,'#sdBodySizeValue').textContent=p.bodySize?p.bodySize+' px':'Auto';
@@ -276,6 +280,7 @@ async function open({report,chapters,editMode=false}){
    const foot=document.createElement('div');foot.className='sd-foot';const left=document.createElement('small');left.textContent='LA LETTURA · IL MESSAGGIO · IL GIOCO';const right=document.createElement('small');right.textContent=String(at+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0');
    foot.append(left);
    if(validVideo(p.videoUrl)){const link=document.createElement('button');link.type='button';link.className='sd-clip-link';link.textContent='▶ APRI VIDEO';link.onclick=()=>window.open(p.videoUrl,'_blank','noopener');foot.append(link)}
+   margins.apply(p,{scene,headerLeft:tag,headerRight:by,footerLeft:left,footerRight:right},at,pages.length);
    foot.append(right);scene.append(foot);
    surface.append(scene);
    if(editing){
