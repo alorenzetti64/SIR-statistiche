@@ -1,12 +1,10 @@
 (function noticeModule(){
 'use strict';
 const URL_NOTICE='https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-opening-notice';
-const URL_AUTH='https://rwfxsbxxykocdcqphfvb.supabase.co/functions/v1/match-story-api';
 const isPlayers=new URLSearchParams(location.search).get('view')==='players';
 const imagePattern=/^https:\/\/rwfxsbxxykocdcqphfvb\.supabase\.co\/storage\/v1\/object\/public\/match-story-presenta-images\/[a-z0-9\/_.-]+$/i;
-const tok=()=>sessionStorage.getItem('sir_match_story_session')||'';
 async function request(action,data,raw=false){
- const headers={Authorization:'Bearer '+tok()};
+ const headers={};
  if(data!==undefined)headers['Content-Type']=raw?'image/jpeg':'application/json';
  const res=await fetch(URL_NOTICE+'?action='+action,{method:data===undefined?'GET':'POST',headers,body:data===undefined?undefined:raw?data:JSON.stringify(data),cache:'no-store'});
  const out=await res.json();if(!res.ok)throw Error(out.error||'Collegamento non disponibile');return out;
@@ -42,17 +40,14 @@ function editor(){
    <label for="msnTitle">Titolo (facoltativo)</label><input type="text" id="msnTitle" maxlength="110" placeholder="Es. Una cosa importante">
    <label for="msnMessage">Testo della comunicazione</label><textarea id="msnMessage" maxlength="3600" rows="7" placeholder="Scrivi qui la tua comunicazione…"></textarea>
    <label>Immagine facoltativa · puoi usare anche solo il testo</label><div class="msn-upload-row"><label for="msnFile" class="msn-upload-picker"><span>+ SCEGLI IMMAGINE DAL DISPOSITIVO</span><input type="file" id="msnFile" accept="image/*,.heic,.heif" aria-label="Scegli immagine o foto dall’iPad"></label><button type="button" id="msnRemove">RIMUOVI IMMAGINE</button></div><div class="msn-preview-image" id="msnImageBox">Nessuna immagine selezionata</div>
-   <div class="msn-login" id="msnLogin" hidden><p>Per modificare il messaggio, accedi con la password STAFF.</p><label for="msnPass">Password STAFF</label><div class="msn-login-row"><input type="password" id="msnPass" autocomplete="current-password"><button id="msnLoginButton" type="button">ACCEDI</button></div></div>
    <p id="msnFeedback" class="msn-feedback" aria-live="polite"></p>
    <div class="msn-actions"><button type="button" id="msnTest">ANTEPRIMA</button><button type="button" id="msnSave">SALVA COMUNICAZIONE</button></div>
   </div>
  </section>`;
  document.body.append(modal);
  const q=s=>modal.querySelector(s);
- const loginPanel=q('#msnLogin');q('.msn-fields').prepend(loginPanel);
- let picture=null,active=false,authorized=false,loaded=false;
+ let picture=null,active=false;
  const feedback=(s,bad=false)=>{q('#msnFeedback').textContent=s;q('#msnFeedback').classList.toggle('msn-error',bad)};
- const showLogin=state=>{q('#msnLogin').hidden=!state;modal.classList.toggle('msn-editor-needs-login',state);authorized=!state};
  function imagePreview(){
   const box=q('#msnImageBox');box.replaceChildren();
   if(!picture){box.textContent='Nessuna immagine selezionata';return}
@@ -60,40 +55,39 @@ function editor(){
  }
  function values(){return{enabled:q('#msnEnabled').checked,title:q('#msnTitle').value.trim(),message:q('#msnMessage').value.trim(),imageUrl:picture}}
  async function reload(){
-  try{const p=await request('edit');q('#msnEnabled').checked=!!p.enabled;q('#msnTitle').value=p.title||'';q('#msnMessage').value=p.message||'';picture=p.imageUrl||null;imagePreview();showLogin(false);loaded=true;feedback('Impostazioni caricate. Il popup è '+(p.enabled?'ATTIVO.':'DISATTIVATO.'))}
-  catch(e){loaded=false;showLogin(true);feedback('Effettua l’accesso STAFF per attivare il popup e caricare immagini.',true)}
+  try{
+   const p=await request('edit');
+   q('#msnEnabled').checked=!!p.enabled;
+   q('#msnTitle').value=p.title||'';
+   q('#msnMessage').value=p.message||'';
+   picture=p.imageUrl||null;imagePreview();
+   feedback('Impostazioni caricate. Il popup è '+(p.enabled?'ATTIVO.':'DISATTIVATO.'));
+  }catch(e){feedback('Impossibile caricare le impostazioni: '+e.message,true)}
  }
- trigger.onclick=async()=>{if(active)return;active=true;modal.hidden=false;showLogin(true);feedback('Caricamento delle impostazioni…');await reload();q('.msn-editor-close').focus()};
+ trigger.onclick=async()=>{if(active)return;active=true;modal.hidden=false;feedback('Caricamento delle impostazioni…');await reload();q('.msn-editor-close').focus()};
  function close(){modal.hidden=true;active=false}
  q('.msn-editor-close').onclick=close;
  modal.addEventListener('click',e=>{if(e.target===modal)close()});
- q('#msnTest').onclick=()=>{if(!authorized)return feedback('Accedi come STAFF per visualizzare l’anteprima.',true);popup({...values(),enabled:true},true)};
+ q('#msnTest').onclick=()=>popup({...values(),enabled:true},true);
  q('#msnSave').onclick=async()=>{
-  if(!authorized)return feedback('Accedi come STAFF prima di salvare.',true);
   if(q('#msnEnabled').checked&&!q('#msnMessage').value.trim())return feedback('Inserisci il testo prima di attivare il popup.',true);
   const btn=q('#msnSave');btn.disabled=true;feedback('Salvataggio e verifica in corso…');
   try{
    const form=values();await request('save',form);
    const saved=await request('edit');
-   if(!!saved.enabled!==form.enabled||saved.message!==form.message||saved.imageUrl!==form.imageUrl)throw Error('Il server non ha confermato i dati salvati. Riprova.');
-   showLogin(false);
+   if(!!saved.enabled!==form.enabled||saved.message!==form.message||saved.title!==form.title||saved.imageUrl!==form.imageUrl)
+    throw Error('Il server non ha confermato i dati salvati. Riprova.');
+   const publicState=await request('public');
+   if(!!publicState.enabled!==form.enabled)
+    throw Error('La comunicazione non risulta ancora nello stato selezionato. Riprova.');
    feedback(form.enabled?'✓ Comunicazione salvata e ATTIVA. La vedrai a ogni apertura, finché non disattivi il flag.':'✓ Comunicazione salvata e DISATTIVATA. Nessun popup all’apertura.');
    if(form.enabled)popup({...saved,enabled:true},true);
-  }catch(e){if(String(e.message).includes('STAFF'))showLogin(true);feedback(e.message,true)}
+  }catch(e){feedback('Salvataggio non riuscito: '+e.message,true)}
   finally{btn.disabled=false}
- };
- q('#msnLoginButton').onclick=async()=>{
-  const btn=q('#msnLoginButton');btn.disabled=true;feedback('Verifico l’accesso STAFF…');
-  try{
-   const r=await fetch(URL_AUTH+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:q('#msnPass').value}),cache:'no-store'});
-   const d=await r.json();if(!r.ok||!d.token)throw Error(d.error||'Password non valida.');
-   sessionStorage.setItem('sir_match_story_session',d.token);q('#msnPass').value='';await reload();
-  }catch(e){feedback(e.message,true)}finally{btn.disabled=false}
  };
  q('#msnRemove').onclick=()=>{picture=null;imagePreview();feedback('Immagine rimossa dalla bozza. Premi SALVA per confermare.')};
  q('#msnFile').onchange=async()=>{
   const file=q('#msnFile').files?.[0];q('#msnFile').value='';if(!file)return;
-  if(!authorized)return feedback('Accedi come STAFF prima di scegliere un’immagine.',true);
   const btn=q('.msn-upload-picker');btn.classList.add('msn-busy');feedback('Preparo la foto…');
   try{
    if(!file.type.startsWith('image/')&&!/\.(heic|heif)$/i.test(file.name)||file.size>26*1024*1024)throw Error('Scegli una foto fino a 26 MB.');
@@ -111,7 +105,7 @@ function editor(){
    feedback('Caricamento immagine…');
    const result=await request('upload',blob,true);
    picture=result.imageUrl;imagePreview();feedback('✓ Immagine caricata. Premi SALVA per confermare.');
-  }catch(e){if(String(e.message).includes('STAFF'))showLogin(true);feedback(e.message,true)}finally{btn.classList.remove('msn-busy')}
+  }catch(e){feedback('Impossibile inserire l’immagine: '+e.message,true)}finally{btn.classList.remove('msn-busy')}
  };
 }
 function init(){editor();loadNotice();
