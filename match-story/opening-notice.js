@@ -27,7 +27,8 @@ function popup(data,force=false){
  o.addEventListener('click',e=>{if(e.target===o)close()});
  document.addEventListener('keydown',onKey);document.body.append(o);o.querySelector('.msn-x').focus({preventScroll:true});
 }
-async function loadNotice(){try{const notice=await request('public');popup(notice)}catch(e){console.warn('Avviso non disponibile',e)}}
+let lastNoticeCheck=0,hiddenAt=0;
+async function loadNotice(){lastNoticeCheck=Date.now();try{const notice=await request('public');popup(notice)}catch(e){console.warn('Avviso non disponibile',e)}}
 function editor(){
  if(isPlayers)return;
  const target=document.querySelector('#staffRoom .archive-top .line')||document.querySelector('#staffRoom .archive-top');if(!target)return;
@@ -99,10 +100,11 @@ function editor(){
    const url=URL.createObjectURL(file);
    let image;
    try{image=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(Error('Formato non leggibile: usa JPG o PNG.'));i.src=url})}
-   finally{URL.revokeObjectURL(url)}
+   catch(e){URL.revokeObjectURL(url);throw e}
    const k=Math.min(1,1700/Math.max(image.naturalWidth,image.naturalHeight));
    const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*k));canvas.height=Math.max(1,Math.round(image.naturalHeight*k));
-   const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+   const ctx=canvas.getContext('2d');if(!ctx){URL.revokeObjectURL(url);throw Error('Impossibile preparare la foto sul dispositivo.')}
+   ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);
    const jpeg=quality=>new Promise((resolve,reject)=>canvas.toBlob(x=>x?resolve(x):reject(Error('Conversione non riuscita.')),'image/jpeg',quality));
    let blob=await jpeg(.82);if(blob.size>4_800_000)blob=await jpeg(.62);
    if(blob.size>4_900_000)throw Error('Foto troppo grande. Riprova con una più piccola.');
@@ -112,6 +114,12 @@ function editor(){
   }catch(e){if(String(e.message).includes('STAFF'))showLogin(true);feedback(e.message,true)}finally{btn.classList.remove('msn-busy')}
  };
 }
-function init(){editor();loadNotice()}
+function init(){editor();loadNotice();
+ window.addEventListener('pageshow',e=>{if(e.persisted)loadNotice()});
+ document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){hiddenAt=Date.now();return}
+  if(hiddenAt&&Date.now()-hiddenAt>2500&&Date.now()-lastNoticeCheck>2500)loadNotice()
+ });
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
