@@ -334,7 +334,7 @@ async function confirmExtraction(){
  const src=extracted.toDataURL('image/png'),maskSrc=smallMask.toDataURL('image/png');
  const image=await imageFrom(src);
  const p={id:++counter,name:'Giocatore '+counter,x:left+w/2,y:top+h/2,w,h,yaw:0,pitch:0,roll:0,scale:1,
-  src,img:image,maskSrc,maskImg:smallMask,originX:left,originY:top,clearOriginal:!demo};
+  src,img:image,maskSrc,maskImg:smallMask,originX:left,originY:top,clearOriginal:true};
  players.push(p);selected=p.id;mask=null;maskTint=null;lasso=[];
  rebuildBackground();setMode('edit');rebuildGallery();updateUI();
  setStatus('Giocatore '+counter+' estratto. Trascinalo sul campo oppure regola rotazioni e dimensioni. Per estrarne un altro torna a «1 · Estrai giocatori».','ok');
@@ -371,7 +371,7 @@ function inpaintOne(c,p){
 function rebuildBackground(){
  if(!base)return;
  background=makeCanvas(W,H);const b=background.getContext('2d',{willReadFrequently:true});b.drawImage(base,0,0);
- if(!demo)for(const p of players)if(p.clearOriginal)inpaintOne(background,p);
+ for(const p of players)if(p.clearOriginal)inpaintOne(background,p);
  render();
 }
 function download(blob,name){
