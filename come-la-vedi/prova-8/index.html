@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark"><title>SIR COME LA VEDI 2.0 — Prova 8</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eff3fa;background:#0b1019}*{box-sizing:border-box}body{margin:0;background:#0b1019}header{padding:15px clamp(12px,2.6vw,25px);background:#111c29;border-bottom:1px solid #25394d;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:850;font-size:clamp(18px,2.2vw,23px)}.brand span{color:#f6d061}header small{display:block;color:#9eb2ca;margin-top:4px}.tag{font-size:12px;border:1px solid #665b33;border-radius:18px;padding:5px 10px;color:#f5cf77}.shell{max-width:1750px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;padding:16px}.stagewrap,.panel{background:#131e2b;border:1px solid #344458;border-radius:16px;padding:12px}.bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}button{appearance:none;-webkit-appearance:none;border:1px solid #425670;border-radius:9px;padding:10px 12px;font-size:14px;line-height:1.2;background:#23354d;color:#eef2f8;cursor:pointer;touch-action:manipulation}button.active{background:#f4cf68;border-color:#f4cf68;color:#172436;font-weight:750}.shot{touch-action:none;-webkit-touch-callout:none;position:relative;width:100%;aspect-ratio:1672/941;overflow:hidden;border-radius:10px;background:#162333;user-select:none;-webkit-user-select:none}.shot img{pointer-events:none;position:absolute;user-select:none;-webkit-user-select:none;max-width:none}#bg,#baseOriginal{inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}#baseOriginal{display:none;z-index:8}.sprite{left:0;top:0;transform-origin:center center;width:13.3373206%;height:auto;position:absolute}#outlineImage{pointer-events:none;z-index:2}#playerImage{z-index:4;cursor:grab;pointer-events:none;touch-action:none;-webkit-user-drag:none}#playerImage.dragging{cursor:grabbing} .shot.original #baseOriginal{display:block}.panel h2{margin:3px 0 6px;font-size:19px}.desc{color:#b8c8da;line-height:1.52;font-size:13px;margin-bottom:14px}.legend{font-size:13px;font-weight:700;margin:14px 0 9px}.two{display:grid;grid-template-columns:1fr;gap:8px}.panel button{width:100%;text-align:center}.controls{display:grid;gap:16px;margin-top:17px}.controls label{font-size:13px;color:#c3cede;display:flex;justify-content:space-between;margin-bottom:5px}.controls input{width:100%;accent-color:#f4cf68}.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.mini button{padding:8px}.msg{min-height:38px;margin-top:15px;background:#0f1a28;border:1px solid #31465b;border-radius:9px;padding:9px;color:#becfe0;font-size:12px;line-height:1.5}.note{padding:0 18px 24px;font-size:12px;color:#9dafc4;max-width:1750px;margin:auto}.note b{color:#e8eef6}.hidden{display:none!important}@media(max-width:900px){.shell{grid-template-columns:1fr;padding:10px;gap:11px}.panel{order:2}header{padding:14px}.bar button{padding:10px;font-size:13px}.tag{font-size:11px}.shot{border-radius:8px}} .axis-hint{font-size:11px;color:#90a9c4;margin-top:4px}.controls label span{font-variant-numeric:tabular-nums;font-weight:700;color:#f5cf77}#playerImage{backface-visibility:visible;will-change:transform}.controls input[type=range]{min-height:29px} @media(max-width:900px){.panel h2{margin-top:7px}.controls{gap:12px}}
+</style>
+</head><body>
+<header><div><div class="brand">SIR <span>COME LA VEDI</span> 2.0</div><small>Editor fotografico tattico • Libero n. 10</small></div><div class="tag">PROVA 8 — rotazioni verticali e orizzontali</div></header>
+<main class="shell"><section class="stagewrap"><div class="bar"><button id="btnEdited" class="active" type="button">Vista modificata</button><button id="btnOriginal" type="button">Originale</button><button id="btnExport" type="button">Esporta PNG</button><button id="btnReset" type="button">Ripristina</button></div>
+<div id="shot" class="shot" aria-label="Fotografia di pallavolo: giocatore numero 10 spostabile">
+<img id="bg" alt="Campo con sfondo ricostruito" draggable="false" src="../prova-7/bg.jpg">
+<img id="outlineImage" class="sprite" alt="Contorno bianco alla posizione originale" draggable="false" src="../prova-7/outline.png" style="left:9.389952%;top:55.472901%">
+<img id="playerImage" class="sprite" alt="Libero SIR numero 10, trascinabile" draggable="false" src="../prova-7/player.png" style="left:29.007177%;top:48.352816%">
+<img id="baseOriginal" alt="Foto originale" draggable="false" src="../prova-7/original.jpg">
+</div></section>
+<aside class="panel"><h2>Libero SIR n. 10</h2><p class="desc">Trascina il giocatore con il dito. Poi orientalo sui due assi: gira a destra/sinistra (verticale) e inclina avanti/indietro (orizzontale). Puoi anche ruotarlo sul piano della foto e ridimensionarlo.</p>
+<div class="legend">Posizione originale</div><div class="two"><button class="active" id="btnOutline" type="button">Sagoma / contorno bianco</button><button id="btnNoOutline" type="button">Solo sfondo</button></div>
+<div class="controls"><div><label for="yaw">Rotazione verticale <span id="yawValue">0°</span></label><input id="yaw" type="range" min="-75" max="75" step="1" value="0" aria-label="Rotazione verticale, verso destra o sinistra"><div class="axis-hint">Gira il giocatore a destra o sinistra</div></div><div><label for="pitch">Rotazione orizzontale <span id="pitchValue">0°</span></label><input id="pitch" type="range" min="-65" max="65" step="1" value="0" aria-label="Rotazione orizzontale, avanti o indietro"><div class="axis-hint">Inclina il giocatore in avanti o indietro</div></div><div><label for="rotation">Rotazione sul piano <span id="rotValue">0°</span></label><input id="rotation" type="range" min="-40" max="40" value="0"></div><div><label for="size">Dimensione <span id="sizeValue">100%</span></label><input id="size" type="range" min="60" max="140" value="100"></div>
+<div><div class="legend">Spostamento di precisione</div><div class="mini"><button id="left" type="button" aria-label="Sposta a sinistra">←</button><button id="up" type="button" aria-label="Sposta in alto">↑</button><button id="down" type="button" aria-label="Sposta in basso">↓</button><button id="right" type="button" aria-label="Sposta a destra">→</button></div></div></div>
+<div id="status" class="msg">Trascina il libero sul campo, poi orientalo usando le rotazioni verticale e orizzontale.</div>
+</aside></main><div class="note"><b>Prova fotografica 8:</b> riparte dalla Prova 7 senza modificarla. Le rotazioni sui due assi simulano una prospettiva 3D a partire dal ritaglio fotografico 2D; non ricostruiscono il vero fianco o il retro dell’atleta.</div>
+<script>
+(function(){
+'use strict';
+var W=1672,H=941,srcX=157,srcY=522,srcW=223,srcH=256;
+var initial={x:485,y:455};
+var state={x:initial.x,y:initial.y,angle:0,yaw:0,pitch:0,scale:1,outline:true,original:false};
+var bg=document.getElementById('bg'),original=document.getElementById('baseOriginal'),player=document.getElementById('playerImage'),outline=document.getElementById('outlineImage'),shot=document.getElementById('shot'),status=document.getElementById('status');
+function message(t){status.textContent=t;}
+function mark(id,active){document.getElementById(id).classList.toggle('active',active);}
+function render(){
+ player.style.left=(100*state.x/W)+'%';player.style.top=(100*state.y/H)+'%';
+ player.style.transform='perspective('+(shot.getBoundingClientRect().width*0.95)+'px) rotateZ('+state.angle+'deg) rotateY('+state.yaw+'deg) rotateX('+state.pitch+'deg) scale('+state.scale+')';
+ shot.classList.toggle('original',state.original);
+ outline.style.display=(!state.outline||state.original)?'none':'block';
+ mark('btnOutline',state.outline);mark('btnNoOutline',!state.outline);
+ mark('btnOriginal',state.original);mark('btnEdited',!state.original);
+ document.getElementById('rotValue').textContent=state.angle+'°';
+ document.getElementById('yawValue').textContent=state.yaw+'°';
+ document.getElementById('pitchValue').textContent=state.pitch+'°';
+ document.getElementById('sizeValue').textContent=Math.round(state.scale*100)+'%';
+}
+function pos(evt){var r=shot.getBoundingClientRect();return {x:(evt.clientX-r.left)*W/r.width,y:(evt.clientY-r.top)*H/r.height};}
+// The image is small on phones; allow a generous but localized finger target.
+function nearPlayer(p){
+ var cx=state.x+srcW/2,cy=state.y+srcH/2;
+ var halfW=srcW*state.scale/2+55,halfH=srcH*state.scale/2+42;
+ return Math.abs(p.x-cx)<=halfW && Math.abs(p.y-cy)<=halfH;
+}
+var drag=null;
+function startDrag(id,p){
+ if(state.original||!nearPlayer(p)||drag)return false;
+ drag={id:id,startX:p.x,startY:p.y,playerX:state.x,playerY:state.y};
+ shot.classList.add('dragging');message('Sposta il libero dove preferisci.');return true;
+}
+function moveDrag(id,p){
+ if(!drag||drag.id!==id)return false;
+ state.x=drag.playerX+(p.x-drag.startX);
+ state.y=drag.playerY+(p.y-drag.startY);
+ render();return true;
+}
+function endDrag(id){
+ if(!drag||drag.id!==id)return false;
+ drag=null;shot.classList.remove('dragging');message('Libero riposizionato. Puoi cambiare sagoma o solo sfondo.');return true;
+}
+if(window.PointerEvent){
+ shot.addEventListener('pointerdown',function(e){
+  if(startDrag(e.pointerId,pos(e))){
+   try{shot.setPointerCapture(e.pointerId);}catch(_e){}
+   e.preventDefault();
+  }
+ });
+ shot.addEventListener('pointermove',function(e){if(moveDrag(e.pointerId,pos(e)))e.preventDefault();});
+ shot.addEventListener('pointerup',function(e){if(endDrag(e.pointerId))e.preventDefault();});
+ shot.addEventListener('pointercancel',function(e){endDrag(e.pointerId);});
+ shot.addEventListener('lostpointercapture',function(e){endDrag(e.pointerId);});
+}else{
+ // Fallback for older browsers without Pointer Events.
+ shot.addEventListener('touchstart',function(e){
+  if(e.touches.length!==1)return;
+  var t=e.changedTouches[0];if(startDrag(t.identifier,pos(t)))e.preventDefault();
+ },{passive:false});
+ shot.addEventListener('touchmove',function(e){
+  for(var i=0;i<e.changedTouches.length;i++){var t=e.changedTouches[i];if(moveDrag(t.identifier,pos(t))){e.preventDefault();break;}}
+ },{passive:false});
+ shot.addEventListener('touchend',function(e){for(var i=0;i<e.changedTouches.length;i++)endDrag(e.changedTouches[i].identifier);});
+ shot.addEventListener('touchcancel',function(e){for(var i=0;i<e.changedTouches.length;i++)endDrag(e.changedTouches[i].identifier);});
+ shot.addEventListener('mousedown',function(e){if(startDrag('mouse',pos(e)))e.preventDefault();});
+ window.addEventListener('mousemove',function(e){if(moveDrag('mouse',pos(e)))e.preventDefault();});
+ window.addEventListener('mouseup',function(){endDrag('mouse');});
+}
+function wire(id,fn){document.getElementById(id).addEventListener('click',fn);}
+wire('btnOutline',function(){state.outline=true;render();message('Sagoma bianca visibile.');});
+wire('btnNoOutline',function(){state.outline=false;render();message('Solo sfondo ricostruito, senza sagoma.');});
+wire('btnOriginal',function(){state.original=true;render();message('Questa è la fotografia originale.');});
+wire('btnEdited',function(){state.original=false;render();message('Tocca il libero n. 10 e trascinalo.');});
+wire('btnReset',function(){
+ state.x=initial.x;state.y=initial.y;state.angle=0;state.yaw=0;state.pitch=0;state.scale=1;state.outline=true;state.original=false;
+ document.getElementById('rotation').value=0;document.getElementById('yaw').value=0;document.getElementById('pitch').value=0;document.getElementById('size').value=100;
+ render();message('Prova ripristinata. Trascina il libero sul campo.');
+});
+document.getElementById('rotation').addEventListener('input',function(e){state.angle=Number(e.target.value);render();});
+document.getElementById('yaw').addEventListener('input',function(e){state.yaw=Number(e.target.value);render();});
+document.getElementById('pitch').addEventListener('input',function(e){state.pitch=Number(e.target.value);render();});
+document.getElementById('size').addEventListener('input',function(e){state.scale=Number(e.target.value)/100;render();});
+function nudge(dx,dy){state.x+=dx;state.y+=dy;render();message('Giocatore spostato.');}
+wire('left',function(){nudge(-15,0);});wire('right',function(){nudge(15,0);});wire('up',function(){nudge(0,-15);});wire('down',function(){nudge(0,15);});
+
+/* Project the photographic sprite onto a tilted plane.
+   The projection mirrors CSS perspective() rotateZ() rotateY() rotateX() scale(),
+   so a downloaded PNG preserves the on-screen orientation. */
+function projectPoint(u,v){
+ var k=Math.PI/180,pitch=state.pitch*k,yaw=state.yaw*k,roll=state.angle*k;
+ var x=(u-srcW/2)*state.scale,y=(v-srcH/2)*state.scale,z=0;
+ var cp=Math.cos(pitch),sp=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw),cr=Math.cos(roll),sr=Math.sin(roll);
+ var y1=y*cp,z1=y*sp;
+ var x2=x*cy+z1*sy,z2=-x*sy+z1*cy;
+ var x3=x2*cr-y1*sr,y3=x2*sr+y1*cr;
+ var perspective=W*0.95,zoom=perspective/(perspective-z2);
+ return {x:state.x+srcW/2+x3*zoom,y:state.y+srcH/2+y3*zoom};
+}
+function drawTexturedTriangle(ctx,sa,sb,sc,da,db,dc){
+ var sx1=sb.x-sa.x,sy1=sb.y-sa.y,sx2=sc.x-sa.x,sy2=sc.y-sa.y;
+ var determinant=sx1*sy2-sx2*sy1;
+ if(!determinant)return;
+ var dx1=db.x-da.x,dy1=db.y-da.y,dx2=dc.x-da.x,dy2=dc.y-da.y;
+ var a=(dx1*sy2-dx2*sy1)/determinant;
+ var b=(dy1*sy2-dy2*sy1)/determinant;
+ var c=(dx2*sx1-dx1*sx2)/determinant;
+ var d=(dy2*sx1-dy1*sx2)/determinant;
+ var e=da.x-a*sa.x-c*sa.y,f=da.y-b*sa.x-d*sa.y;
+ ctx.save();
+ ctx.beginPath();ctx.moveTo(da.x,da.y);ctx.lineTo(db.x,db.y);ctx.lineTo(dc.x,dc.y);ctx.closePath();ctx.clip();
+ ctx.setTransform(a,b,c,d,e,f);
+ ctx.drawImage(player,0,0,srcW,srcH);
+ ctx.restore();
+}
+function drawProjectedPlayer(ctx){
+ var parts=12;
+ var src=[],dst=[];
+ for(var iy=0;iy<=parts;iy++){
+  src[iy]=[];dst[iy]=[];
+  for(var ix=0;ix<=parts;ix++){
+   var u=srcW*ix/parts,v=srcH*iy/parts;
+   src[iy][ix]={x:u,y:v};dst[iy][ix]=projectPoint(u,v);
+  }
+ }
+ for(var y=0;y<parts;y++)for(var x=0;x<parts;x++){
+  var s00=src[y][x],s10=src[y][x+1],s01=src[y+1][x],s11=src[y+1][x+1];
+  var d00=dst[y][x],d10=dst[y][x+1],d01=dst[y+1][x],d11=dst[y+1][x+1];
+  drawTexturedTriangle(ctx,s00,s10,s11,d00,d10,d11);
+  drawTexturedTriangle(ctx,s00,s11,s01,d00,d11,d01);
+ }
+}
+
+wire('btnExport',function(){
+ try{
+  if(!bg.complete||!original.complete||!player.complete||!outline.complete||!bg.naturalWidth){message('Le immagini non sono ancora pronte.');return;}
+  var c=document.createElement('canvas');c.width=W;c.height=H;var ctx=c.getContext('2d');
+  if(state.original){ctx.drawImage(original,0,0,W,H);}else{
+   ctx.drawImage(bg,0,0,W,H);
+   if(state.outline)ctx.drawImage(outline,srcX,srcY,srcW,srcH);
+   drawProjectedPlayer(ctx);
+  }
+  c.toBlob(function(blob){
+   if(!blob){message('Non è stato possibile creare il PNG.');return;}
+   var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='SIR_come_la_vedi_prova_8.png';a.style.display='none';document.body.appendChild(a);a.click();a.remove();
+   window.setTimeout(function(){URL.revokeObjectURL(url);},5000);message('Immagine PNG pronta.');
+  },'image/png');
+ }catch(err){message('Esportazione non disponibile: '+err.message);}
+});
+window.addEventListener('resize',render);
+render();message('Pronto: trascina il libero; usa i due cursori per orientarlo in verticale e orizzontale.');
+})();
+</script>
+</body></html>
