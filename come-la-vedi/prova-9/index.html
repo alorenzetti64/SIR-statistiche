@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b111a">
+<title>SIR COME LA VEDI 2.0 · Prova 9</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eef3f9;background:#0b1019;--panel:#142132;--line:#34465d;--gold:#f2cb68;--muted:#a6bbce}
+*{box-sizing:border-box}body{margin:0;background:#0b1019}button,input{font:inherit}
+button,.filebtn{appearance:none;border:1px solid #486077;border-radius:9px;padding:10px 12px;background:#263a51;color:#edf3f9;font-weight:600;cursor:pointer;font-size:13px;display:inline-flex;justify-content:center;align-items:center;gap:6px;min-height:42px}
+button.active{border-color:var(--gold);background:var(--gold);color:#142237}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:#efcc71;border-color:#efcc71;color:#1b2634;font-weight:800}
+button.danger{border-color:#854e53;background:#472b35}
+button.ghost{background:transparent}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px clamp(14px,2vw,25px);border-bottom:1px solid #283b52;background:#101c2b;flex-wrap:wrap}
+.brand{font-size:clamp(20px,2.4vw,26px);font-weight:850;letter-spacing:-.5px}.brand b{color:var(--gold)}
+.sub{font-size:12px;color:var(--muted);margin-top:4px}.version{padding:5px 10px;border-radius:99px;border:1px solid #806b3b;color:#f4d68e;font-size:12px}
+.shell{max-width:1750px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 315px;gap:16px;padding:15px}
+.stagebox,.panel{border:1px solid var(--line);background:var(--panel);border-radius:15px;padding:12px;min-width:0}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+#stageWrap{background:#0b1724;border-radius:10px;overflow:hidden;position:relative;min-height:150px}
+#stage{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair}
+.panel h2{font-size:17px;line-height:1.25;margin:5px 0 8px}.panel h3{font-size:14px;margin:15px 0 8px;color:#ebf3fb}
+.help{font-size:12px;color:#b0c3d4;line-height:1.55;margin:5px 0 12px}
+.switches{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.full{width:100%}.toolrow{display:flex;gap:6px;flex-wrap:wrap}.toolrow button{flex:1 1 auto}
+.hidden{display:none!important}.divider{height:1px;background:#32465d;margin:14px 0}
+#status{padding:11px 13px;background:#101a28;border:1px solid #3a526c;border-radius:10px;line-height:1.48;font-size:12px;min-height:44px;color:#c5d6e7;margin-top:10px}
+#status.error{color:#ffd1c6;border-color:#8e5652}#status.ok{color:#e1f2d5;border-color:#556e4c}
+.controls{display:grid;gap:12px}.ctrl label{display:flex;justify-content:space-between;font-size:12px;color:#c4d3e2;margin-bottom:5px}.ctrl label span{color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--gold);min-height:25px;cursor:pointer}
+input[type=text]{border:1px solid #455b76;background:#101c2d;color:#fff;padding:10px;border-radius:8px;width:100%;font-size:14px}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}
+.checkline{font-size:13px;display:flex;align-items:flex-start;gap:9px;line-height:1.45;color:#c6d9eb;margin-top:9px}
+#gallery{display:grid;gap:7px;max-height:280px;overflow:auto}
+.person{display:flex;align-items:center;gap:9px;min-width:0;text-align:left;width:100%;background:#1b2c42;border:1px solid #3a4e64;border-radius:9px;padding:7px}
+.person.sel{border-color:#f1ce70;background:#334052}.person img{width:43px;height:53px;object-fit:contain;background:repeating-conic-gradient(#273647 0% 25%,#1c2937 0% 50%) 50% / 12px 12px;border-radius:5px}
+.person span{font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis}.empty{color:#9db4ca;font-size:12px;margin:9px 0;line-height:1.5}
+.tiny{font-size:11px;color:#90a8bf;line-height:1.55}.note{max-width:1750px;margin:0 auto;padding:0 18px 25px;font-size:12px;color:#97aec4;line-height:1.55}
+.count{padding:3px 8px;border-radius:15px;background:#283b4f;font-size:11px;color:#e1eaf3}
+#brushrow{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:10px;font-size:12px;margin-top:9px}
+#pointCount{font-size:12px;color:#b4c9db;margin:7px 0}
+.loading{animation:fade 1.6s infinite}@keyframes fade{50%{opacity:.42}}
+@media(max-width:980px){.shell{grid-template-columns:1fr;padding:10px;gap:10px}.stagebox,.panel{padding:10px}.panel{order:2}.bar button,.bar .filebtn{flex:1 1 auto}.version{font-size:11px}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">SIR <b>COME LA VEDI</b> 2.0</div><div class="sub">Laboratorio fotografico tattico · editor multi-giocatore</div></div><span class="version">PROVA 9 · ESTRAI E SPOSTA</span></header>
+<main class="shell">
+<section class="stagebox">
+<div class="bar">
+<label class="filebtn primary" for="photoFile">Carica fotografia<input type="file" id="photoFile" accept="image/*" hidden></label>
+<button id="selectMode" class="active" type="button">1 · Estrai giocatori</button>
+<button id="editMode" type="button">2 · Sistema in campo</button>
+<button id="exportPng" type="button">Esporta PNG</button>
+<button id="saveProject" type="button">Salva progetto</button>
+<label class="filebtn" for="projectFile">Apri progetto<input type="file" id="projectFile" accept=".json,application/json" hidden></label>
+</div>
+<div id="stageWrap"><canvas id="stage" width="1672" height="941" aria-label="Fotografia: tocca un giocatore per estrarlo o trascinalo per spostarlo"></canvas></div>
+<div id="status" role="status">Apertura della foto dimostrativa…</div>
+</section>
+<aside class="panel">
+<div id="extractPanel">
+<h2>1 · Estrai dalla fotografia</h2>
+<p class="help">Tocca un giocatore nella foto. L'estrazione intelligente cerca la sua sagoma; puoi correggerla prima di aggiungerla alla scena.</p>
+<div class="switches"><button id="autoTool" class="active" type="button">Ritaglio intelligente</button><button id="lassoTool" type="button">Contorno manuale</button></div>
+<div id="lassoActions" class="hidden">
+<p id="pointCount">0 punti scelti</p>
+<div class="toolrow"><button id="undoPoint">Annulla punto</button><button id="closeLasso" class="primary" disabled>Crea sagoma</button></div>
+<p class="tiny">Tocca diversi punti lungo il contorno del giocatore, poi premi «Crea sagoma».</p>
+</div>
+<div id="maskActions" class="hidden">
+<h3>Rifinisci il ritaglio</h3>
+<div class="toolrow"><button id="brushAdd">Pennello +</button><button id="brushErase">Gomma −</button><button id="brushOff" class="active">Fine pennello</button></div>
+<div id="brushrow"><label for="brushSize">Spessore pennello</label><input id="brushSize" type="range" min="3" max="70" value="18"></div>
+<div class="toolrow" style="margin-top:10px"><button id="discardMask" type="button">Ricomincia</button><button id="confirmExtract" class="primary" type="button">Aggiungi giocatore</button></div>
+</div>
+<div class="divider"></div>
+<p class="tiny">Il primo ritaglio intelligente richiede il caricamento del modello di segmentazione. Se non si avvia sul dispositivo, puoi usare «Contorno manuale» senza perdere la foto.</p>
+</div>
+<div id="editPanel" class="hidden">
+<h2>2 · Sistema il giocatore</h2>
+<p class="help">Tocca un giocatore in campo o scegli la sua miniatura. Puoi modificare ciascuno separatamente.</p>
+<div id="editControls" class="hidden">
+<label class="tiny" for="playerName">Nome del giocatore</label>
+<input id="playerName" type="text" maxlength="44" placeholder="Nome giocatore">
+<div class="controls" style="margin-top:13px">
+<div class="ctrl"><label for="yaw">Rotazione verticale <span id="yawVal">0°</span></label><input id="yaw" type="range" min="-75" max="75" value="0"></div>
+<div class="ctrl"><label for="pitch">Rotazione orizzontale <span id="pitchVal">0°</span></label><input id="pitch" type="range" min="-65" max="65" value="0"></div>
+<div class="ctrl"><label for="roll">Rotazione nel piano <span id="rollVal">0°</span></label><input id="roll" type="range" min="-180" max="180" value="0"></div>
+<div class="ctrl"><label for="scale">Dimensione <span id="scaleVal">100%</span></label><input id="scale" type="range" min="20" max="250" value="100"></div>
+</div>
+<div class="switches" style="margin-top:12px"><button id="duplicate">Duplica</button><button id="bringFront">Porta avanti</button></div>
+<label class="checkline"><input id="clearOriginal" type="checkbox"><span>Nascondi la posizione originale (ricostruzione approssimativa dello sfondo)</span></label>
+<div class="toolrow" style="margin-top:13px"><button id="nLeft">←</button><button id="nUp">↑</button><button id="nDown">↓</button><button id="nRight">→</button></div>
+<button id="deletePlayer" class="danger full" style="margin-top:10px">Elimina giocatore</button>
+</div>
+<p id="noSelected" class="empty">Nessun giocatore selezionato. Estrai il primo dalla fotografia.</p>
+<div class="divider"></div>
+<button id="showOriginal" class="ghost full">Mostra / nascondi fotografia originale</button>
+</div>
+<div class="divider"></div>
+<h2>Giocatori <span id="playerCount" class="count">0</span></h2>
+<div id="gallery"><p class="empty">Qui appariranno le miniature dei giocatori estratti.</p></div>
+<div class="divider"></div>
+<button id="resetAll" class="ghost full" type="button">Ripristina scena</button>
+<p class="tiny" style="margin-top:12px">Le rotazioni sui due assi simulano la prospettiva di una fotografia 2D: non ricreano il lato nascosto del giocatore.</p>
+</aside>
+</main>
+<div class="note">La fotografia caricata resta nel browser. Per conservare la scena e riaprirla in seguito, usa «Salva progetto»; «Esporta PNG» salva invece solo l'immagine finale. La separazione automatica dipende dalla qualità e dalla sovrapposizione dei giocatori.</div>
+<script type="module">
+const $ = id=>document.getElementById(id);
+const stage=$('stage'), ctx=stage.getContext('2d',{willReadFrequently:true});
+let W=1672,H=941, source=null, base=null, background=null, mask=null, maskTint=null;
+let mode='extract', tool='auto', isOriginalView=false, players=[], selected=null, counter=0, lasso=[];
+let segmenter=null, segmenterReadyFor=null, loadingAI=false, aiVersion=0, dragging=null, brushPointer=null;
+let demo=true;
+const AI_URL='https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/latest/interactive_segmentation.task';
+const SDK_URL='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs';
+const WASM_URL='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm';
+
+function setStatus(message,kind=''){
+ const el=$('status');el.textContent=message;el.className=kind;
+}
+function makeCanvas(w,h){let c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function clearMask(){mask=null;maskTint=null;lasso=[];tool='auto';updateUI()}
+function imageFrom(src){return new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error('Immagine non leggibile'));i.src=src;})}
+async function loadExample(){
+ try{
+  const [orig,bg]=await Promise.all([imageFrom('../prova-7/original.jpg'),imageFrom('../prova-7/bg.jpg')]);
+  W=1672;H=941;source=makeCanvas(W,H);base=makeCanvas(W,H);
+  source.getContext('2d').drawImage(orig,0,0,W,H);
+  base.getContext('2d').drawImage(bg,0,0,W,H);
+  background=makeCanvas(W,H);stage.width=W;stage.height=H;clearMask();rebuildBackground();
+  setMode('extract');setStatus('Foto dimostrativa pronta. Tocca un giocatore per estrarlo con un clic.','ok');
+ }catch(err){setStatus('Non riesco a caricare la foto dimostrativa. Usa «Carica fotografia».','error')}
+}
+async function loadUserPhoto(file){
+ try{
+  if(!file||!file.type.startsWith('image/'))throw new Error('Seleziona una fotografia.');
+  const url=URL.createObjectURL(file);
+  let im;
+  try{im=await imageFrom(url)}finally{URL.revokeObjectURL(url)}
+  const factor=Math.min(1,1700/Math.max(im.naturalWidth,im.naturalHeight));
+  W=Math.max(1,Math.round(im.naturalWidth*factor));H=Math.max(1,Math.round(im.naturalHeight*factor));
+  source=makeCanvas(W,H);source.getContext('2d').drawImage(im,0,0,W,H);
+  base=makeCanvas(W,H);base.getContext('2d').drawImage(source,0,0);
+  background=makeCanvas(W,H);stage.width=W;stage.height=H;
+  demo=false;players=[];selected=null;counter=0;aiVersion++;segmenterReadyFor=null;clearMask();rebuildBackground();setMode('extract');
+  setStatus('Fotografia caricata. Tocca il primo giocatore da estrarre.','ok');
+ }catch(err){setStatus('Errore nel caricamento: '+err.message,'error')}
+ $('photoFile').value='';
+}
+function setMode(value){
+ mode=value;isOriginalView=false;
+ $('extractPanel').classList.toggle('hidden',mode!=='extract');
+ $('editPanel').classList.toggle('hidden',mode!=='edit');
+ $('selectMode').classList.toggle('active',mode==='extract');
+ $('editMode').classList.toggle('active',mode==='edit');
+ updateUI();render();
+}
+function setTool(value){
+ tool=value;
+ if(value==='lasso'){lasso=[];mask=null;maskTint=null;setStatus('Tocca i punti lungo il contorno del giocatore, poi «Crea sagoma».');}
+ else if(value==='auto'){lasso=[];setStatus('Tocca il giocatore da estrarre.');}
+ else if(value==='add'||value==='erase')setStatus('Passa il dito sul contorno per '+(value==='add'?'aggiungere':'cancellare')+' una parte della sagoma.');
+ updateUI();render();
+}
+function updateUI(){
+ $('autoTool').classList.toggle('active',tool==='auto');
+ $('lassoTool').classList.toggle('active',tool==='lasso');
+ $('brushAdd').classList.toggle('active',tool==='add');
+ $('brushErase').classList.toggle('active',tool==='erase');
+ $('brushOff').classList.toggle('active',tool==='auto');
+ $('lassoActions').classList.toggle('hidden',!(mode==='extract'&&tool==='lasso'));
+ $('maskActions').classList.toggle('hidden',!(mode==='extract'&&mask));
+ $('pointCount').textContent=lasso.length+' punti scelti';
+ $('closeLasso').disabled=lasso.length<3;
+ $('playerCount').textContent=String(players.length);
+ const p=current();
+ $('editControls').classList.toggle('hidden',!p);
+ $('noSelected').classList.toggle('hidden',!!p);
+ if(p){
+  $('playerName').value=p.name;
+  for(const id of ['yaw','pitch','roll','scale'])$(''+id).value=id==='scale'?Math.round(p.scale*100):p[id];
+  updateValues();$('clearOriginal').checked=p.clearOriginal;
+ }
+}
+function updateValues(){
+ const p=current();if(!p)return;
+ $('yawVal').textContent=p.yaw+'°';$('pitchVal').textContent=p.pitch+'°';$('rollVal').textContent=p.roll+'°';$('scaleVal').textContent=Math.round(p.scale*100)+'%';
+}
+function current(){return players.find(p=>p.id===selected)||null}
+function rebuildGallery(){
+ const gallery=$('gallery');gallery.replaceChildren();
+ if(!players.length){let x=document.createElement('p');x.className='empty';x.textContent='Qui appariranno le miniature dei giocatori estratti.';gallery.appendChild(x)}
+ players.forEach(p=>{
+  let b=document.createElement('button');b.className='person'+(p.id===selected?' sel':'');b.type='button';
+  let im=document.createElement('img');im.src=p.src;im.alt='';
+  let span=document.createElement('span');span.textContent=p.name;
+  b.append(im,span);b.addEventListener('click',()=>{selected=p.id;setMode('edit');updateUI();rebuildGallery();render()});gallery.appendChild(b)
+ });
+ $('playerCount').textContent=String(players.length);
+}
+function choose(id){
+ selected=id;rebuildGallery();updateUI();render();
+}
+function render(){
+ ctx.clearRect(0,0,W,H);if(!source)return;
+ if(mode==='extract'){ctx.drawImage(source,0,0,W,H);
+  if(maskTint){ctx.save();ctx.globalAlpha=.62;ctx.drawImage(maskTint,0,0);ctx.restore();}
+  if(lasso.length){ctx.save();ctx.beginPath();ctx.moveTo(lasso[0].x,lasso[0].y);for(let i=1;i<lasso.length;i++)ctx.lineTo(lasso[i].x,lasso[i].y);
+   ctx.lineWidth=Math.max(2,W/470);ctx.strokeStyle='#ffd06b';ctx.setLineDash([7,5]);ctx.stroke();ctx.setLineDash([]);
+   for(const pt of lasso){ctx.beginPath();ctx.arc(pt.x,pt.y,Math.max(3,W/330),0,Math.PI*2);ctx.fillStyle='#ffd06b';ctx.fill()}ctx.restore()}
+ }else{renderScene(ctx,!isOriginalView)}
+}
+function renderScene(c,withSelection){
+ if(isOriginalView){c.drawImage(source,0,0,W,H);return}
+ c.drawImage(background||base,0,0,W,H);
+ players.forEach(p=>drawPlayer(c,p));
+ if(withSelection){const p=current();if(p){const corners=[proj(p,0,0),proj(p,p.w,0),proj(p,p.w,p.h),proj(p,0,p.h)];
+  c.save();c.beginPath();c.moveTo(corners[0].x,corners[0].y);for(let i=1;i<4;i++)c.lineTo(corners[i].x,corners[i].y);c.closePath();
+  c.strokeStyle='#ffe285';c.lineWidth=Math.max(2,W/650);c.setLineDash([8,5]);c.stroke();c.restore()}}
+}
+function proj(p,u,v){
+ const x=(u-p.w/2)*p.scale,y=(v-p.h/2)*p.scale;
+ const roll=p.roll*Math.PI/180,yaw=p.yaw*Math.PI/180,pitch=p.pitch*Math.PI/180;
+ const yy=y*Math.cos(pitch),z=y*Math.sin(pitch);
+ const xx=x*Math.cos(yaw)+z*Math.sin(yaw),zz=-x*Math.sin(yaw)+z*Math.cos(yaw);
+ const xx2=xx*Math.cos(roll)-yy*Math.sin(roll),yy2=xx*Math.sin(roll)+yy*Math.cos(roll);
+ const foc=Math.max(W,H)*1.15,zoom=foc/(foc-zz);
+ return {x:p.x+xx2*zoom,y:p.y+yy2*zoom};
+}
+function tri(c,img,s1,s2,s3,d1,d2,d3){
+ const ax=s2.x-s1.x,ay=s2.y-s1.y,bx=s3.x-s1.x,by=s3.y-s1.y,det=ax*by-bx*ay;
+ if(Math.abs(det)<.00001)return;
+ const ex=d2.x-d1.x,ey=d2.y-d1.y,fx=d3.x-d1.x,fy=d3.y-d1.y;
+ const a=(ex*by-fx*ay)/det,b=(ey*by-fy*ay)/det,cc=(fx*ax-ex*bx)/det,d=(fy*ax-ey*bx)/det;
+ c.save();c.beginPath();c.moveTo(d1.x,d1.y);c.lineTo(d2.x,d2.y);c.lineTo(d3.x,d3.y);c.closePath();c.clip();
+ c.transform(a,b,cc,d,d1.x-a*s1.x-cc*s1.y,d1.y-b*s1.x-d*s1.y);c.drawImage(img,0,0,pixelW(img),pixelH(img));c.restore();
+}
+function pixelW(i){return i.naturalWidth||i.width}
+function pixelH(i){return i.naturalHeight||i.height}
+function drawPlayer(c,p){
+ if(!p.img||!p.img.complete)return;
+ if(p.yaw===0&&p.pitch===0){c.save();c.translate(p.x,p.y);c.rotate(p.roll*Math.PI/180);c.scale(p.scale,p.scale);c.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);c.restore();return}
+ const n=5;
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  const x0=p.w*x/n,x1=p.w*(x+1)/n,y0=p.h*y/n,y1=p.h*(y+1)/n;
+  const s00={x:x0,y:y0},s10={x:x1,y:y0},s01={x:x0,y:y1},s11={x:x1,y:y1};
+  const d00=proj(p,x0,y0),d10=proj(p,x1,y0),d01=proj(p,x0,y1),d11=proj(p,x1,y1);
+  tri(c,p.img,s00,s10,s11,d00,d10,d11);tri(c,p.img,s00,s11,s01,d00,d11,d01);
+ }
+}
+function getCoords(e){
+ const r=stage.getBoundingClientRect();return {x:Math.max(0,Math.min(W,(e.clientX-r.left)*W/r.width)),y:Math.max(0,Math.min(H,(e.clientY-r.top)*H/r.height))}
+}
+function hitTest(pt){for(let i=players.length-1;i>=0;i--){const p=players[i];
+ const r=Math.max(p.w,p.h)*p.scale*.72+Math.max(10,W/110);
+ if(Math.abs(pt.x-p.x)<r&&Math.abs(pt.y-p.y)<r)return p;}return null;}
+async function ensureSegmenter(){
+ if(segmenter)return segmenter;
+ if(loadingAI)throw new Error('Il modello si sta ancora caricando.');
+ loadingAI=true;setStatus('Carico il modello di ritaglio intelligente. Serve connessione internet al primo utilizzo…');
+ try{
+  const pkg=await import(SDK_URL);
+  const v=await pkg.FilesetResolver.forVisionTasks(WASM_URL);
+  segmenter=await pkg.InteractiveSegmenter.createFromOptions(v,{baseOptions:{modelAssetPath:AI_URL,delegate:'CPU'}});
+  return segmenter;
+ }finally{loadingAI=false}
+}
+async function pickWithAI(point){
+ if(!source||loadingAI)return;
+ const vers=aiVersion;
+ setStatus('Analizzo il giocatore selezionato…','');
+ await new Promise(resolve=>setTimeout(resolve,35));
+ try{
+  const ai=await ensureSegmenter();if(vers!==aiVersion)return;
+  if(segmenterReadyFor!==source){ai.setImage(source);segmenterReadyFor=source;}
+  await new Promise(resolve=>setTimeout(resolve,30));
+  const result=ai.segment([{brushMode:1,point:[{x:point.x/W,y:point.y/H}],isCompleted:true}]);
+  if(vers!==aiVersion)return;
+  const mw=result.width,mh=result.height,raw=result.getAsFloat32Array();
+  const tmp=makeCanvas(mw,mh),t=tmp.getContext('2d');
+  const data=t.createImageData(mw,mh);
+  for(let i=0;i<raw.length;i++){const v=raw[i],j=i*4;
+   data.data[j]=255;data.data[j+1]=255;data.data[j+2]=255;data.data[j+3]=Math.max(0,Math.min(255,Math.round((v-.32)*255/.32)));
+  }
+  t.putImageData(data,0,0);
+  mask=makeCanvas(W,H);mask.getContext('2d').drawImage(tmp,0,0,W,H);
+  if(!hasEnoughMask()){mask=null;throw new Error('Sagoma non identificata. Riprova toccando il centro del giocatore.')}
+  refreshMaskTint();setTool('auto');setStatus('Sagoma individuata. Se necessario usa Pennello + o Gomma −, poi «Aggiungi giocatore».','ok');
+ }catch(err){mask=null;maskTint=null;setTool('lasso');setStatus('Ritaglio intelligente non disponibile o non riuscito ('+err.message+'). Ho attivato il contorno manuale: tocca i punti attorno al giocatore.','error');}
+ render();
+}
+function hasEnoughMask(){
+ if(!mask)return false;
+ const d=mask.getContext('2d').getImageData(0,0,W,H).data;
+ let n=0;for(let i=3;i<d.length;i+=32)if(d[i]>70)n++;
+ return n>6;
+}
+function refreshMaskTint(){
+ if(!mask){maskTint=null;return}
+ maskTint=makeCanvas(W,H);const m=maskTint.getContext('2d');m.drawImage(mask,0,0);m.globalCompositeOperation='source-in';m.fillStyle='#00e6dc';m.fillRect(0,0,W,H);m.globalCompositeOperation='source-over';render();
+}
+function createLassoMask(){
+ if(lasso.length<3)return;
+ mask=makeCanvas(W,H);let c=mask.getContext('2d');c.fillStyle='white';c.beginPath();c.moveTo(lasso[0].x,lasso[0].y);
+ for(let i=1;i<lasso.length;i++)c.lineTo(lasso[i].x,lasso[i].y);
+ c.closePath();c.fill();lasso=[];tool='auto';refreshMaskTint();updateUI();
+ setStatus('Contorno creato. Puoi correggerlo con il pennello e aggiungere il giocatore.','ok');
+}
+function paintMask(point,erase){
+ if(!mask)return;
+ const radius=Number($('brushSize').value)*Math.max(1,W/1100);
+ const c=mask.getContext('2d');c.save();c.globalCompositeOperation=erase?'destination-out':'source-over';
+ c.beginPath();c.arc(point.x,point.y,radius,0,Math.PI*2);c.fillStyle='white';c.fill();c.restore();
+}
+async function confirmExtraction(){
+ if(!mask||!source)return;
+ const data=mask.getContext('2d').getImageData(0,0,W,H).data;
+ let left=W,top=H,right=0,bottom=0,count=0;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const alpha=data[(y*W+x)*4+3];
+  if(alpha>55){count++;if(x<left)left=x;if(x>right)right=x;if(y<top)top=y;if(y>bottom)bottom=y}}
+ if(count<150){setStatus('La selezione è troppo piccola. Seleziona un giocatore più chiaramente.','error');return}
+ if(count>W*H*.80){setStatus('La selezione comprende quasi tutta la foto. Riprova o usa il contorno manuale.','error');return}
+ const pad=Math.max(2,Math.round(W*.002));left=Math.max(0,left-pad);top=Math.max(0,top-pad);right=Math.min(W-1,right+pad);bottom=Math.min(H-1,bottom+pad);
+ const w=right-left+1,h=bottom-top+1;
+ const extracted=makeCanvas(w,h);const ec=extracted.getContext('2d');
+ ec.drawImage(source,left,top,w,h,0,0,w,h);ec.globalCompositeOperation='destination-in';ec.drawImage(mask,left,top,w,h,0,0,w,h);ec.globalCompositeOperation='source-over';
+ const smallMask=makeCanvas(w,h);smallMask.getContext('2d').drawImage(mask,left,top,w,h,0,0,w,h);
+ const src=extracted.toDataURL('image/png'),maskSrc=smallMask.toDataURL('image/png');
+ const image=await imageFrom(src);
+ const p={id:++counter,name:'Giocatore '+counter,x:left+w/2,y:top+h/2,w,h,yaw:0,pitch:0,roll:0,scale:1,
+  src,img:image,maskSrc,maskImg:smallMask,originX:left,originY:top,clearOriginal:!demo};
+ players.push(p);selected=p.id;mask=null;maskTint=null;lasso=[];
+ rebuildBackground();setMode('edit');rebuildGallery();updateUI();
+ setStatus('Giocatore '+counter+' estratto. Trascinalo sul campo oppure regola rotazioni e dimensioni. Per estrarne un altro torna a «1 · Estrai giocatori».','ok');
+}
+function inpaintOne(c,p){
+ if(!p.maskImg)return;
+ const px=Math.max(0,Math.floor(p.originX-6)),py=Math.max(0,Math.floor(p.originY-6));
+ const rw=Math.min(W-px,Math.ceil(p.w+12)),rh=Math.min(H-py,Math.ceil(p.h+12));
+ if(rw<2||rh<2)return;
+ const cc=c.getContext('2d',{willReadFrequently:true});
+ const data=cc.getImageData(px,py,rw,rh),src=data.data;
+ const m=makeCanvas(rw,rh);const mc=m.getContext('2d',{willReadFrequently:true});
+ mc.drawImage(p.maskImg,p.originX-px,p.originY-py,p.w,p.h);
+ const alpha=mc.getImageData(0,0,rw,rh).data;
+ const bad=new Uint8Array(rw*rh);
+ for(let y=0;y<rh;y++)for(let x=0;x<rw;x++)if(alpha[(y*rw+x)*4+3]>45){
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){let xx=x+dx,yy=y+dy;if(xx>=0&&xx<rw&&yy>=0&&yy<rh)bad[yy*rw+xx]=1}
+ }
+ const left=new Int32Array(rw*rh),right=new Int32Array(rw*rh),up=new Int32Array(rw*rh),down=new Int32Array(rw*rh);
+ for(let y=0;y<rh;y++){let v=-1;for(let x=0;x<rw;x++){let i=y*rw+x;if(!bad[i])v=i;left[i]=v;}
+  v=-1;for(let x=rw-1;x>=0;x--){let i=y*rw+x;if(!bad[i])v=i;right[i]=v}}
+ for(let x=0;x<rw;x++){let v=-1;for(let y=0;y<rh;y++){let i=y*rw+x;if(!bad[i])v=i;up[i]=v;}
+  v=-1;for(let y=rh-1;y>=0;y--){let i=y*rw+x;if(!bad[i])v=i;down[i]=v}}
+ const result=new Uint8ClampedArray(src);
+ for(let i=0;i<bad.length;i++)if(bad[i]){
+  const x=i%rw,y=(i/rw)|0,neighbors=[left[i],right[i],up[i],down[i]];
+  let weight=0,r=0,g=0,b=0;
+  for(const j of neighbors)if(j>=0){let dist=Math.abs(x-j%rw)+Math.abs(y-((j/rw)|0));let w=1/Math.pow(Math.max(1,dist),.82);
+   weight+=w;r+=src[j*4]*w;g+=src[j*4+1]*w;b+=src[j*4+2]*w;}
+  if(weight){result[i*4]=r/weight;result[i*4+1]=g/weight;result[i*4+2]=b/weight;result[i*4+3]=255}
+ }
+ data.data.set(result);cc.putImageData(data,px,py);
+}
+function rebuildBackground(){
+ if(!base)return;
+ background=makeCanvas(W,H);const b=background.getContext('2d',{willReadFrequently:true});b.drawImage(base,0,0);
+ if(!demo)for(const p of players)if(p.clearOriginal)inpaintOne(background,p);
+ render();
+}
+function download(blob,name){
+ if(!blob){setStatus('Non è stato possibile preparare il file.','error');return}
+ const link=document.createElement('a'),url=URL.createObjectURL(blob);link.href=url;link.download=name;
+ document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+function exportPNG(){
+ if(!source)return;
+ const c=makeCanvas(W,H),cx=c.getContext('2d');const old=isOriginalView;isOriginalView=false;
+ renderScene(cx,false);isOriginalView=old;
+ c.toBlob(blob=>{download(blob,'SIR_come_la_vedi_Prova9.png');setStatus('Esportazione PNG avviata.','ok')},'image/png');
+}
+function saveProject(){
+ if(!source)return;
+ const data={app:'SIR COME LA VEDI 2.0',version:9,width:W,height:H,demo,photo:source.toDataURL('image/jpeg',.92),
+  base:base.toDataURL('image/jpeg',.92),players:players.map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,w:p.w,h:p.h,yaw:p.yaw,pitch:p.pitch,roll:p.roll,scale:p.scale,src:p.src,maskSrc:p.maskSrc,originX:p.originX,originY:p.originY,clearOriginal:p.clearOriginal}))};
+ download(new Blob([JSON.stringify(data)],{type:'application/json'}),'SIR_come_la_vedi_progetto.json');
+ setStatus('Progetto salvato con foto, ritagli e posizioni.','ok');
+}
+async function restoreProject(file){
+ try{
+  const data=JSON.parse(await file.text());if(data.version!==9||!data.photo||!Array.isArray(data.players))throw new Error('Formato progetto non riconosciuto');
+  const [im,bg]=await Promise.all([imageFrom(data.photo),imageFrom(data.base)]);
+  W=data.width;H=data.height;if(!(W>0&&H>0&&W<=5000&&H<=5000))throw new Error('Dimensioni progetto non valide');
+  source=makeCanvas(W,H);base=makeCanvas(W,H);
+  source.getContext('2d').drawImage(im,0,0,W,H);base.getContext('2d').drawImage(bg,0,0,W,H);
+  demo=!!data.demo;players=[];
+  for(const raw of data.players){
+   const [img,mimg]=await Promise.all([imageFrom(raw.src),imageFrom(raw.maskSrc)]);
+   const maskCanvas=makeCanvas(raw.w,raw.h);maskCanvas.getContext('2d').drawImage(mimg,0,0);
+   players.push({...raw,img,maskImg:maskCanvas});
+  }
+  counter=players.reduce((a,p)=>Math.max(a,p.id),0);selected=players.length?players[players.length-1].id:null;
+  stage.width=W;stage.height=H;aiVersion++;segmenterReadyFor=null;clearMask();rebuildBackground();setMode('edit');rebuildGallery();updateUI();
+  setStatus('Progetto riaperto: '+players.length+' giocatori disponibili.','ok');
+ }catch(err){setStatus('Impossibile aprire il progetto: '+err.message,'error')}
+ $('projectFile').value='';
+}
+function duplicate(){
+ const p=current();if(!p)return;
+ const q={...p,id:++counter,name:p.name+' copia',x:p.x+W*.025,y:p.y+H*.025,clearOriginal:false};
+ players.push(q);selected=q.id;rebuildGallery();updateUI();render();
+}
+function clearAll(){
+ if(!confirm('Vuoi eliminare tutti i giocatori dalla scena? La fotografia resterà caricata.'))return;
+ players=[];selected=null;counter=0;clearMask();rebuildBackground();rebuildGallery();setMode('extract');
+ setStatus('Scena azzerata. Fotografia originale conservata.','ok');
+}
+stage.addEventListener('pointerdown',e=>{
+ if(!source||isOriginalView)return;
+ const pt=getCoords(e);
+ if(mode==='extract'){
+  if(tool==='lasso'){lasso.push(pt);updateUI();render();e.preventDefault();return}
+  if(tool==='add'||tool==='erase'){if(!mask)return;brushPointer=e.pointerId;stage.setPointerCapture(e.pointerId);paintMask(pt,tool==='erase');refreshMaskTint();e.preventDefault();return}
+  if(tool==='auto'){pickWithAI(pt);e.preventDefault();return}
+ }
+ if(mode==='edit'){
+  const p=hitTest(pt);if(p){choose(p.id);dragging={pointer:e.pointerId,x:pt.x,y:pt.y,origX:p.x,origY:p.y};stage.setPointerCapture(e.pointerId);e.preventDefault()}
+  else{selected=null;rebuildGallery();updateUI();render()}
+ }
+});
+stage.addEventListener('pointermove',e=>{
+ const pt=getCoords(e);
+ if(brushPointer===e.pointerId){paintMask(pt,tool==='erase');refreshMaskTint();e.preventDefault()}
+ if(dragging&&dragging.pointer===e.pointerId){const p=current();if(p){p.x=dragging.origX+pt.x-dragging.x;p.y=dragging.origY+pt.y-dragging.y;render()}e.preventDefault()}
+});
+function finishPointer(e){if(brushPointer===e.pointerId){brushPointer=null;refreshMaskTint()}if(dragging&&dragging.pointer===e.pointerId){dragging=null;render()}}
+stage.addEventListener('pointerup',finishPointer);stage.addEventListener('pointercancel',finishPointer);stage.addEventListener('lostpointercapture',finishPointer);
+$('photoFile').addEventListener('change',e=>loadUserPhoto(e.target.files?.[0]));
+$('projectFile').addEventListener('change',e=>e.target.files?.[0]&&restoreProject(e.target.files[0]));
+$('selectMode').addEventListener('click',()=>{setMode('extract');setStatus('Tocca il prossimo giocatore nella fotografia originale.')});
+$('editMode').addEventListener('click',()=>{setMode('edit');setStatus('Trascina i giocatori sul campo. Puoi sceglierli anche dalle miniature.')});
+$('autoTool').addEventListener('click',()=>setTool('auto'));$('lassoTool').addEventListener('click',()=>setTool('lasso'));
+$('undoPoint').addEventListener('click',()=>{lasso.pop();updateUI();render()});
+$('closeLasso').addEventListener('click',createLassoMask);
+$('brushAdd').addEventListener('click',()=>setTool('add'));$('brushErase').addEventListener('click',()=>setTool('erase'));
+$('brushOff').addEventListener('click',()=>setTool('auto'));
+$('discardMask').addEventListener('click',()=>{mask=null;maskTint=null;lasso=[];setTool('auto');render()});
+$('confirmExtract').addEventListener('click',confirmExtraction);
+for(const id of ['yaw','pitch','roll','scale'])$(id).addEventListener('input',e=>{
+ const p=current();if(!p)return;p[id]=id==='scale'?Number(e.target.value)/100:Number(e.target.value);updateValues();render();
+});
+$('playerName').addEventListener('input',e=>{const p=current();if(!p)return;p.name=e.target.value||'Giocatore';rebuildGallery()});
+$('clearOriginal').addEventListener('change',e=>{const p=current();if(!p)return;p.clearOriginal=e.target.checked;rebuildBackground();
+ setStatus('Sfondo ricalcolato. Il riempimento è approssimativo, soprattutto quando i giocatori si sovrappongono.')});
+$('duplicate').addEventListener('click',duplicate);
+$('bringFront').addEventListener('click',()=>{const p=current();if(!p)return;players=players.filter(q=>q!==p).concat(p);rebuildGallery();render()});
+$('deletePlayer').addEventListener('click',()=>{const p=current();if(!p)return;players=players.filter(q=>q.id!==p.id);selected=players.length?players[players.length-1].id:null;rebuildBackground();rebuildGallery();updateUI();render()});
+for(const [id,dx,dy] of [['nLeft',-1,0],['nRight',1,0],['nUp',0,-1],['nDown',0,1]])$(id).addEventListener('click',()=>{const p=current();if(!p)return;p.x+=dx*W*.008;p.y+=dy*H*.008;render()});
+$('showOriginal').addEventListener('click',()=>{isOriginalView=!isOriginalView;render();setStatus(isOriginalView?'Fotografia originale in visualizzazione. Premi ancora per tornare alla scena.':'Vista modificata ripristinata.')});
+$('exportPng').addEventListener('click',exportPNG);$('saveProject').addEventListener('click',saveProject);
+$('resetAll').addEventListener('click',clearAll);
+window.addEventListener('resize',render);
+loadExample();
+</script>
+</body></html>
