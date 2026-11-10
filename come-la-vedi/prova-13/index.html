@@ -1,0 +1,190 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111c29"><title>SIR COME LA VEDI 2.0 — Prova 13</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eff3fa;background:#0b1019}*{box-sizing:border-box}body{margin:0;background:#0b1019}header{padding:15px clamp(12px,2.6vw,25px);background:#111c29;border-bottom:1px solid #25394d;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:850;font-size:clamp(18px,2.2vw,23px)}.brand span{color:#f6d061}header small{display:block;color:#9eb2ca;margin-top:4px}.tag{font-size:12px;border:1px solid #665b33;border-radius:18px;padding:5px 10px;color:#f5cf77}.shell{max-width:1750px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px}.stagewrap,.panel{background:#131e2b;border:1px solid #344458;border-radius:16px;padding:12px}.bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}button{appearance:none;-webkit-appearance:none;border:1px solid #425670;border-radius:9px;padding:10px 12px;font-size:14px;line-height:1.2;background:#23354d;color:#eef2f8;cursor:pointer;touch-action:manipulation}button.active,button.primary{background:#f4cf68;border-color:#f4cf68;color:#172436;font-weight:750}button:disabled{opacity:.45;cursor:wait}.shot{touch-action:none;-webkit-touch-callout:none;position:relative;width:100%;aspect-ratio:1672/941;overflow:hidden;border-radius:10px;background:#162333;user-select:none;-webkit-user-select:none}.shot canvas{display:block;width:100%;height:100%;touch-action:none}.panel h2{margin:3px 0 6px;font-size:19px}.desc{color:#b8c8da;line-height:1.52;font-size:13px;margin-bottom:14px}.legend{font-size:13px;font-weight:700;margin:14px 0 9px}.two{display:grid;grid-template-columns:1fr;gap:8px}.panel button{width:100%;text-align:center}.controls{display:grid;gap:14px;margin-top:14px}.controls label{font-size:13px;color:#c3cede;display:flex;justify-content:space-between;margin-bottom:5px}.controls input{width:100%;accent-color:#f4cf68}.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.mini button{padding:8px}.msg{min-height:50px;margin-top:15px;background:#0f1a28;border:1px solid #31465b;border-radius:9px;padding:9px;color:#becfe0;font-size:12px;line-height:1.5}.note{padding:0 18px 24px;font-size:12px;color:#9dafc4;max-width:1750px;margin:auto}.note b{color:#e8eef6}.hidden{display:none!important}.thumbs{display:flex;gap:7px;overflow-x:auto;padding:9px 0}.thumb{width:90px;height:60px;object-fit:cover;border:3px solid transparent;border-radius:7px;cursor:pointer;flex-shrink:0}.thumb.active{border-color:#f4cf68}.list{display:flex;flex-direction:column;gap:5px;max-height:140px;overflow:auto}.list button{font-size:12px;padding:8px}.list button.selected{border-color:#f4cf68;color:#f4cf68}input[type=file]{display:none}.row{display:flex;gap:7px;flex-wrap:wrap}.row>*{flex:1}.small{font-size:12px;color:#b6c6d9}.busy{color:#f4cf68}.panel select{width:100%;background:#0f1a28;color:white;border:1px solid #425670;padding:8px;border-radius:8px}.sep{border:0;border-top:1px solid #33465b;margin:16px 0}@media(max-width:900px){.shell{grid-template-columns:1fr;padding:10px;gap:11px}.panel{order:2}header{padding:14px}.bar button{padding:10px;font-size:13px}.tag{font-size:11px}.shot{border-radius:8px}}
+</style></head><body>
+<header><div><div class="brand">SIR <span>COME LA VEDI</span> 2.0</div><small>Editor fotografico tattico · estrazione del giocatore e sfondo ricostruito</small></div><div class="tag">PROVA 13 · caricamento IA corretto</div></header>
+<main class="shell"><section class="stagewrap">
+<div class="bar"><button id="load" class="primary">+ Carica foto</button><input id="files" type="file" accept="image/*" multiple><button id="deletePhoto">Elimina foto</button><button id="edited" class="active">Vista modificata</button><button id="original">Originale</button><button id="export">Salva PNG</button><button id="save">Salva progetto</button><button id="open">Apri progetto</button><input id="projectInput" type="file" accept=".json,application/json"><button id="reset">Ripristina</button></div>
+<div id="thumbs" class="thumbs"></div>
+<div class="bar"><button id="ai" class="primary">Estrai giocatore con clic</button><button id="trace">Estrai con contorno manuale</button><button id="undo" class="hidden">Annulla punto</button><button id="finish" class="hidden">Conferma contorno</button><button id="acceptMask" class="hidden primary">Conferma sagoma bianca</button><button id="retryMask" class="hidden">Riprova clic</button><button id="cancel" class="hidden">Annulla estrazione</button></div>
+<div id="shot" class="shot"><canvas id="canvas" width="1672" height="941" aria-label="Fotografia modificabile"></canvas></div>
+<p class="small" id="modeHelp">Seleziona una foto, poi premi “Estrai giocatore con clic” e tocca il giocatore. Per spostare un elemento, trascinalo.</p>
+</section>
+<aside class="panel"><h2 id="panelTitle">La tua fotografia</h2><p class="desc">Stessa impostazione della Prova 7. Estrai più giocatori, spostali, ruotali e scegli cosa lasciare nella loro posizione di partenza.</p>
+<div class="legend">Giocatori estratti</div><div id="players" class="list"><span class="small">Nessun giocatore estratto</span></div>
+<div id="editControls" class="hidden"><div class="legend">Posizione originale</div><div class="two"><button id="outline" class="active">Sagoma / contorno bianco</button><button id="noOutline">Solo sfondo nitido</button></div>
+<div class="controls"><div><label for="rotation">Rotazione <span id="rotValue">0°</span></label><input id="rotation" type="range" min="-180" max="180" value="0"></div><div><label for="size">Dimensione <span id="sizeValue">100%</span></label><input id="size" type="range" min="40" max="200" value="100"></div><div><div class="legend">Spostamento di precisione</div><div class="mini"><button id="left">←</button><button id="up">↑</button><button id="down">↓</button><button id="right">→</button></div></div><div class="row"><button id="raise">Davanti</button><button id="lower">Dietro</button></div><button id="removePlayer">Elimina il giocatore estratto</button></div></div>
+<hr class="sep"><div class="legend">Estrazione automatica</div><p class="small">Il riconoscimento con clic usa MediaPipe MagicTouch di Google. Il primo utilizzo richiede Internet per scaricare il modello. A differenza della PROVA 7, ogni nuova foto viene analizzata qui nell’app: la sagoma va controllata prima della conferma. Il risultato non è sempre perfetto.</p>
+<div class="legend">Ricostruzione dello sfondo</div><p class="small">Lo sfondo viene ricostruito automaticamente sui pixel rimossi. Le zone complesse possono presentare imperfezioni; non sono garantite ricostruzioni fotografiche esatte.</p>
+<div id="status" class="msg" role="status" aria-live="polite">Pronto. Carica una foto per cominciare.</div></aside></main>
+<div class="note"><b>SIR · COME LA VEDI — PROVA 13:</b> lavoro direttamente sulle foto, progetto salvabile in JSON e composizione esportabile in PNG. L'originale PROVA 7 sul tuo sito non viene modificato.</div>
+<script type="module">
+const $=id=>document.getElementById(id),cv=$('canvas'),cx=cv.getContext('2d',{willReadFrequently:true}),shot=$('shot');
+let photos=[],activeId=null,selectedId=null,mode='move',viewOriginal=false,drag=null,manualPoints=[],segmenter=null,modelPromise=null,segmenterPhoto=null,modelBusy=false,sequence=0,pendingMask=null,pendingPhoto=null;
+const uid=()=>`p${Date.now().toString(36)}_${++sequence}`;
+const msg=t=>{$('status').textContent=t};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const loadImg=url=>new Promise((resolve,reject)=>{let i=new Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=reject;i.src=url});
+const phot=()=>photos.find(p=>p.id===activeId);
+const activePlayers=()=>phot()?.players||[];
+const selected=()=>activePlayers().find(p=>p.id===selectedId);
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const assetRoot='https://alorenzetti64.github.io/SIR-statistiche/come-la-vedi/prova-7/';
+function point(e){let r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}}
+async function makePhotoFromFile(file){let url=URL.createObjectURL(file);try{let img=await loadImg(url),max=1800,ratio=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*ratio)),h=Math.max(1,Math.round(img.height*ratio));let c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);let data=c.toDataURL('image/jpeg',.92);return {id:uid(),name:file.name,w,h,data,players:[],img:await loadImg(data)}}finally{URL.revokeObjectURL(url)}}
+async function importPhotos(files){let good=0;for(let f of files){if(!f.type.startsWith('image/'))continue;try{let p=await makePhotoFromFile(f);photos.push(p);activeId=p.id;selectedId=null;good++}catch(err){msg('Errore caricando '+f.name+': '+err.message)}}renderAll();if(good)msg(`${good} foto caricate. Premi “Estrai giocatore con clic”.`)}
+function dims(p){return {w:p?.w||1672,h:p?.h||941}}
+function canvasFor(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function getOriginComposite(p){let c=canvasFor(p.w,p.h),g=c.getContext('2d');g.drawImage(p.img,0,0,p.w,p.h);for(let player of p.players){if(player.patchImg){g.drawImage(player.patchImg,0,0,p.w,p.h);if(player.outline){g.drawImage(player.outlineImg,0,0,p.w,p.h)}}}return c}
+function drawPlayer(g,p){if(!p.spriteImg)return;g.save();g.translate(p.x,p.y);g.rotate(p.rot*Math.PI/180);g.scale(p.scale,p.scale);g.drawImage(p.spriteImg,-p.sw/2,-p.sh/2,p.sw,p.sh);g.restore()}
+function drawStage(withUI=true){let p=phot();if(!p){cv.width=1672;cv.height=941;shot.style.aspectRatio='1672/941';cx.fillStyle='#162333';cx.fillRect(0,0,1672,941);cx.fillStyle='#c2d1e3';cx.textAlign='center';cx.font='bold 34px system-ui';cx.fillText('Carica una fotografia',836,470);return}if(cv.width!==p.w||cv.height!==p.h){cv.width=p.w;cv.height=p.h;shot.style.aspectRatio=`${p.w}/${p.h}`}
+if(viewOriginal){cx.drawImage(p.img,0,0,p.w,p.h);return}
+cx.drawImage(getOriginComposite(p),0,0);for(let pl of p.players)drawPlayer(cx,pl);
+if(withUI&&pendingMask&&pendingPhoto===p.id){let preview=prepareMaskCanvas(p,pendingMask);cx.save();cx.globalAlpha=.90;cx.drawImage(preview,0,0,p.w,p.h);cx.restore()}
+if(withUI&&selected()){let q=selected();cx.save();cx.translate(q.x,q.y);cx.rotate(q.rot*Math.PI/180);cx.strokeStyle='#f4cf68';cx.lineWidth=Math.max(2,p.w/600);cx.setLineDash([9,6]);cx.strokeRect(-q.sw*q.scale/2,-q.sh*q.scale/2,q.sw*q.scale,q.sh*q.scale);cx.restore()}
+if(withUI&&mode==='manual'&&manualPoints.length){cx.save();cx.beginPath();manualPoints.forEach((pt,i)=>i?cx.lineTo(pt.x,pt.y):cx.moveTo(pt.x,pt.y));if(manualPoints.length>=3)cx.closePath();cx.strokeStyle='#f4cf68';cx.lineWidth=Math.max(3,p.w/400);cx.stroke();for(let pt of manualPoints){cx.beginPath();cx.arc(pt.x,pt.y,5,0,Math.PI*2);cx.fillStyle='white';cx.fill()}cx.restore()}}
+function renderPhotos(){let wrap=$('thumbs');wrap.replaceChildren();for(let p of photos){let im=document.createElement('img');im.src=p.data;im.title=p.name;im.alt=p.name;im.className='thumb'+(p.id===activeId?' active':'');im.onclick=()=>{if(modelBusy)return;activeId=p.id;selectedId=null;mode='move';viewOriginal=false;manualPoints=[];renderAll()};wrap.appendChild(im)}wrap.classList.toggle('hidden',photos.length===0)}
+function renderPlayers(){let list=$('players');list.replaceChildren();let pl=activePlayers();if(!pl.length){let x=document.createElement('span');x.className='small';x.textContent='Nessun giocatore estratto';list.append(x)}for(let p of pl){let b=document.createElement('button');b.textContent=`${pl.indexOf(p)+1}. ${p.name||'Giocatore'}`;b.className=p.id===selectedId?'selected':'';b.onclick=()=>{selectedId=p.id;mode='move';renderAll()};list.append(b)}let s=selected();$('editControls').classList.toggle('hidden',!s);if(s){$('rotValue').textContent=s.rot+'°';$('rotation').value=s.rot;$('sizeValue').textContent=Math.round(s.scale*100)+'%';$('size').value=s.scale*100;$('outline').classList.toggle('active',s.outline);$('noOutline').classList.toggle('active',!s.outline)}}
+function renderModes(){$('acceptMask').classList.toggle('hidden',!pendingMask);$('retryMask').classList.toggle('hidden',!pendingMask);$('ai').classList.toggle('active',mode==='ai');$('trace').classList.toggle('active',mode==='manual');for(let id of ['undo','finish','cancel'])$(id).classList.toggle('hidden',mode!=='manual');$('modeHelp').textContent=mode==='ai'?'Tocca un punto all’interno del giocatore. Il modello IA ne individua la sagoma.':mode==='manual'?'Tocca più punti lungo il contorno esterno del giocatore, poi premi “Conferma contorno”.':'Trascina il giocatore selezionato sulla foto. Puoi estrarre altri giocatori dalla stessa immagine.'}
+function renderAll(){renderPhotos();renderPlayers();renderModes();drawStage();$('panelTitle').textContent=phot()?.name||'La tua fotografia';$('edited').classList.toggle('active',!viewOriginal);$('original').classList.toggle('active',viewOriginal)}
+function hit(p,q){let dx=q.x-p.x,dy=q.y-p.y,a=-p.rot*Math.PI/180,x=dx*Math.cos(a)-dy*Math.sin(a),y=dx*Math.sin(a)+dy*Math.cos(a);return Math.abs(x)<p.sw*p.scale/2+25&&Math.abs(y)<p.sh*p.scale/2+25}
+cv.addEventListener('pointerdown',async e=>{let p=phot();if(!p||modelBusy||viewOriginal||pendingMask)return;let q=point(e);if(mode==='manual'){manualPoints.push(q);drawStage();return}if(mode==='ai'){mode='move';renderModes();await segmentClick(q);return}let target=[...p.players].reverse().find(pl=>hit(pl,q));selectedId=target?.id||null;if(target){drag={id:target.id,pointer:e.pointerId,dx:q.x-target.x,dy:q.y-target.y};cv.setPointerCapture(e.pointerId)}renderPlayers();drawStage()});
+cv.addEventListener('pointermove',e=>{if(!drag)return;let q=point(e),p=activePlayers().find(x=>x.id===drag.id);if(!p)return;p.x=q.x-drag.dx;p.y=q.y-drag.dy;drawStage()});
+for(let evt of ['pointerup','pointercancel','lostpointercapture'])cv.addEventListener(evt,()=>drag=null);
+function prepareMaskCanvas(p,mask){let m=canvasFor(p.w,p.h),g=m.getContext('2d'),id=g.createImageData(p.w,p.h);for(let i=0;i<mask.length;i++){let k=i*4;id.data[k]=255;id.data[k+1]=255;id.data[k+2]=255;id.data[k+3]=mask[i]?255:0}g.putImageData(id,0,0);return m}
+function maskBounds(mask,w,h){let minX=w,minY=h,maxX=-1,maxY=-1,count=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x]){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);count++}if(count<100)return null;return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1,count}}
+function buildSprite(photo,mask,b){let c=canvasFor(b.w,b.h),g=c.getContext('2d');g.drawImage(photo.img,b.x,b.y,b.w,b.h,0,0,b.w,b.h);let im=g.getImageData(0,0,b.w,b.h);for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){let j=(y*b.w+x)*4;if(!mask[(y+b.y)*photo.w+(x+b.x)])im.data[j+3]=0}g.putImageData(im,0,0);return c}
+function outlineCanvas(photo,mask){let c=canvasFor(photo.w,photo.h),g=c.getContext('2d'),id=g.createImageData(photo.w,photo.h),w=photo.w,h=photo.h;const r=Math.max(2,Math.round(w/450));for(let y=0;y<h;y++)for(let x=0;x<w;x++){let idx=y*w+x;if(!mask[idx])continue;let boundary=false;for(let dy=-r;dy<=r&&!boundary;dy+=r)for(let dx=-r;dx<=r;dx+=r){let xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h||!mask[yy*w+xx]){boundary=true;break}}if(boundary){let k=4*idx;id.data[k]=255;id.data[k+1]=255;id.data[k+2]=255;id.data[k+3]=255}}g.putImageData(id,0,0);return c}
+// Multi-scale color diffusion into the removed object's area: no invented rectangular crop.
+function inpaint(photo,mask){const w=photo.w,h=photo.h,maxSide=560,ratio=Math.min(1,maxSide/Math.max(w,h)),sw=Math.max(1,Math.round(w*ratio)),sh=Math.max(1,Math.round(h*ratio));let src=canvasFor(sw,sh),s=src.getContext('2d',{willReadFrequently:true});s.drawImage(photo.img,0,0,sw,sh);let dat=s.getImageData(0,0,sw,sh),pix=dat.data,unknown=new Uint8Array(sw*sh),br=Math.max(2,Math.round(4/ratio));for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let ox=Math.min(w-1,Math.floor(x/ratio)),oy=Math.min(h-1,Math.floor(y/ratio));unknown[y*sw+x]=mask[oy*w+ox]}
+let dilated=unknown.slice();for(let y=0;y<sh;y++)for(let x=0;x<sw;x++)if(unknown[y*sw+x])for(let dy=-br;dy<=br;dy++)for(let dx=-br;dx<=br;dx++){let xx=x+dx,yy=y+dy;if(xx>=0&&xx<sw&&yy>=0&&yy<sh)dilated[yy*sw+xx]=1}
+const cur=new Float32Array(sw*sh*3),fixed=new Uint8Array(sw*sh);for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let k=y*sw+x,j=k*4;if(!dilated[k])fixed[k]=1;for(let ch=0;ch<3;ch++)cur[k*3+ch]=pix[j+ch]}
+// Fill by propagation from known pixels, then smooth the filled region.
+let visited=fixed.slice(),queue=new Int32Array(sw*sh),start=0,end=0;for(let i=0;i<fixed.length;i++)if(fixed[i])queue[end++]=i;while(start<end){let k=queue[start++],x=k%sw,y=(k/sw)|0;for(let d of [-sw,sw,-1,1]){let j=k+d;if(j<0||j>=sw*sh||(d===-1&&x===0)||(d===1&&x===sw-1)||visited[j])continue;visited[j]=1;for(let ch=0;ch<3;ch++)cur[3*j+ch]=cur[3*k+ch];queue[end++]=j}}
+let nxt=new Float32Array(cur.length);for(let it=0;it<100;it++){nxt.set(cur);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){let k=y*sw+x;if(!dilated[k])continue;for(let ch=0;ch<3;ch++)nxt[3*k+ch]=(cur[3*(k-1)+ch]+cur[3*(k+1)+ch]+cur[3*(k-sw)+ch]+cur[3*(k+sw)+ch])*.25}cur.set(nxt)}
+for(let k=0;k<sw*sh;k++)if(dilated[k])for(let ch=0;ch<3;ch++)pix[4*k+ch]=clamp(Math.round(cur[3*k+ch]),0,255);s.putImageData(dat,0,0);
+let expanded=canvasFor(w,h),ex=expanded.getContext('2d');ex.drawImage(src,0,0,w,h);
+let patch=canvasFor(w,h),g=patch.getContext('2d'),out=g.createImageData(w,h),rep=ex.getImageData(0,0,w,h).data;for(let k=0;k<mask.length;k++)if(mask[k]){out.data[4*k]=rep[4*k];out.data[4*k+1]=rep[4*k+1];out.data[4*k+2]=rep[4*k+2];out.data[4*k+3]=255}g.putImageData(out,0,0);return patch}
+async function createExtracted(mask){let photo=phot();let bounds=maskBounds(mask,photo.w,photo.h);if(!bounds){msg('Non ho trovato una figura. Riprova cliccando al centro del giocatore.');return}if(bounds.count>photo.w*photo.h*.75){msg('Il modello ha selezionato quasi tutta la foto. Prova un altro punto o il contorno manuale.');return}msg('Sagoma individuata. Sto ricostruendo lo sfondo…');await sleep(30);let sprite=buildSprite(photo,mask,bounds),outline=outlineCanvas(photo,mask),patch=inpaint(photo,mask);let pl={id:uid(),name:'Giocatore '+(photo.players.length+1),x:bounds.x+bounds.w/2+Math.round(photo.w*.08),y:bounds.y+bounds.h/2,sw:bounds.w,sh:bounds.h,rot:0,scale:1,outline:true,spriteData:sprite.toDataURL('image/png'),outlineData:outline.toDataURL('image/png'),patchData:patch.toDataURL('image/png')};pl.spriteImg=await loadImg(pl.spriteData);pl.outlineImg=await loadImg(pl.outlineData);pl.patchImg=await loadImg(pl.patchData);photo.players.push(pl);selectedId=pl.id;mode='move';renderAll();msg('Giocatore estratto e spostabile. Scegli “Sagoma / contorno bianco” o “Solo sfondo nitido”.')}
+// MediaPipe MagicTouch: dedicated interactive segmentation model, not Hugging Face/SlimSAM.
+// Uses the official Google-hosted model and a standard CDN for the runtime.
+
+const SEGMENTER_MODEL='https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/latest/interactive_segmentation.task';
+async function setupSegmenter(){
+  if(segmenter)return segmenter;
+  if(modelPromise)return modelPromise;
+  modelPromise=(async()=>{
+    if(!navigator.onLine)throw Error('Non risulta una connessione Internet.');
+    if(location.protocol!=='https:' && location.hostname!=='localhost')throw Error('Apri questa pagina da GitHub Pages HTTPS, non dal file HTML scaricato.');
+    msg('Preparo MediaPipe MagicTouch. Sto verificando le risorse...');
+    const sources=[
+      {name:'jsDelivr',mod:'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/vision_bundle.mjs',wasm:'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm'},
+      {name:'unpkg',mod:'https://unpkg.com/@mediapipe/tasks-vision@0.10.32/vision_bundle.mjs',wasm:'https://unpkg.com/@mediapipe/tasks-vision@0.10.32/wasm'}
+    ];
+    let failures=[];
+    for (const source of sources){
+      try {
+        msg('Caricamento da '+source.name+'…');
+        let lib=await import(source.mod);
+        if(!lib.FilesetResolver||!lib.InteractiveSegmenter)throw Error('La libreria non espone InteractiveSegmenter.');
+        const vision=await lib.FilesetResolver.forVisionTasks(source.wasm);
+        msg('Inizializzo WebAssembly da '+source.name+'…');
+        const engine=await lib.InteractiveSegmenter.createFromOptions(vision,{
+          baseOptions:{modelAssetPath:SEGMENTER_MODEL,delegate:'CPU'}
+        });
+        segmenter=engine;
+        msg('MagicTouch pronto. Individuo la sagoma…');
+        return engine;
+      }catch(error){failures.push(source.name+': '+(error?.message||String(error)));}
+    }
+    throw Error('Impossibile caricare il motore IA. '+failures.join(' | '));
+  })().catch(e=>{modelPromise=null;segmenter=null;throw e});
+  return modelPromise;
+}
+function connectedFromClick(mask,w,h,q){
+  let x=clamp(Math.floor(q.x),0,w-1),y=clamp(Math.floor(q.y),0,h-1),idx=y*w+x;
+  if(!mask[idx]){
+    let found=-1;outer:for(let radius=1;radius<=Math.max(8,Math.round(Math.min(w,h)*.022));radius++){
+      for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+        let xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h)continue;
+        if(mask[yy*w+xx]){found=yy*w+xx;break outer}
+      }
+    }
+    if(found<0) return mask;
+    idx=found;
+  }
+  let out=new Uint8Array(mask.length),queue=new Int32Array(mask.length),head=0,tail=0;
+  queue[tail++]=idx;out[idx]=1;
+  while(head<tail){let k=queue[head++],px=k%w;for(let d of [-w,w,-1,1]){
+    let j=k+d;
+    if(j<0||j>=mask.length||(d===-1&&px===0)||(d===1&&px===w-1)||out[j]||!mask[j])continue;
+    out[j]=1;queue[tail++]=j;
+  }}return out;
+}
+async function segmentClick(q){
+  const photo=phot();if(!photo)return;
+  modelBusy=true;renderModes();
+  try{
+    const engine=await setupSegmenter();
+    if(segmenterPhoto!==photo.id){
+      msg('Analizzo la fotografia per individuare i contorni…');
+      // Keep MediaPipe input bounded to reduce RAM consumption on iPhone/iPad.
+      const max=1100,scale=Math.min(1,max/Math.max(photo.w,photo.h));
+      const tw=Math.round(photo.w*scale),th=Math.round(photo.h*scale);
+      engine._sirInput=canvasFor(tw,th);
+      engine._sirInput.getContext('2d').drawImage(photo.img,0,0,tw,th);
+      engine._sirWidth=tw;engine._sirHeight=th;
+      engine.setImage(engine._sirInput);
+      segmenterPhoto=photo.id;
+    }
+    msg('Creo la sagoma bianca del giocatore…');
+    await sleep(25);
+    const point={x:clamp(q.x/photo.w,0,1),y:clamp(q.y/photo.h,0,1)};
+    const result=engine.segment([{brushMode:1,point:[point],isCompleted:true}]);
+    const rw=result.width,rh=result.height;
+    const probabilities=result.getAsFloat32Array();
+    let bmask=new Uint8Array(photo.w*photo.h);
+    for(let y=0;y<photo.h;y++){
+      const iy=Math.min(rh-1,Math.floor(y*rh/photo.h));
+      for(let x=0;x<photo.w;x++){
+        const ix=Math.min(rw-1,Math.floor(x*rw/photo.w));
+        bmask[y*photo.w+x]=probabilities[iy*rw+ix]>=.52?1:0;
+      }
+    }
+    result.close();
+    bmask=connectedFromClick(bmask,photo.w,photo.h,q);
+    const bounds=maskBounds(bmask,photo.w,photo.h);
+    if(!bounds||bounds.count>photo.w*photo.h*.65)throw Error('Sagoma non riconosciuta in modo affidabile. Prova a cliccare sul busto del giocatore.');
+    pendingMask=bmask;pendingPhoto=photo.id;
+    renderAll();
+    msg('Sagoma BIANCA individuata. Controlla testa, braccia e gambe, quindi premi “Conferma sagoma bianca”. Se non è precisa, premi “Riprova clic”.');
+  }catch(err){
+    console.error('SIR MediaPipe:',err);
+    msg('Estrazione con clic non riuscita: '+(err?.message||String(err))+'. Se il problema è il download, prova dal sito HTTPS; l’app mantiene l’alternativa manuale.');
+  }finally{modelBusy=false;renderModes()}
+}
+$('acceptMask').onclick=async()=>{
+ if(!pendingMask||!phot()||pendingPhoto!==activeId)return;
+ let mask=pendingMask;pendingMask=null;pendingPhoto=null;modelBusy=true;
+ try{await createExtracted(mask)}catch(err){msg('Errore durante il ritaglio: '+err.message)}
+ finally{modelBusy=false;renderAll()}
+};
+$('retryMask').onclick=()=>{pendingMask=null;pendingPhoto=null;mode='ai';renderAll();msg('Clicca nuovamente sul busto del giocatore.')};
+function manualMask(){let p=phot(),c=canvasFor(p.w,p.h),g=c.getContext('2d');g.beginPath();manualPoints.forEach((pt,i)=>i?g.lineTo(pt.x,pt.y):g.moveTo(pt.x,pt.y));g.closePath();g.fillStyle='white';g.fill();let pixels=g.getImageData(0,0,p.w,p.h).data,mask=new Uint8Array(p.w*p.h);for(let i=0;i<mask.length;i++)mask[i]=pixels[i*4+3]>127?1:0;return mask}
+$('load').onclick=()=>$('files').click();$('files').onchange=async e=>{await importPhotos([...e.target.files]);e.target.value=''};
+$('deletePhoto').onclick=()=>{pendingMask=null;pendingPhoto=null;let p=phot();if(!p)return;if(!confirm('Eliminare la foto selezionata e le modifiche associate?'))return;photos=photos.filter(q=>q.id!==p.id);activeId=photos.at(-1)?.id||null;selectedId=null;viewOriginal=false;mode='move';renderAll();msg('Fotografia eliminata. Puoi caricarne un’altra.')};
+$('edited').onclick=()=>{viewOriginal=false;renderAll()};$('original').onclick=()=>{viewOriginal=true;renderAll()};
+$('ai').onclick=()=>{pendingMask=null;pendingPhoto=null;if(!phot()){msg('Carica prima una fotografia.');return}viewOriginal=false;selectedId=null;mode='ai';renderAll();msg('Tocca un punto del giocatore che vuoi estrarre.')};
+$('trace').onclick=()=>{pendingMask=null;pendingPhoto=null;if(!phot()){msg('Carica prima una fotografia.');return}viewOriginal=false;selectedId=null;manualPoints=[];mode='manual';renderAll();msg('Tocca punti lungo il perimetro del giocatore, poi conferma.')};
+$('undo').onclick=()=>{manualPoints.pop();drawStage()};$('cancel').onclick=()=>{pendingMask=null;pendingPhoto=null;mode='move';manualPoints=[];renderAll()};$('finish').onclick=async()=>{if(manualPoints.length<3){msg('Servono almeno tre punti sul contorno.');return}mode='move';modelBusy=true;try{await createExtracted(manualMask())}catch(e){msg('Errore nel ritaglio: '+e.message)}finally{manualPoints=[];modelBusy=false;renderAll()}};
+$('outline').onclick=()=>{let p=selected();if(p){p.outline=true;renderAll()}};$('noOutline').onclick=()=>{let p=selected();if(p){p.outline=false;renderAll()}};
+$('rotation').oninput=e=>{let p=selected();if(!p)return;p.rot=+e.target.value;$('rotValue').textContent=p.rot+'°';drawStage()};$('size').oninput=e=>{let p=selected();if(!p)return;p.scale=+e.target.value/100;$('sizeValue').textContent=Math.round(100*p.scale)+'%';drawStage()};
+for(let [id,dx,dy] of [['left',-1,0],['right',1,0],['up',0,-1],['down',0,1]])$(id).onclick=()=>{let p=selected();if(p){p.x+=dx*15;p.y+=dy*15;drawStage()}};
+$('raise').onclick=()=>{let a=activePlayers(),i=a.findIndex(x=>x.id===selectedId);if(i>=0){a.push(a.splice(i,1)[0]);renderAll()}};$('lower').onclick=()=>{let a=activePlayers(),i=a.findIndex(x=>x.id===selectedId);if(i>=0){a.unshift(a.splice(i,1)[0]);renderAll()}};$('removePlayer').onclick=()=>{let p=selected();if(!p)return;let a=activePlayers(),i=a.indexOf(p);a.splice(i,1);selectedId=null;renderAll()};
+function download(blob,filename){let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)}
+$('export').onclick=()=>{if(!phot()){msg('Carica una fotografia prima di esportare.');return}drawStage(false);cv.toBlob(blob=>{if(blob)download(blob,'SIR_COME_LA_VEDI_'+Date.now()+'.png');drawStage();msg(blob?'Immagine PNG salvata.':'Esportazione PNG non riuscita.')},'image/png')};
+$('save').onclick=()=>{let obj={version:9,activeId,photos:photos.map(p=>({id:p.id,name:p.name,w:p.w,h:p.h,data:p.data,players:p.players.map(({spriteImg,outlineImg,patchImg,...rest})=>rest)}))};download(new Blob([JSON.stringify(obj)],{type:'application/json'}),'SIR_COME_LA_VEDI_PROGETTO.json');msg('Progetto completo salvato in JSON.')};
+$('open').onclick=()=>$('projectInput').click();$('projectInput').onchange=async e=>{try{let file=e.target.files[0];if(!file)return;let obj=JSON.parse(await file.text());if(!Array.isArray(obj.photos))throw Error('Formato non valido');let arr=[];for(let p of obj.photos){p.img=await loadImg(p.data);for(let pl of p.players||[]){pl.spriteImg=await loadImg(pl.spriteData);pl.outlineImg=await loadImg(pl.outlineData);pl.patchImg=await loadImg(pl.patchData)}arr.push(p)}photos=arr;activeId=obj.activeId&&photos.some(p=>p.id===obj.activeId)?obj.activeId:photos[0]?.id||null;selectedId=null;viewOriginal=false;mode='move';renderAll();msg('Progetto riaperto.') }catch(err){msg('Errore apertura progetto: '+err.message)}e.target.value=''};
+$('reset').onclick=()=>{pendingMask=null;pendingPhoto=null;let p=phot();if(!p)return;if(!confirm('Ripristinare la foto originale eliminando le estrazioni di questa foto?'))return;p.players=[];selectedId=null;viewOriginal=false;renderAll();msg('Fotografia ripristinata.')};
+renderAll();
+</script></body></html>
