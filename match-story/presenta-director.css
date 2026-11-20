@@ -296,7 +296,7 @@
   padding-left:0!important;
 }
 .sir-dir .sd-slide.sd-empty-body .sd-content[hidden]{display:none!important}
-.sir-dir .sd-slide.sd-visual-only .sd-body{display:none!important}
+.sir-dir .sd-slide.sd-background-only .sd-body{display:none!important}
 .sir-dir .sd-slide.sd-visual-only .sd-underline{display:none!important}
 .sir-dir .sd-slide.sd-visual-only .sd-h,
 .sir-dir .sd-slide.sd-visual-only .sd-content{display:none!important}
