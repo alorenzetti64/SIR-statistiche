@@ -288,3 +288,15 @@
  .sd-pdf-overlay{padding:12px;align-items:center}
  .sd-pdf-dialog{padding:21px 17px}
 }
+
+/* Clean full-bleed background photos: no pink divider/left border on blank slides.
+   Empty text may still have HTML <br> nodes, so the JS marks visual emptiness. */
+.sir-dir .sd-slide.sd-empty-body .sd-content{
+  border-left:0!important;
+  padding-left:0!important;
+}
+.sir-dir .sd-slide.sd-empty-body .sd-content[hidden]{display:none!important}
+.sir-dir .sd-slide.sd-visual-only .sd-body{display:none!important}
+.sir-dir .sd-slide.sd-visual-only .sd-underline{display:none!important}
+.sir-dir .sd-slide.sd-visual-only .sd-h,
+.sir-dir .sd-slide.sd-visual-only .sd-content{display:none!important}
