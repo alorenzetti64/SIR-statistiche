@@ -266,7 +266,10 @@ async function open({report,chapters,editMode=false}){
    const bodyHasText=!!desc.textContent.trim();
    if(!titleHasText)scene.classList.add('sd-empty-title');
    if(!bodyHasText)scene.classList.add('sd-empty-body');
-   if(p.bgMode==='image'&&!titleHasText&&!bodyHasText)scene.classList.add('sd-visual-only');
+   if(p.bgMode==='image'&&!titleHasText&&!bodyHasText){
+     scene.classList.add('sd-visual-only');
+     if(!asset)scene.classList.add('sd-background-only');
+   }
    desc.hidden=!revealed||(!bodyHasText&&!editing);
    desc.style.fontFamily=fontFamilies[p.bodyFont]||fontFamilies.inter;
    desc.style.textAlign=p.bodyAlign||'left';
