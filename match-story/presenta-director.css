@@ -464,3 +464,21 @@
   /* The independent REGIA overlay stays scrollable above the mobile slide. */
   .sir-dir .sd-sidebar:not([hidden]){z-index:2147480010!important}
 }
+
+/* Landscape phones: keep the compact horizontal header, but enable zoom/pan
+   and the same swipe navigation as portrait phones. */
+@media (max-height:500px) and (max-width:1000px) and (pointer:coarse) and (min-width:701px){
+ .sir-dir .sd-mobile-zoom{
+   display:flex;align-items:center;justify-content:center;
+   flex:0 0 85px;width:85px;height:42px;
+   background:#e9c882;color:#13263a;border:1px solid #e9c882;
+   border-radius:8px;font-size:12px;font-weight:900;touch-action:manipulation;
+ }
+ .sir-dir .sd-footer-bar{gap:9px;padding:5px 12px;height:54px}
+ .sir-dir .sd-progress,.sir-dir .sd-btm-label{display:none!important}
+ .sir-dir .sd-stage{min-width:0;min-height:0;overflow:hidden;touch-action:pan-y}
+ .sir-dir .sd-stage.sd-zoomed{
+  overflow:auto!important;align-items:flex-start!important;justify-content:flex-start!important;
+  touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:touch!important;
+ }
+}
