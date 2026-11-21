@@ -175,7 +175,7 @@ async function open({report,chapters,editMode=false}){
  slideFrame.className='sd-zoom-canvas';
  stage.insertBefore(slideFrame,surface);
  slideFrame.appendChild(surface);
- const phoneMedia=window.matchMedia('(max-width:700px)');
+ const phoneMedia=window.matchMedia('(max-width:700px), (max-height:500px) and (pointer:coarse)');
  let mobileZoomed=false;
  const zoomButton=$(shell,'[data-sd="zoom"]');
 
