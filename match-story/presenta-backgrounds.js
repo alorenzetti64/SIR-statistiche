@@ -23,8 +23,28 @@ else if(type==='gradient'){bg='linear-gradient(135deg,'+c1+','+c2+')';light=brig
 else if(type==='image'){
 const tone=tones.includes(p.bgOverlay)?p.bgOverlay:'dark';light=tone==='light';
 if(imageAllowed(p.bgImageUrl)){
-image=document.createElement('div');image.className='sd-bg-image';image.style.backgroundImage='url("'+p.bgImageUrl+'")';
-image.style.backgroundSize=fits.includes(p.bgFit)?p.bgFit:'cover';image.style.opacity=String(clamp(p.bgOpacity,0,100,100)/100);
+  // An actual IMG is more reliable than CSS background-image inside
+  // a transform-scaled slide on mobile Safari and desktop browsers.
+  image=document.createElement('img');
+  image.className='sd-bg-image';
+  image.alt='';
+  image.setAttribute('aria-hidden','true');
+  image.loading='eager';
+  image.decoding='async';
+  image.style.objectFit=fits.includes(p.bgFit)?p.bgFit:'cover';
+  image.style.opacity=String(clamp(p.bgOpacity,0,100,100)/100);
+  const state=document.createElement('div');
+  state.className='sd-bg-load-status';
+  state.textContent='Caricamento immagine della slide…';
+  state.setAttribute('aria-live','polite');
+  image.addEventListener('load',()=>state.remove(),{once:true});
+  image.addEventListener('error',()=>{
+    image.hidden=true;
+    state.classList.add('sd-bg-failed');
+    state.textContent='Immagine non caricata. Riapri PRESENTA o sostituisci la foto in REGIA.';
+  },{once:true});
+  scene.append(state);
+  image.src=p.bgImageUrl;
 }
 if(tone!=='none'){
 overlay=document.createElement('div');overlay.className='sd-bg-overlay';
