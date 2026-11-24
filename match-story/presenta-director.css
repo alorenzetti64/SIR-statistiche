@@ -510,3 +510,37 @@
 .sir-dir .sd-slide.sd-custom-bg .sd-bg-load-status.sd-bg-failed{
  background:#fff4f4;color:#8c2440;border:3px solid #c73764;
 }
+
+
+/* 2026-11-24 — Isola la regia PRESENTA dalle regole globali "main" di Match Story.
+   Senza questo override il layout riceve max-width e padding del sito,
+   riducendo la stage e quindi l'intera slide 16:9 a dimensioni minime. */
+body .sir-dir > main.sd-main {
+  display:flex!important;
+  flex:1 1 auto!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  position:relative!important;
+}
+body .sir-dir > main.sd-main > .sd-stage {
+  flex:1 1 auto!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin:0!important;
+}
+body .sir-dir .sd-zoom-canvas {
+  flex:0 0 auto;
+  max-width:none!important;
+}
+body .sir-dir .sd-zoom-canvas > .sd-surface {
+  width:1280px!important;
+  height:720px!important;
+  max-width:none!important;
+}
