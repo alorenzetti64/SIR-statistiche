@@ -69,6 +69,8 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}.checkline{
 <div id="editPanel" class="hidden">
 <h2>2 · Sistema la scena</h2>
 <p class="help">Puoi lavorare sia sui giocatori sia sulle forme tattiche. Toccali in campo oppure scegli l'elemento nella galleria.</p>
+<button id="extractAnother" class="primary full" type="button">+ Estrai un altro giocatore</button>
+<p class="tiny" style="margin-top:7px">La scena resta visibile e le posizioni già impostate vengono conservate.</p>
 <div class="shapehint"><button id="addCone">+ Cono giallo</button><button id="addOval">+ Ovale giallo</button></div>
 <div class="divider"></div>
 <div id="editControls" class="hidden">
@@ -163,12 +165,15 @@ async function loadUserPhoto(file){
 }
 
 function setMode(value){mode=value;isOriginalView=false;$('extractPanel').classList.toggle('hidden',mode!=='extract');$('editPanel').classList.toggle('hidden',mode!=='edit');$('selectMode').classList.toggle('active',mode==='extract');$('editMode').classList.toggle('active',mode==='edit');updateUI();render()}
+function startAnotherExtraction(){if(!source)return;mask=null;maskTint=null;lasso=[];tool='auto';setMode('extract');const n=players().length;setStatus(n?`La scena con ${n} giocator${n===1?'e':'i'} resta visibile. Tocca un altro atleta nella foto.`:'Tocca un giocatore nella foto.','ok')}
 function setTool(value){tool=value; if(value==='lasso'){lasso=[];mask=null;maskTint=null;setStatus('Tocca i punti lungo il contorno del giocatore, poi «Crea sagoma».')} else if(value==='auto'){lasso=[];setStatus('Tocca il giocatore da estrarre.')} else if(value==='add'||value==='erase'){setStatus('Passa il dito sul contorno per '+(value==='add'?'aggiungere':'cancellare')+' una parte della sagoma.')} updateUI();render()}
 
 function updateUI(){
  $('autoTool').classList.toggle('active',tool==='auto'); $('lassoTool').classList.toggle('active',tool==='lasso'); $('brushAdd').classList.toggle('active',tool==='add'); $('brushErase').classList.toggle('active',tool==='erase'); $('brushOff').classList.toggle('active',tool==='auto');
  $('lassoActions').classList.toggle('hidden',!(mode==='extract'&&tool==='lasso')); $('maskActions').classList.toggle('hidden',!(mode==='extract'&&mask)); $('pointCount').textContent=lasso.length+' punti scelti'; $('closeLasso').disabled=lasso.length<3;
  $('itemCount').textContent=String(scene.length);
+ $('selectMode').textContent=players().length?'1 · Aggiungi giocatore':'1 · Estrai giocatori';
+ $('extractAnother').textContent=players().length?'＋ Estrai un altro giocatore':'＋ Estrai un giocatore';
  const el=current(); $('editControls').classList.toggle('hidden',!el); $('noSelected').classList.toggle('hidden',!!el); $('playerControls').classList.toggle('hidden',!(el&&el.kind==='player')); $('shapeControls').classList.toggle('hidden',!(el&&el.kind==='shape'));
  if(el){ $('elementName').value=el.name||''; if(el.kind==='player'){ $('yaw').value=el.yaw; $('pitch').value=el.pitch; $('roll').value=el.roll; $('scale').value=Math.round(el.scale*100); $('clearOriginal').checked=!!el.clearOriginal; $('showMaskOriginal').checked=!!el.showMask; $('moveBack').classList.toggle('active',el.layer==='back'); $('moveFront').classList.toggle('active',el.layer==='front'); updatePlayerValues(el);} else if(el.kind==='shape'){ $('shapeW').value=Math.round(el.w); $('shapeH').value=Math.round(el.h); $('shapeRot').value=Math.round(el.rotation); $('shapeOpacity').value=Math.round(el.opacity*100); updateShapeValues(el);} }
 }
@@ -191,15 +196,15 @@ function rebuildGallery(){
 
 function render(){
  ctx.clearRect(0,0,W,H); if(!source)return;
- if(mode==='extract'){ ctx.drawImage(source,0,0,W,H); if(maskTint){ctx.save();ctx.globalAlpha=.62;ctx.drawImage(maskTint,0,0);ctx.restore()} if(lasso.length){ctx.save();ctx.beginPath();ctx.moveTo(lasso[0].x,lasso[0].y);for(let i=1;i<lasso.length;i++)ctx.lineTo(lasso[i].x,lasso[i].y);ctx.lineWidth=Math.max(2,W/470);ctx.strokeStyle='#ffd06b';ctx.setLineDash([7,5]);ctx.stroke();ctx.setLineDash([]); for(const pt of lasso){ctx.beginPath();ctx.arc(pt.x,pt.y,Math.max(3,W/330),0,Math.PI*2);ctx.fillStyle='#ffd06b';ctx.fill()} ctx.restore()} }
+ if(mode==='extract'){ if(players().length)renderScene(ctx,false,false);else ctx.drawImage(source,0,0,W,H); if(maskTint){ctx.save();ctx.globalAlpha=.62;ctx.drawImage(maskTint,0,0);ctx.restore()} if(lasso.length){ctx.save();ctx.beginPath();ctx.moveTo(lasso[0].x,lasso[0].y);for(let i=1;i<lasso.length;i++)ctx.lineTo(lasso[i].x,lasso[i].y);ctx.lineWidth=Math.max(2,W/470);ctx.strokeStyle='#ffd06b';ctx.setLineDash([7,5]);ctx.stroke();ctx.setLineDash([]); for(const pt of lasso){ctx.beginPath();ctx.arc(pt.x,pt.y,Math.max(3,W/330),0,Math.PI*2);ctx.fillStyle='#ffd06b';ctx.fill()} ctx.restore()} }
  else {renderScene(ctx,true)}
 }
 
-function renderScene(c,withSelection){
+function renderScene(c,withSelection,showOriginalMasks=true){
  if(isOriginalView){c.drawImage(source,0,0,W,H); return}
  c.drawImage(background||base,0,0,W,H);
  const backPlayers=scene.filter(x=>x.kind==='player'&&x.layer==='back');
- const masks=scene.filter(x=>x.kind==='player'&&x.showMask&&x.outlineImg);
+ const masks=showOriginalMasks?scene.filter(x=>x.kind==='player'&&x.showMask&&x.outlineImg):[];
  const forms=scene.filter(x=>x.kind==='shape');
  const frontPlayers=scene.filter(x=>x.kind==='player'&&x.layer!=='back');
  backPlayers.forEach(p=>drawPlayer(c,p));
@@ -272,7 +277,7 @@ async function confirmExtraction(){
  const p={id:++counter, kind:'player', name:'Giocatore '+counter, x:left+w/2, y:top+h/2, w,h, yaw:0,pitch:0,roll:0,scale:1, src, img, maskSrc, maskImg:smallMask, outlineSrc, outlineImg, thumb:src, originX:left, originY:top, clearOriginal:true, showMask:true, layer:'front'};
  scene.push(p); selected=p.id; mask=null; maskTint=null; lasso=[]; rebuildBackground(); setMode('edit'); rebuildGallery(); updateUI();
  maskUndo=[];maskRedo=[];updateMaskHistoryUI();
- setStatus('Giocatore estratto con trasparenza. Premi «1 · Estrai giocatori» per selezionare un altro atleta nella stessa foto.','ok');
+ setStatus('Giocatore estratto con trasparenza. Puoi spostarlo e poi aggiungere un altro atleta: la scena resterà conservata.','ok');
 }
 
 function inpaintOne(c,p){ if(!p.maskImg)return; const px=Math.max(0,Math.floor(p.originX-6)),py=Math.max(0,Math.floor(p.originY-6)); const rw=Math.min(W-px,Math.ceil(p.w+12)),rh=Math.min(H-py,Math.ceil(p.h+12)); if(rw<2||rh<2)return; const cc=c.getContext('2d',{willReadFrequently:true}); const data=cc.getImageData(px,py,rw,rh),src=data.data; const m=makeCanvas(rw,rh); const mc=m.getContext('2d',{willReadFrequently:true}); mc.drawImage(p.maskImg,p.originX-px,p.originY-py,p.w,p.h); const alpha=mc.getImageData(0,0,rw,rh).data; const bad=new Uint8Array(rw*rh); for(let y=0;y<rh;y++)for(let x=0;x<rw;x++)if(alpha[(y*rw+x)*4+3]>45){ for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){ let xx=x+dx,yy=y+dy; if(xx>=0&&xx<rw&&yy>=0&&yy<rh) bad[yy*rw+xx]=1; }} const left=new Int32Array(rw*rh),right=new Int32Array(rw*rh),up=new Int32Array(rw*rh),down=new Int32Array(rw*rh); for(let y=0;y<rh;y++){ let v=-1; for(let x=0;x<rw;x++){ let i=y*rw+x; if(!bad[i])v=i; left[i]=v; } v=-1; for(let x=rw-1;x>=0;x--){ let i=y*rw+x; if(!bad[i])v=i; right[i]=v; }} for(let x=0;x<rw;x++){ let v=-1; for(let y=0;y<rh;y++){ let i=y*rw+x; if(!bad[i])v=i; up[i]=v; } v=-1; for(let y=rh-1;y>=0;y--){ let i=y*rw+x; if(!bad[i])v=i; down[i]=v; }} const result=new Uint8ClampedArray(src); for(let i=0;i<bad.length;i++)if(bad[i]){ const x=i%rw,y=(i/rw)|0,neighbors=[left[i],right[i],up[i],down[i]]; let weight=0,r=0,g=0,b=0; for(const j of neighbors) if(j>=0){ let dist=Math.abs(x-j%rw)+Math.abs(y-((j/rw)|0)); let w=1/Math.pow(Math.max(1,dist),.82); weight+=w; r+=src[j*4]*w; g+=src[j*4+1]*w; b+=src[j*4+2]*w; } if(weight){ result[i*4]=r/weight; result[i*4+1]=g/weight; result[i*4+2]=b/weight; result[i*4+3]=255; } } data.data.set(result); cc.putImageData(data,px,py); }
@@ -299,7 +304,7 @@ stage.addEventListener('pointerup',finishPointer); stage.addEventListener('point
 $('photoFile').addEventListener('change',e=>loadUserPhoto(e.target.files?.[0])); $('projectFile').addEventListener('change',e=>e.target.files?.[0]&&restoreProject(e.target.files[0]));
 $('undoMask').addEventListener('click',undoMaskStroke);$('redoMask').addEventListener('click',redoMaskStroke);$('saveCutout').addEventListener('click',saveSelectedCutout);
 $('zoom').addEventListener('input',e=>{const z=Number(e.target.value);$('zoomValue').textContent=z+'%';stage.style.width=z+'%';render()});
-$('selectMode').addEventListener('click',()=>{ setMode('extract'); setStatus('Tocca il prossimo giocatore nella fotografia originale.') }); $('editMode').addEventListener('click',()=>{ setMode('edit'); setStatus('Trascina gli elementi sul campo. Puoi sceglierli anche dalla galleria.') });
+$('selectMode').addEventListener('click',startAnotherExtraction); $('extractAnother').addEventListener('click',startAnotherExtraction); $('editMode').addEventListener('click',()=>{ setMode('edit'); setStatus('Trascina gli elementi sul campo. Puoi sceglierli anche dalla galleria.') });
 $('autoTool').addEventListener('click',()=>setTool('auto')); $('lassoTool').addEventListener('click',()=>setTool('lasso')); $('undoPoint').addEventListener('click',()=>{ lasso.pop(); updateUI(); render() }); $('closeLasso').addEventListener('click',createLassoMask); $('brushAdd').addEventListener('click',()=>setTool('add')); $('brushErase').addEventListener('click',()=>setTool('erase')); $('brushOff').addEventListener('click',()=>setTool('auto')); $('discardMask').addEventListener('click',()=>{ mask=null; maskTint=null; lasso=[]; setTool('auto'); render() }); $('confirmExtract').addEventListener('click',confirmExtraction);
 $('elementName').addEventListener('input',e=>{ const el=current(); if(!el)return; el.name=e.target.value|| (el.kind==='player'?'Giocatore':'Forma'); rebuildGallery() });
 for(const id of ['yaw','pitch','roll','scale']) $(id).addEventListener('input',e=>{ const el=current(); if(!el||el.kind!=='player')return; el[id]=id==='scale'?Number(e.target.value)/100:Number(e.target.value); updatePlayerValues(el); render() });
