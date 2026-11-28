@@ -87,7 +87,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}.checkline{
 <label class="checkline"><input id="clearOriginal" type="checkbox"><span>Nascondi la posizione originale nello sfondo</span></label>
 <label class="checkline"><input id="showMaskOriginal" type="checkbox"><span>Mostra la maschera originale (trasparente con bordo bianco)</span></label>
 <div class="switches" style="margin-top:12px"><button id="moveBack">Secondo piano</button><button id="moveFront">Primo piano</button></div>
-<div class="toolrow" style="margin-top:13px"><button id="duplicate">Duplica</button><button id="bringFront">Porta avanti</button></div>
+<div class="toolrow" style="margin-top:13px"><button id="duplicate">Duplica</button><button id="sendBack">Porta indietro</button><button id="bringFront">Porta avanti</button></div>
 <button id="saveCutout" class="full" style="margin-top:9px">Salva ritaglio PNG trasparente</button>
 <div class="toolrow" style="margin-top:10px"><button id="nLeft">←</button><button id="nUp">↑</button><button id="nDown">↓</button><button id="nRight">→</button></div>
 </div>
@@ -99,7 +99,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}.checkline{
 <div class="ctrl"><label for="shapeRot">Rotazione <span id="shapeRotVal">0°</span></label><input id="shapeRot" type="range" min="-180" max="180" value="0"></div>
 <div class="ctrl"><label for="shapeOpacity">Opacità <span id="shapeOpacityVal">45%</span></label><input id="shapeOpacity" type="range" min="10" max="90" value="45"></div>
 </div>
-<div class="toolrow" style="margin-top:10px"><button id="duplicateShape">Duplica</button><button id="bringFrontShape">Porta avanti</button></div>
+<div class="toolrow" style="margin-top:10px"><button id="duplicateShape">Duplica</button><button id="sendBackShape">Porta indietro</button><button id="bringFrontShape">Porta avanti</button></div>
 <div class="toolrow" style="margin-top:10px"><button id="sLeft">←</button><button id="sUp">↑</button><button id="sDown">↓</button><button id="sRight">→</button></div>
 </div>
 
@@ -137,6 +137,8 @@ function clearMask(){mask=null;maskTint=null;lasso=[];maskUndo=[];maskRedo=[];up
 function current(){return scene.find(x=>x.id===selected)||null}
 function players(){return scene.filter(x=>x.kind==='player')}
 function shapes(){return scene.filter(x=>x.kind==='shape')}
+function zValue(el){return Number.isFinite(el.zOrder)?el.zOrder:(el.kind==='player'?(el.layer==='back'?-100:100):0)}
+function orderedScene(){return [...scene].sort((a,b)=>zValue(a)-zValue(b)||scene.indexOf(a)-scene.indexOf(b))}
 
 async function loadExample(){
  try{
@@ -203,14 +205,9 @@ function render(){
 function renderScene(c,withSelection,showOriginalMasks=true){
  if(isOriginalView){c.drawImage(source,0,0,W,H); return}
  c.drawImage(background||base,0,0,W,H);
- const backPlayers=scene.filter(x=>x.kind==='player'&&x.layer==='back');
  const masks=showOriginalMasks?scene.filter(x=>x.kind==='player'&&x.showMask&&x.outlineImg):[];
- const forms=scene.filter(x=>x.kind==='shape');
- const frontPlayers=scene.filter(x=>x.kind==='player'&&x.layer!=='back');
- backPlayers.forEach(p=>drawPlayer(c,p));
  masks.forEach(p=>drawMaskOutline(c,p));
- forms.forEach(s=>drawShape(c,s));
- frontPlayers.forEach(p=>drawPlayer(c,p));
+ orderedScene().forEach(el=>el.kind==='player'?drawPlayer(c,el):drawShape(c,el));
  if(withSelection){const el=current(); if(el) drawSelection(c,el)}
 }
 
@@ -244,7 +241,7 @@ function getCoords(e){const r=stage.getBoundingClientRect();return {x:Math.max(0
 function distToRotRect(pt,pts){ function sqr(x){return x*x} function seg(a,b){ let vx=b.x-a.x,vy=b.y-a.y,wx=pt.x-a.x,wy=pt.y-a.y; let t=(vx*wx+vy*wy)/(vx*vx+vy*vy); t=Math.max(0,Math.min(1,t)); let x=a.x+t*vx,y=a.y+t*vy; return Math.sqrt(sqr(pt.x-x)+sqr(pt.y-y)) } return Math.min(seg(pts[0],pts[1]),seg(pts[1],pts[2]),seg(pts[2],pts[3]),seg(pts[3],pts[0])) }
 function pointInPoly(pt,poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++) if(((poly[i].y>pt.y)!=(poly[j].y>pt.y)) && (pt.x < (poly[j].x-poly[i].x)*(pt.y-poly[i].y)/(poly[j].y-poly[i].y)+poly[i].x)) c=!c; return c }
 function hitTest(pt){
- const order=[...scene.filter(x=>x.kind==='player'&&x.layer!=='back').reverse(), ...scene.filter(x=>x.kind==='shape').reverse(), ...scene.filter(x=>x.kind==='player'&&x.layer==='back').reverse()];
+ const order=orderedScene().reverse();
  for(const el of order){ if(el.kind==='player'){ const r=Math.max(el.w,el.h)*el.scale*.72+Math.max(10,W/110); if(Math.abs(pt.x-el.x)<r&&Math.abs(pt.y-el.y)<r)return el; } else { const pts=shapeBox(el); if(pointInPoly(pt,pts)||distToRotRect(pt,pts)<12)return el; } }
  return null;
 }
@@ -274,7 +271,7 @@ async function confirmExtraction(){
  const smallMask=makeCanvas(w,h); smallMask.getContext('2d').drawImage(mask,left,top,w,h,0,0,w,h); const outlineCanvas=buildOutlineCanvas(smallMask);
  const src=extracted.toDataURL('image/png'), maskSrc=smallMask.toDataURL('image/png'), outlineSrc=outlineCanvas.toDataURL('image/png');
  const [img, outlineImg] = await Promise.all([imageFrom(src), imageFrom(outlineSrc)]);
- const p={id:++counter, kind:'player', name:'Giocatore '+counter, x:left+w/2, y:top+h/2, w,h, yaw:0,pitch:0,roll:0,scale:1, src, img, maskSrc, maskImg:smallMask, outlineSrc, outlineImg, thumb:src, originX:left, originY:top, clearOriginal:true, showMask:true, layer:'front'};
+ const p={id:++counter, kind:'player', name:'Giocatore '+counter, x:left+w/2, y:top+h/2, w,h, yaw:0,pitch:0,roll:0,scale:1, src, img, maskSrc, maskImg:smallMask, outlineSrc, outlineImg, thumb:src, originX:left, originY:top, clearOriginal:true, showMask:true, layer:'front',zOrder:scene.length?Math.max(...scene.map(zValue))+1:0};
  scene.push(p); selected=p.id; mask=null; maskTint=null; lasso=[]; rebuildBackground(); setMode('edit'); rebuildGallery(); updateUI();
  maskUndo=[];maskRedo=[];updateMaskHistoryUI();
  setStatus('Giocatore estratto con trasparenza. Puoi spostarlo e poi aggiungere un altro atleta: la scena resterà conservata.','ok');
@@ -283,7 +280,7 @@ async function confirmExtraction(){
 function inpaintOne(c,p){ if(!p.maskImg)return; const px=Math.max(0,Math.floor(p.originX-6)),py=Math.max(0,Math.floor(p.originY-6)); const rw=Math.min(W-px,Math.ceil(p.w+12)),rh=Math.min(H-py,Math.ceil(p.h+12)); if(rw<2||rh<2)return; const cc=c.getContext('2d',{willReadFrequently:true}); const data=cc.getImageData(px,py,rw,rh),src=data.data; const m=makeCanvas(rw,rh); const mc=m.getContext('2d',{willReadFrequently:true}); mc.drawImage(p.maskImg,p.originX-px,p.originY-py,p.w,p.h); const alpha=mc.getImageData(0,0,rw,rh).data; const bad=new Uint8Array(rw*rh); for(let y=0;y<rh;y++)for(let x=0;x<rw;x++)if(alpha[(y*rw+x)*4+3]>45){ for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){ let xx=x+dx,yy=y+dy; if(xx>=0&&xx<rw&&yy>=0&&yy<rh) bad[yy*rw+xx]=1; }} const left=new Int32Array(rw*rh),right=new Int32Array(rw*rh),up=new Int32Array(rw*rh),down=new Int32Array(rw*rh); for(let y=0;y<rh;y++){ let v=-1; for(let x=0;x<rw;x++){ let i=y*rw+x; if(!bad[i])v=i; left[i]=v; } v=-1; for(let x=rw-1;x>=0;x--){ let i=y*rw+x; if(!bad[i])v=i; right[i]=v; }} for(let x=0;x<rw;x++){ let v=-1; for(let y=0;y<rh;y++){ let i=y*rw+x; if(!bad[i])v=i; up[i]=v; } v=-1; for(let y=rh-1;y>=0;y--){ let i=y*rw+x; if(!bad[i])v=i; down[i]=v; }} const result=new Uint8ClampedArray(src); for(let i=0;i<bad.length;i++)if(bad[i]){ const x=i%rw,y=(i/rw)|0,neighbors=[left[i],right[i],up[i],down[i]]; let weight=0,r=0,g=0,b=0; for(const j of neighbors) if(j>=0){ let dist=Math.abs(x-j%rw)+Math.abs(y-((j/rw)|0)); let w=1/Math.pow(Math.max(1,dist),.82); weight+=w; r+=src[j*4]*w; g+=src[j*4+1]*w; b+=src[j*4+2]*w; } if(weight){ result[i*4]=r/weight; result[i*4+1]=g/weight; result[i*4+2]=b/weight; result[i*4+3]=255; } } data.data.set(result); cc.putImageData(data,px,py); }
 function rebuildBackground(){ if(!base)return; background=makeCanvas(W,H); const b=background.getContext('2d',{willReadFrequently:true}); b.drawImage(base,0,0); players().forEach(p=>{ if(p.clearOriginal) inpaintOne(background,p) }); render(); }
 
-function createShape(type){ const s={ id:++counter, kind:'shape', shapeType:type, name:type==='cone'?'Cono giallo':'Ovale giallo', x:W*.5, y:H*.56, w:type==='cone'?150:220, h:type==='cone'?140:120, rotation:0, opacity:.45, thumb:createShapeThumb(type), layer:'middle' }; scene.push(s); selected=s.id; setMode('edit'); rebuildGallery(); updateUI(); render(); setStatus((type==='cone'?'Cono':'Ovale')+' aggiunto. Trascinalo e regolane dimensione, rotazione e opacità.','ok') }
+function createShape(type){ const s={ id:++counter, kind:'shape', shapeType:type, name:type==='cone'?'Cono giallo':'Ovale giallo', x:W*.5, y:H*.56, w:type==='cone'?150:220, h:type==='cone'?140:120, rotation:0, opacity:.45, thumb:createShapeThumb(type), layer:'middle',zOrder:scene.length?Math.max(...scene.map(zValue))+1:0 }; scene.push(s); selected=s.id; setMode('edit'); rebuildGallery(); updateUI(); render(); setStatus((type==='cone'?'Cono':'Ovale')+' aggiunto. Trascinalo e regolane dimensione, rotazione e opacità.','ok') }
 function createShapeThumb(type){ const c=makeCanvas(60,70), x=c.getContext('2d'); x.translate(30,35); x.globalAlpha=.65; x.fillStyle='rgba(255,221,0,0.55)'; x.strokeStyle='rgba(255,235,160,0.95)'; x.lineWidth=3; if(type==='cone'){ x.beginPath(); x.moveTo(0,-22); x.lineTo(18,20); x.lineTo(-18,20); x.closePath(); x.fill(); x.stroke(); } else { x.beginPath(); x.ellipse(0,0,23,14,0,0,Math.PI*2); x.fill(); x.stroke(); } return c.toDataURL('image/png') }
 
 function download(blob,name){ if(!blob){setStatus('Non è stato possibile preparare il file.','error'); return} const link=document.createElement('a'),url=URL.createObjectURL(blob); link.href=url; link.download=name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000) }
@@ -292,8 +289,10 @@ function saveSelectedCutout(){const el=current();if(!el||el.kind!=='player')retu
 function saveProject(){ if(!source)return; const data={ app:'SIR COME LA VEDI 2.0', version:11, width:W,height:H, photo:source.toDataURL('image/jpeg',.92), base:base.toDataURL('image/jpeg',.92), scene:scene.map(el=>{ const out={...el}; delete out.img; delete out.maskImg; delete out.outlineImg; return out; }) }; download(new Blob([JSON.stringify(data)],{type:'application/json'}),'SIR_come_la_vedi_progetto_v11.json'); setStatus('Progetto PROVA 11 salvato con foto, ritagli, forme e livelli.','ok') }
 async function restoreProject(file){ try{ const data=JSON.parse(await file.text()); if(![9,10,11].includes(data.version)||!data.photo||!(Array.isArray(data.scene)||Array.isArray(data.players))) throw new Error('Formato progetto non riconosciuto'); const [im,bg]=await Promise.all([imageFrom(data.photo), imageFrom(data.base)]); W=data.width; H=data.height; if(!(W>0&&H>0&&W<=5000&&H<=5000))throw new Error('Dimensioni immagine non valide'); source=makeCanvas(W,H); base=makeCanvas(W,H); source.getContext('2d').drawImage(im,0,0,W,H); base.getContext('2d').drawImage(bg,0,0,W,H); scene=[]; for(const raw of (data.scene||data.players)){ if(raw.kind==='player'||(data.version===9)){ const [img, maskImage]=await Promise.all([imageFrom(raw.src),imageFrom(raw.maskSrc)]); const maskImg=makeCanvas(raw.w,raw.h); maskImg.getContext('2d').drawImage(maskImage,0,0); const outlineSrc=raw.outlineSrc||buildOutlineCanvas(maskImg).toDataURL('image/png'); const outlineImg=await imageFrom(outlineSrc); scene.push({...raw,kind:'player',layer:raw.layer||'front',showMask:raw.showMask??false,outlineSrc,thumb:raw.thumb||raw.src,img,maskImg,outlineImg}); } else scene.push(raw); } stage.width=W; stage.height=H; selected=scene.length?scene[scene.length-1].id:null; counter=scene.reduce((a,e)=>Math.max(a,e.id),0); aiVersion++; segmenterReadyFor=null; clearMask(); rebuildBackground(); setMode('edit'); rebuildGallery(); updateUI(); setStatus('Progetto riaperto: '+scene.length+' elementi disponibili.','ok') }catch(err){ setStatus('Impossibile aprire il progetto: '+err.message,'error') } $('projectFile').value=''; }
 
-function duplicateCurrent(){ const el=current(); if(!el)return; const clone={...el, id:++counter, name:(el.name||'Elemento')+' copia', x:el.x+W*.025, y:el.y+H*.025}; if(el.kind==='player'){ clone.layer='front'; } scene.push(clone); selected=clone.id; rebuildGallery(); updateUI(); render(); }
-function bringSelectedFront(){ const el=current(); if(!el)return; scene=scene.filter(x=>x.id!==el.id).concat(el); rebuildGallery(); render(); }
+function duplicateCurrent(){ const el=current(); if(!el)return; const clone={...el, id:++counter, name:(el.name||'Elemento')+' copia', x:el.x+W*.025, y:el.y+H*.025,zOrder:scene.length?Math.max(...scene.map(zValue))+1:0}; if(el.kind==='player'){ clone.layer='front'; } scene.push(clone); selected=clone.id; rebuildGallery(); updateUI(); render(); }
+function moveSelectedLayer(direction){const el=current();if(!el)return;const order=orderedScene(),at=order.findIndex(x=>x.id===el.id),next=at+direction;if(next<0||next>=order.length){setStatus(direction<0?'L’oggetto è già dietro a tutti.':'L’oggetto è già davanti a tutti.');return}[order[at],order[next]]=[order[next],order[at]];order.forEach((item,i)=>item.zOrder=i);rebuildGallery();updateUI();render();setStatus(direction<0?'Oggetto spostato dietro a un elemento.':'Oggetto spostato davanti a un elemento.','ok')}
+function bringSelectedFront(){moveSelectedLayer(1)}
+function sendSelectedBack(){moveSelectedLayer(-1)}
 function clearAll(){ if(!confirm('Vuoi eliminare tutti gli elementi della scena? La fotografia resterà caricata.'))return; scene=[]; selected=null; counter=0; clearMask(); rebuildBackground(); rebuildGallery(); setMode('extract'); setStatus('Scena azzerata. Fotografia originale conservata.','ok') }
 
 stage.addEventListener('pointerdown',e=>{ if(!source||isOriginalView)return; const pt=getCoords(e); if(mode==='extract'){ if(tool==='lasso'){ const last=lasso[lasso.length-1]; if(!last||Math.hypot(pt.x-last.x,pt.y-last.y)>Math.max(3,W/500))lasso.push(pt); lassoPointer=e.pointerId; stage.setPointerCapture(e.pointerId); updateUI(); render(); e.preventDefault(); return } if(tool==='add'||tool==='erase'){ if(!mask)return; maskUndo.push(maskSnapshot()); if(maskUndo.length>40)maskUndo.shift(); maskRedo=[]; updateMaskHistoryUI(); brushPointer=e.pointerId; stage.setPointerCapture(e.pointerId); paintMask(pt,tool==='erase'); refreshMaskTint(); e.preventDefault(); return } if(tool==='auto'){ pickWithAI(pt); e.preventDefault(); return } } if(mode==='edit'){ const el=hitTest(pt); if(el){ selected=el.id; rebuildGallery(); updateUI(); dragging={pointer:e.pointerId, x:pt.x, y:pt.y, origX:el.x, origY:el.y}; stage.setPointerCapture(e.pointerId); e.preventDefault(); } else { selected=null; rebuildGallery(); updateUI(); render() } } });
@@ -310,12 +309,12 @@ $('elementName').addEventListener('input',e=>{ const el=current(); if(!el)return
 for(const id of ['yaw','pitch','roll','scale']) $(id).addEventListener('input',e=>{ const el=current(); if(!el||el.kind!=='player')return; el[id]=id==='scale'?Number(e.target.value)/100:Number(e.target.value); updatePlayerValues(el); render() });
 $('clearOriginal').addEventListener('change',e=>{ const el=current(); if(!el||el.kind!=='player')return; el.clearOriginal=e.target.checked; rebuildBackground(); setStatus('Sfondo ricalcolato. Il riempimento è approssimativo nelle zone complesse.') });
 $('showMaskOriginal').addEventListener('change',e=>{ const el=current(); if(!el||el.kind!=='player')return; el.showMask=e.target.checked; render() });
-$('moveBack').addEventListener('click',()=>{ const el=current(); if(!el||el.kind!=='player')return; el.layer='back'; updateUI(); rebuildGallery(); render() }); $('moveFront').addEventListener('click',()=>{ const el=current(); if(!el||el.kind!=='player')return; el.layer='front'; updateUI(); rebuildGallery(); render() });
-$('duplicate').addEventListener('click',duplicateCurrent); $('bringFront').addEventListener('click',bringSelectedFront);
+$('moveBack').addEventListener('click',()=>{ const el=current(); if(!el||el.kind!=='player')return; el.layer='back'; el.zOrder=Math.min(...scene.filter(x=>x.id!==el.id).map(zValue),0)-1; updateUI(); rebuildGallery(); render() }); $('moveFront').addEventListener('click',()=>{ const el=current(); if(!el||el.kind!=='player')return; el.layer='front'; el.zOrder=Math.max(...scene.filter(x=>x.id!==el.id).map(zValue),-1)+1; updateUI(); rebuildGallery(); render() });
+$('duplicate').addEventListener('click',duplicateCurrent); $('bringFront').addEventListener('click',bringSelectedFront); $('sendBack').addEventListener('click',sendSelectedBack);
 for(const [id,dx,dy] of [['nLeft',-1,0],['nRight',1,0],['nUp',0,-1],['nDown',0,1]]) $(id).addEventListener('click',()=>{ const el=current(); if(!el||el.kind!=='player')return; el.x+=dx*W*.008; el.y+=dy*H*.008; render() });
 
 for(const id of ['shapeW','shapeH','shapeRot','shapeOpacity']) $(id).addEventListener('input',e=>{ const el=current(); if(!el||el.kind!=='shape')return; if(id==='shapeW')el.w=Number(e.target.value); if(id==='shapeH')el.h=Number(e.target.value); if(id==='shapeRot')el.rotation=Number(e.target.value); if(id==='shapeOpacity')el.opacity=Number(e.target.value)/100; updateShapeValues(el); render() });
-$('duplicateShape').addEventListener('click',duplicateCurrent); $('bringFrontShape').addEventListener('click',bringSelectedFront);
+$('duplicateShape').addEventListener('click',duplicateCurrent); $('bringFrontShape').addEventListener('click',bringSelectedFront); $('sendBackShape').addEventListener('click',sendSelectedBack);
 for(const [id,dx,dy] of [['sLeft',-1,0],['sRight',1,0],['sUp',0,-1],['sDown',0,1]]) $(id).addEventListener('click',()=>{ const el=current(); if(!el||el.kind!=='shape')return; el.x+=dx*W*.008; el.y+=dy*H*.008; render() });
 $('addCone').addEventListener('click',()=>createShape('cone')); $('addOval').addEventListener('click',()=>createShape('oval'));
 $('deleteElement').addEventListener('click',()=>{ const el=current(); if(!el)return; scene=scene.filter(x=>x.id!==el.id); selected=scene.length?scene[scene.length-1].id:null; rebuildBackground(); rebuildGallery(); updateUI(); render() });
