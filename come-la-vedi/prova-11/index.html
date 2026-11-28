@@ -55,7 +55,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}.checkline{
 <div id="lassoActions" class="hidden">
 <p id="pointCount">0 punti scelti</p>
 <div class="toolrow"><button id="undoPoint">Annulla punto</button><button id="closeLasso" class="primary" disabled>Crea sagoma</button></div>
-<p class="tiny">Tocca diversi punti lungo il contorno del giocatore, poi premi «Crea sagoma».</p>
+<p class="tiny">Tieni premuto e trascina una volta lungo il contorno del giocatore, poi premi «Crea sagoma». Puoi anche segnare il contorno con tocchi separati.</p>
 </div>
 <div id="maskActions" class="hidden">
 <h3>Rifinisci il ritaglio</h3>
@@ -122,14 +122,15 @@ const stage=$('stage'), ctx=stage.getContext('2d',{willReadFrequently:true});
 let W=1672,H=941, source=null, base=null, background=null, mask=null, maskTint=null;
 let mode='extract', tool='auto', isOriginalView=false, scene=[], selected=null, counter=0, lasso=[];
 let segmenter=null, segmenterReadyFor=null, loadingAI=false, aiVersion=0, dragging=null, brushPointer=null;
+let lassoPointer=null;
 let maskUndo=[],maskRedo=[];
-const AI_URL='https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/latest/interactive_segmentation.task';
-const SDK_URL='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs';
-const WASM_URL='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm';
+const AI_URL='https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/1/interactive_segmentation.task';
+const SDK_URL='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/+esm';
+const WASM_URL='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm';
 
 function setStatus(message,kind=''){const el=$('status');el.textContent=message;el.className=kind}
 function makeCanvas(w,h){let c=document.createElement('canvas');c.width=w;c.height=h;return c}
-function imageFrom(src){return new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error('Immagine non leggibile'));i.src=src})}
+function imageFrom(src){return new Promise((resolve,reject)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=()=>reject(new Error('Immagine non leggibile o senza autorizzazione CORS'));i.src=src})}
 function clearMask(){mask=null;maskTint=null;lasso=[];maskUndo=[];maskRedo=[];updateMaskHistoryUI();tool='auto';updateUI()}
 function current(){return scene.find(x=>x.id===selected)||null}
 function players(){return scene.filter(x=>x.kind==='player')}
@@ -243,7 +244,7 @@ function hitTest(pt){
  return null;
 }
 
-async function ensureSegmenter(){ if(segmenter)return segmenter; if(loadingAI)throw new Error('Il modello si sta ancora caricando.'); loadingAI=true; setStatus('Carico il modello di ritaglio intelligente. Serve connessione internet al primo utilizzo…'); try{ const pkg=await import(SDK_URL); const v=await pkg.FilesetResolver.forVisionTasks(WASM_URL); segmenter=await pkg.InteractiveSegmenter.createFromOptions(v,{baseOptions:{modelAssetPath:AI_URL,delegate:'CPU'}}); return segmenter } finally{ loadingAI=false } }
+async function ensureSegmenter(){ if(segmenter)return segmenter; if(loadingAI)throw new Error('Il modello si sta ancora caricando.'); loadingAI=true; setStatus('Carico il modello di ritaglio intelligente. Serve connessione internet al primo utilizzo…'); try{ const pkg=await import(SDK_URL); if(!pkg.FilesetResolver||!pkg.InteractiveSegmenter)throw new Error('Libreria MediaPipe non compatibile'); const v=await pkg.FilesetResolver.forVisionTasks(WASM_URL); segmenter=await pkg.InteractiveSegmenter.createFromModelPath(v,AI_URL); return segmenter } finally{ loadingAI=false } }
 async function pickWithAI(point){ if(!source||loadingAI)return; const vers=aiVersion; setStatus('Analizzo il giocatore selezionato…'); await new Promise(r=>setTimeout(r,35)); try{ const ai=await ensureSegmenter(); if(vers!==aiVersion)return; if(segmenterReadyFor!==source){ai.setImage(source); segmenterReadyFor=source;} await new Promise(r=>setTimeout(r,30)); const result=ai.segment([{brushMode:1,point:[{x:point.x/W,y:point.y/H}],isCompleted:true}]); if(vers!==aiVersion){result.close?.();return;} const mw=result.width,mh=result.height,raw=new Float32Array(result.getAsFloat32Array()); result.close?.(); const tmp=makeCanvas(mw,mh),t=tmp.getContext('2d'); const data=t.createImageData(mw,mh); for(let i=0;i<raw.length;i++){ const v=raw[i],j=i*4; data.data[j]=255; data.data[j+1]=255; data.data[j+2]=255; data.data[j+3]=Math.max(0,Math.min(255,Math.round((v-.32)*255/.32))); } t.putImageData(data,0,0); mask=makeCanvas(W,H); mask.getContext('2d').drawImage(tmp,0,0,W,H); if(!hasEnoughMask()){mask=null; throw new Error('Sagoma non identificata. Riprova toccando il centro del giocatore.')} refreshMaskTint(); setTool('auto'); setStatus('Sagoma individuata. Se necessario usa Pennello + o Gomma −, poi «Aggiungi giocatore».','ok'); }catch(err){ mask=null; maskTint=null; setTool('lasso'); setStatus('Ritaglio intelligente non disponibile o non riuscito ('+err.message+'). Ho attivato il contorno manuale.','error'); } render(); }
 function hasEnoughMask(){ if(!mask)return false; const d=mask.getContext('2d').getImageData(0,0,W,H).data; let n=0; for(let i=3;i<d.length;i+=32) if(d[i]>70) n++; return n>6 }
 function refreshMaskTint(){ if(!mask){maskTint=null;return} maskTint=makeCanvas(W,H); const m=maskTint.getContext('2d'); m.drawImage(mask,0,0); m.globalCompositeOperation='source-in'; m.fillStyle='#00e6dc'; m.fillRect(0,0,W,H); m.globalCompositeOperation='source-over'; render() }
@@ -290,9 +291,9 @@ function duplicateCurrent(){ const el=current(); if(!el)return; const clone={...
 function bringSelectedFront(){ const el=current(); if(!el)return; scene=scene.filter(x=>x.id!==el.id).concat(el); rebuildGallery(); render(); }
 function clearAll(){ if(!confirm('Vuoi eliminare tutti gli elementi della scena? La fotografia resterà caricata.'))return; scene=[]; selected=null; counter=0; clearMask(); rebuildBackground(); rebuildGallery(); setMode('extract'); setStatus('Scena azzerata. Fotografia originale conservata.','ok') }
 
-stage.addEventListener('pointerdown',e=>{ if(!source||isOriginalView)return; const pt=getCoords(e); if(mode==='extract'){ if(tool==='lasso'){ lasso.push(pt); updateUI(); render(); e.preventDefault(); return } if(tool==='add'||tool==='erase'){ if(!mask)return; maskUndo.push(maskSnapshot()); if(maskUndo.length>40)maskUndo.shift(); maskRedo=[]; updateMaskHistoryUI(); brushPointer=e.pointerId; stage.setPointerCapture(e.pointerId); paintMask(pt,tool==='erase'); refreshMaskTint(); e.preventDefault(); return } if(tool==='auto'){ pickWithAI(pt); e.preventDefault(); return } } if(mode==='edit'){ const el=hitTest(pt); if(el){ selected=el.id; rebuildGallery(); updateUI(); dragging={pointer:e.pointerId, x:pt.x, y:pt.y, origX:el.x, origY:el.y}; stage.setPointerCapture(e.pointerId); e.preventDefault(); } else { selected=null; rebuildGallery(); updateUI(); render() } } });
-stage.addEventListener('pointermove',e=>{ const pt=getCoords(e); if(brushPointer===e.pointerId){ paintMask(pt,tool==='erase'); refreshMaskTint(); e.preventDefault() } if(dragging&&dragging.pointer===e.pointerId){ const el=current(); if(el){ el.x=dragging.origX+pt.x-dragging.x; el.y=dragging.origY+pt.y-dragging.y; render() } e.preventDefault() } });
-function finishPointer(e){ if(brushPointer===e.pointerId){ brushPointer=null; refreshMaskTint() } if(dragging&&dragging.pointer===e.pointerId){ dragging=null; render() } }
+stage.addEventListener('pointerdown',e=>{ if(!source||isOriginalView)return; const pt=getCoords(e); if(mode==='extract'){ if(tool==='lasso'){ const last=lasso[lasso.length-1]; if(!last||Math.hypot(pt.x-last.x,pt.y-last.y)>Math.max(3,W/500))lasso.push(pt); lassoPointer=e.pointerId; stage.setPointerCapture(e.pointerId); updateUI(); render(); e.preventDefault(); return } if(tool==='add'||tool==='erase'){ if(!mask)return; maskUndo.push(maskSnapshot()); if(maskUndo.length>40)maskUndo.shift(); maskRedo=[]; updateMaskHistoryUI(); brushPointer=e.pointerId; stage.setPointerCapture(e.pointerId); paintMask(pt,tool==='erase'); refreshMaskTint(); e.preventDefault(); return } if(tool==='auto'){ pickWithAI(pt); e.preventDefault(); return } } if(mode==='edit'){ const el=hitTest(pt); if(el){ selected=el.id; rebuildGallery(); updateUI(); dragging={pointer:e.pointerId, x:pt.x, y:pt.y, origX:el.x, origY:el.y}; stage.setPointerCapture(e.pointerId); e.preventDefault(); } else { selected=null; rebuildGallery(); updateUI(); render() } } });
+stage.addEventListener('pointermove',e=>{ const pt=getCoords(e); if(lassoPointer===e.pointerId){const last=lasso[lasso.length-1];if(!last||Math.hypot(pt.x-last.x,pt.y-last.y)>Math.max(3,W/500)){lasso.push(pt);updateUI();render()}e.preventDefault()} if(brushPointer===e.pointerId){ paintMask(pt,tool==='erase'); refreshMaskTint(); e.preventDefault() } if(dragging&&dragging.pointer===e.pointerId){ const el=current(); if(el){ el.x=dragging.origX+pt.x-dragging.x; el.y=dragging.origY+pt.y-dragging.y; render() } e.preventDefault() } });
+function finishPointer(e){ if(lassoPointer===e.pointerId)lassoPointer=null; if(brushPointer===e.pointerId){ brushPointer=null; refreshMaskTint() } if(dragging&&dragging.pointer===e.pointerId){ dragging=null; render() } }
 stage.addEventListener('pointerup',finishPointer); stage.addEventListener('pointercancel',finishPointer); stage.addEventListener('lostpointercapture',finishPointer);
 
 $('photoFile').addEventListener('change',e=>loadUserPhoto(e.target.files?.[0])); $('projectFile').addEventListener('change',e=>e.target.files?.[0]&&restoreProject(e.target.files[0]));
