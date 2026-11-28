@@ -47,7 +47,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}.checkline{
 <button id="exportPng" type="button">Esporta PNG</button>
 <button id="saveProject" type="button">Salva progetto</button>
 <label class="filebtn" for="projectFile">Apri progetto<input type="file" id="projectFile" accept=".json,application/json" hidden></label>
-<button id="installApp" class="hidden" type="button">Installa app</button>
+<button id="installApp" type="button">Installa app</button>
 <button id="undoMask" type="button" disabled title="Annulla l'ultima pennellata">↶ Annulla</button><button id="redoMask" type="button" disabled title="Ripristina la pennellata annullata">↷ Ripeti</button>
 <label id="zoomRow" for="zoom">Zoom <span id="zoomValue">100%</span><input id="zoom" type="range" min="100" max="300" value="100" step="10"></label>
 </div>
@@ -335,7 +335,7 @@ $('addCone').addEventListener('click',()=>createShape('cone')); $('addOval').add
 $('deleteElement').addEventListener('click',()=>{ const el=current(); if(!el)return; scene=scene.filter(x=>x.id!==el.id); selected=scene.length?scene[scene.length-1].id:null; rebuildBackground(); rebuildGallery(); updateUI(); render() });
 $('showOriginal').addEventListener('click',()=>{ isOriginalView=!isOriginalView; render(); setStatus(isOriginalView?'Fotografia originale in visualizzazione. Premi ancora per tornare alla scena.':'Vista modificata ripristinata.') });
 $('exportPng').addEventListener('click',exportPNG); $('saveProject').addEventListener('click',saveProject); $('resetAll').addEventListener('click',clearAll); window.addEventListener('resize',render);
-let installPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installApp').classList.remove('hidden')});$('installApp').addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installApp').classList.add('hidden')});window.addEventListener('appinstalled',()=>{$('installApp').classList.add('hidden');setStatus('SIR COME LA VEDI è stata installata.','ok')});if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
+let installPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});$('installApp').addEventListener('click',async()=>{if(!installPrompt){setStatus('Nel menu del browser scegli «Installa app»; su iPhone o iPad scegli Condividi → «Aggiungi alla schermata Home».','ok');return}installPrompt.prompt();await installPrompt.userChoice;installPrompt=null});window.addEventListener('appinstalled',()=>{setStatus('SIR COME LA VEDI è stata installata.','ok')});if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
 loadExample();
 </script>
 </body>
