@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b111a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIR Come la Vedi">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <title>SIR COME LA VEDI 2.0 · Prova 11</title>
 <style>
 :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eef3f9;background:#0b1019;--panel:#142132;--line:#34465d;--gold:#f2cb68;--muted:#a6bbce}
@@ -41,6 +47,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold)}.checkline{
 <button id="exportPng" type="button">Esporta PNG</button>
 <button id="saveProject" type="button">Salva progetto</button>
 <label class="filebtn" for="projectFile">Apri progetto<input type="file" id="projectFile" accept=".json,application/json" hidden></label>
+<button id="installApp" class="hidden" type="button">Installa app</button>
 <button id="undoMask" type="button" disabled title="Annulla l'ultima pennellata">↶ Annulla</button><button id="redoMask" type="button" disabled title="Ripristina la pennellata annullata">↷ Ripeti</button>
 <label id="zoomRow" for="zoom">Zoom <span id="zoomValue">100%</span><input id="zoom" type="range" min="100" max="300" value="100" step="10"></label>
 </div>
@@ -328,6 +335,7 @@ $('addCone').addEventListener('click',()=>createShape('cone')); $('addOval').add
 $('deleteElement').addEventListener('click',()=>{ const el=current(); if(!el)return; scene=scene.filter(x=>x.id!==el.id); selected=scene.length?scene[scene.length-1].id:null; rebuildBackground(); rebuildGallery(); updateUI(); render() });
 $('showOriginal').addEventListener('click',()=>{ isOriginalView=!isOriginalView; render(); setStatus(isOriginalView?'Fotografia originale in visualizzazione. Premi ancora per tornare alla scena.':'Vista modificata ripristinata.') });
 $('exportPng').addEventListener('click',exportPNG); $('saveProject').addEventListener('click',saveProject); $('resetAll').addEventListener('click',clearAll); window.addEventListener('resize',render);
+let installPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installApp').classList.remove('hidden')});$('installApp').addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installApp').classList.add('hidden')});window.addEventListener('appinstalled',()=>{$('installApp').classList.add('hidden');setStatus('SIR COME LA VEDI è stata installata.','ok')});if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
 loadExample();
 </script>
 </body>
